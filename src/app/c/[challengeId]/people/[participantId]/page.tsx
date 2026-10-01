@@ -1,5 +1,10 @@
 "use client";
 import { useParams } from "next/navigation";
+import { useState } from "react";
+import { BookDetails } from "@/components/books/book-card";
+import { BookShelf } from "@/components/books/book-shelf";
+import { Sheet } from "@/components/ui/sheet";
+import type { LocalBook } from "@/local/db";
 import { useChallenge } from "@/components/challenge/context";
 import { DayRing } from "@/components/challenge/day-ring";
 import { GoalProgress } from "@/components/challenge/goal-progress";
@@ -18,6 +23,7 @@ export default function ParticipantPage() {
   const { participantId } = useParams<{ participantId: string }>();
   const { view } = useChallenge();
   const member = view.members.find((m) => m.participant.id === participantId);
+  const [openBook, setOpenBook] = useState<LocalBook | null>(null);
   const back = { href: `/c/${view.challenge.id}/people`, label: "Back to people" };
   if (!member) {
     return (
@@ -38,6 +44,9 @@ export default function ParticipantPage() {
   const others = view.members.filter((m) => m !== member).map((m) => m.progress.streak.current);
   const banner = streakBanner(p, others, view.challenge.durationDays);
   const sessions = view.feed.filter((s) => s.participantId === participantId);
+  // Reading now first, then up next, then finished.
+  const order = { reading: 0, planned: 1, completed: 2, abandoned: 3 } as const;
+  const books = [...member.books].sort((a, b) => order[a.status] - order[b.status] || b.updatedAt.localeCompare(a.updatedAt));
 
   return (
     <>
@@ -70,6 +79,21 @@ export default function ParticipantPage() {
         </div>
       </Hero>
       <PageSheet className="space-y-4">
+        <section aria-labelledby="their-books" className="pb-1">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 id="their-books" className="headline text-[22px]">
+              {isMe ? "Your books" : "Books"}
+            </h2>
+            <p className="text-sm text-muted">
+              {books.length} book{books.length === 1 ? "" : "s"} · {p.booksCompleted} finished
+            </p>
+          </div>
+          {books.length ? (
+            <BookShelf books={books} onOpen={setOpenBook} ledge="light" />
+          ) : (
+            <p className="rounded-2xl bg-surface-2 px-4 py-3.5 text-sm text-ink/60">{isMe ? "You haven't added a book yet." : `${member.participant.displayName} hasn't added a book yet.`}</p>
+          )}
+        </section>
         <div className="grid grid-cols-2 gap-3">
           <Card tone="muted" pad="sm">
             <Eyebrow>Longest streak</Eyebrow>
@@ -88,6 +112,9 @@ export default function ParticipantPage() {
           {sessions.length ? <ReadingFeed view={view} sessions={sessions.slice(0, 20)} showEmpty={false} /> : <EmptyState title="No check-ins yet" />}
         </div>
       </PageSheet>
+      <Sheet open={openBook !== null} onClose={() => setOpenBook(null)} title="Book">
+        {openBook ? <BookDetails book={books.find((b) => b.id === openBook.id) ?? openBook} editable={false} /> : null}
+      </Sheet>
     </>
   );
 }

@@ -19,8 +19,8 @@ export function initials(name: string) {
   return letters.toUpperCase();
 }
 
-export function Avatar({ name, id, size = "md", className }: { name: string; id: string; size?: "sm" | "md" | "lg" | "xl"; className?: string }) {
-  const sizes = { sm: "size-8 text-[11px]", md: "size-11 text-[13px]", lg: "size-14 text-base", xl: "size-20 text-2xl" };
+export function Avatar({ name, id, size = "md", className }: { name: string; id: string; size?: "xs" | "sm" | "md" | "lg" | "xl"; className?: string }) {
+  const sizes = { xs: "size-5 text-[8px]", sm: "size-8 text-[11px]", md: "size-11 text-[13px]", lg: "size-14 text-base", xl: "size-20 text-2xl" };
   return (
     <span aria-hidden className={cn("inline-grid shrink-0 place-items-center rounded-full font-medium tracking-tight text-ink", sizes[size], TONES[hash(id) % TONES.length], className)}>
       {initials(name)}

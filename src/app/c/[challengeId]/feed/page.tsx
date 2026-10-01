@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { useChallenge } from "@/components/challenge/context";
 import { Hero } from "@/components/challenge/hero";
+import { CrewBooks } from "@/components/feed/crew-books";
 import { ReadingFeed } from "@/components/feed/reading-feed";
 import { PageSheet } from "@/components/ui/card";
 import { greeting } from "@/lib/copy";
@@ -61,6 +62,9 @@ export default function FeedPage() {
             <span>
               <span className="text-sage">●</span> {stats.averageConsistency}% consistency
             </span>
+          </div>
+          <div className="mt-5">
+            <CrewBooks view={view} />
           </div>
         </div>
       </Hero>
