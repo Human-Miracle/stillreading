@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { searchBooks, type BookSearchResult } from "@/lib/book-search";
+import { findCovers, searchBooks, type BookSearchResult } from "@/lib/book-search";
 import type { LocalBook } from "@/local/db";
+import { cn } from "../ui/cn";
 import { Field, Input } from "../ui/field";
 
 export interface BookDraft {
@@ -36,7 +37,7 @@ function useBookSearch(query: string, enabled: boolean) {
     if (!active) return;
     const ctrl = new AbortController();
     const timer = setTimeout(() => {
-      searchBooks(q, ctrl.signal)
+      searchBooks({ q }, ctrl.signal)
         .catch(() => [])
         .then((results) => {
           if (!ctrl.signal.aborted) setFound({ q, results });
@@ -51,13 +52,51 @@ function useBookSearch(query: string, enabled: boolean) {
   return { results: fresh ? found.results : [], loading: active && !fresh };
 }
 
+type CoverPicker = { status: "loading" } | { status: "done"; covers: string[] } | { status: "error" };
+
+/** Covers for the title and author currently in the form, to pick from. */
+function CoverChoices({ picker, current, onPick }: { picker: CoverPicker; current: string | null; onPick: (url: string) => void }) {
+  if (picker.status === "loading") return <p className="text-sm text-muted">Looking for covers…</p>;
+  if (picker.status === "error") return <p className="text-sm text-muted">Couldn&apos;t reach the book catalogue. Check your connection and try again.</p>;
+  if (!picker.covers.length) return <p className="text-sm text-muted">No covers found. Check the title and author spelling.</p>;
+  return (
+    <ul aria-label="Covers" className="no-scrollbar -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
+      {picker.covers.map((url) => (
+        <li key={url} className="shrink-0">
+          <button
+            type="button"
+            aria-pressed={url === current}
+            aria-label="Use this cover"
+            onClick={() => onPick(url)}
+            className={cn("block overflow-hidden rounded-md ring-offset-2 ring-offset-surface transition", url === current ? "ring-2 ring-ink" : "opacity-90 hover:opacity-100")}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed */}
+            <img src={url} alt="" loading="lazy" className="h-24 w-16 bg-surface-2 object-cover" />
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function BookForm({ value, onChange, autoFocus }: { value: BookDraft; onChange: (v: BookDraft) => void; autoFocus?: boolean }) {
   // Only search after the reader types, not for a title that was prefilled or picked from the list.
   const [searching, setSearching] = useState(false);
   const { results, loading } = useBookSearch(value.title, searching);
+  const [picker, setPicker] = useState<CoverPicker | null>(null);
+
+  const lookUpCovers = async () => {
+    setPicker({ status: "loading" });
+    try {
+      setPicker({ status: "done", covers: await findCovers({ title: value.title, author: value.author }) });
+    } catch {
+      setPicker({ status: "error" });
+    }
+  };
 
   const pick = (r: BookSearchResult) => {
     setSearching(false);
+    setPicker(null);
     onChange({
       title: r.title,
       author: r.author ?? value.author,
@@ -106,15 +145,23 @@ export function BookForm({ value, onChange, autoFocus }: { value: BookDraft; onC
           ))}
         </ul>
       ) : null}
-      {value.coverUrl ? (
-        <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed */}
-          <img src={value.coverUrl} alt="Selected cover" className="h-20 w-14 rounded-md object-cover shadow-soft" />
-          <button type="button" className="text-sm font-medium text-muted underline underline-offset-4" onClick={() => onChange({ ...value, coverUrl: null })}>
-            Remove cover
+      <div className="flex items-center gap-3">
+        {value.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed
+          <img src={value.coverUrl} alt="Selected cover" className="h-20 w-14 shrink-0 rounded-md bg-surface-2 object-cover shadow-soft" />
+        ) : null}
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-muted">
+          <button type="button" className="underline underline-offset-4 disabled:opacity-50" disabled={value.title.trim().length < 2} onClick={() => void lookUpCovers()}>
+            {value.coverUrl ? "Change cover" : "Find a cover"}
           </button>
+          {value.coverUrl ? (
+            <button type="button" className="underline underline-offset-4" onClick={() => onChange({ ...value, coverUrl: null })}>
+              Remove cover
+            </button>
+          ) : null}
         </div>
-      ) : null}
+      </div>
+      {picker ? <CoverChoices picker={picker} current={value.coverUrl} onPick={(url) => onChange({ ...value, coverUrl: url })} /> : null}
       <Field label="Author (optional)">
         {(p) => <Input {...p} maxLength={120} placeholder="James Clear" value={value.author} onChange={(e) => onChange({ ...value, author: e.target.value })} />}
       </Field>

@@ -19,6 +19,7 @@ export const LIMITS = {
   push: { bucket: "push", limit: 120, windowSeconds: 60 },
   pull: { bucket: "pull", limit: 120, windowSeconds: 60 },
   events: { bucket: "events-ip", limit: 120, windowSeconds: 60 },
+  bookSearch: { bucket: "books-ip", limit: 60, windowSeconds: 60 },
 } satisfies Record<string, Limit>;
 
 /**

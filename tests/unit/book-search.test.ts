@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { coverUrlFor, parseOpenLibrarySearch } from "@/lib/book-search";
+import { describe, expect, it, vi } from "vitest";
+import { cleanBookQuery, coverUrlFor, findCovers, openLibrarySearchUrl, parseOpenLibrarySearch } from "@/lib/book-search";
 import { coverUrl } from "@/lib/validation/fields";
 
 describe("parseOpenLibrarySearch", () => {
@@ -39,6 +39,41 @@ describe("coverUrl validation", () => {
       "not a url",
     ]) {
       expect(coverUrl.safeParse(bad).success, bad).toBe(false);
+    }
+  });
+});
+
+describe("book queries", () => {
+  it("drops empty or too-short parts", () => {
+    expect(cleanBookQuery({ q: "  ab " })).toBeNull();
+    expect(cleanBookQuery({ title: " Scythe ", author: "  " })).toEqual({ title: "Scythe" });
+    expect(cleanBookQuery({ title: "Scythe", author: "Neal Shusterman" })).toEqual({ title: "Scythe", author: "Neal Shusterman" });
+  });
+
+  it("builds an Open Library search URL with only the fields we use", () => {
+    const url = openLibrarySearchUrl({ title: "Scythe", author: "Neal Shusterman" });
+    expect(url.searchParams.get("title")).toBe("Scythe");
+    expect(url.searchParams.get("author")).toBe("Neal Shusterman");
+    expect(url.searchParams.has("q")).toBe(false);
+    expect(url.searchParams.get("fields")).toBe("key,title,author_name,cover_i,number_of_pages_median");
+  });
+});
+
+describe("findCovers", () => {
+  const result = (id: number | null, title = "Scythe") => ({ key: `/works/${id}`, title, author: null, totalPages: null, coverUrl: id ? coverUrlFor(id) : null });
+
+  it("falls back to the title alone when title + author finds no cover", async () => {
+    const seen: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      const params = new URL(url, "http://x").searchParams;
+      seen.push(params.toString());
+      return Response.json({ results: params.has("author") ? [result(null)] : [result(7), result(7), result(8)] });
+    });
+    try {
+      expect(await findCovers({ title: "Scythe", author: "Neil Shusterman" })).toEqual([coverUrlFor(7), coverUrlFor(8)]);
+      expect(seen).toEqual(["title=Scythe&author=Neil+Shusterman", "title=Scythe"]);
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 });

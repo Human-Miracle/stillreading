@@ -5,6 +5,7 @@ import { GET as pullGET } from "@/app/api/challenges/[id]/sync/route";
 import { GET as previewGET, POST as joinPOST } from "@/app/api/join/[code]/route";
 import { POST as pushPOST } from "@/app/api/sync/route";
 import { POST as eventsPOST } from "@/app/api/events/route";
+import { GET as bookSearchGET } from "@/app/api/books/search/route";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { newDeviceSecret, newId } from "@/lib/ids";
 
@@ -40,6 +41,7 @@ const routes: { method: string; pattern: RegExp; keys: string[]; handler: Handle
   { method: "POST", pattern: /^\/api\/join\/([^/]+)$/, keys: ["code"], handler: joinPOST as Handler },
   { method: "POST", pattern: /^\/api\/sync$/, keys: [], handler: pushPOST as Handler },
   { method: "POST", pattern: /^\/api\/events$/, keys: [], handler: eventsPOST as Handler },
+  { method: "GET", pattern: /^\/api\/books\/search$/, keys: [], handler: bookSearchGET as Handler },
 ];
 
 /** A `fetch` that dispatches straight into the Next.js route handlers. */
