@@ -16,6 +16,7 @@ export async function upsertBook(
   const values = {
     title: input.title,
     author: input.author || null,
+    ...(input.coverUrl !== undefined ? { coverUrl: input.coverUrl } : {}),
     totalPages: input.totalPages ?? null,
     currentPage: input.currentPage,
     status: input.status,

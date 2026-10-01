@@ -53,7 +53,7 @@ async function requireChallenge(challengeId: string) {
 export interface ProfileInput {
   displayName: string;
   goal: GoalPreset;
-  book?: { title: string; author?: string | null; totalPages?: number | null } | null;
+  book?: { title: string; author?: string | null; totalPages?: number | null; coverUrl?: string | null } | null;
 }
 
 function bookPayload(book: NonNullable<ProfileInput["book"]>) {
@@ -62,6 +62,7 @@ function bookPayload(book: NonNullable<ProfileInput["book"]>) {
     id: newId("bk"),
     title: book.title,
     author: book.author || null,
+    coverUrl: book.coverUrl ?? null,
     totalPages: book.totalPages ?? null,
     currentPage: 0,
     status: "reading" as const,
@@ -193,6 +194,7 @@ async function saveBookInTx(book: LocalBook) {
     id: next.id,
     title: next.title,
     author: next.author,
+    coverUrl: next.coverUrl,
     totalPages: next.totalPages,
     currentPage: next.currentPage,
     status: next.status,
@@ -205,7 +207,10 @@ async function saveBookInTx(book: LocalBook) {
   return next;
 }
 
-export async function addBook(challengeId: string, input: { title: string; author?: string | null; totalPages?: number | null; status?: BookStatus }) {
+export async function addBook(
+  challengeId: string,
+  input: { title: string; author?: string | null; totalPages?: number | null; coverUrl?: string | null; status?: BookStatus },
+) {
   const db = getLocalDb();
   const challenge = await requireChallenge(challengeId);
   const t = nowIso();
@@ -216,7 +221,7 @@ export async function addBook(challengeId: string, input: { title: string; autho
     participantId: challenge.myParticipantId,
     title: input.title.trim(),
     author: input.author?.trim() || null,
-    coverUrl: null,
+    coverUrl: input.coverUrl ?? null,
     totalPages: input.totalPages ?? null,
     currentPage: 0,
     status,
@@ -232,7 +237,7 @@ export async function addBook(challengeId: string, input: { title: string; autho
   return saved;
 }
 
-export async function updateBook(bookId: string, patch: Partial<Pick<BookDTO, "title" | "author" | "totalPages" | "currentPage" | "status">>) {
+export async function updateBook(bookId: string, patch: Partial<Pick<BookDTO, "title" | "author" | "coverUrl" | "totalPages" | "currentPage" | "status">>) {
   const db = getLocalDb();
   const book = await db.books.get(bookId);
   if (!book) return;
@@ -244,6 +249,7 @@ export async function updateBook(bookId: string, patch: Partial<Pick<BookDTO, "t
   }
   if (patch.status && patch.status !== "completed") next.completedAt = null;
   if (patch.status === "reading" && !book.startedAt) next.startedAt = t;
+  if (next.totalPages && next.currentPage > next.totalPages) next.currentPage = next.totalPages;
   await db.transaction("rw", [db.books, db.syncQueue], () => saveBookInTx(next));
   notify();
 }

@@ -4,6 +4,7 @@ import {
   bookAuthor,
   bookStatus,
   bookTitle,
+  coverUrl,
   challengeName,
   dateKey,
   description,
@@ -23,6 +24,8 @@ export const bookFields = z.object({
   id: id("bk"),
   title: bookTitle,
   author: bookAuthor.nullable().optional(),
+  /** Omitted by older clients: the server then keeps the stored cover. */
+  coverUrl: coverUrl.nullable().optional(),
   totalPages: pageCount.nullable().optional(),
   currentPage: z.number().int().min(0).max(20_000).default(0),
   status: bookStatus,
