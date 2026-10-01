@@ -1,98 +1,83 @@
 @import "tailwindcss";
 
 /*
- * Still Reading design tokens. Semantic colours are CSS variables so dark mode is a variable swap;
- * Tailwind utilities (bg-paper, text-ink, …) are generated from them via @theme inline.
+ * Still Reading design tokens.
+ * Warm paper canvas, ink-black actions, and a soft pastel family used for heroes, rings and
+ * progress. Light theme only: the pastel palette is the product's identity.
  */
 :root {
-  --paper: #fbf6ee;
-  --paper-2: #f4ecdf;
-  --card: #fffdf9;
-  --ink: #221b16;
-  --ink-2: #4a3f36;
-  --muted: #74675b;
-  --line: #e7dccb;
-  --accent: #c6532a;
-  --accent-ink: #ffffff;
-  --accent-soft: #f8e1d5;
-  --success: #2f6b4f;
-  --success-soft: #dcefe3;
-  --warn: #9a6a00;
-  --warn-soft: #fbefcd;
-  --danger: #b3261e;
-  --danger-soft: #f9dedc;
-  --streak: #e0711c;
-  --focus: #1f5fbf;
-  --shadow-color: 36 24% 20%;
-}
+  color-scheme: light;
+  --paper: #f6f2ea;
+  --surface: #ffffff;
+  --surface-2: #f2eee6;
+  --ink: #111111;
+  --ink-2: #3b3a38;
+  --muted: #8b877f;
+  --line: #e6e0d5;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #17130f;
-    --paper-2: #211b16;
-    --card: #231d18;
-    --ink: #f6eee3;
-    --ink-2: #ddd1c3;
-    --muted: #b3a493;
-    --line: #3a3029;
-    --accent: #ef7a4c;
-    --accent-ink: #1c120c;
-    --accent-soft: #43261a;
-    --success: #7fcca3;
-    --success-soft: #1d3428;
-    --warn: #f0c35a;
-    --warn-soft: #3a2f12;
-    --danger: #ff8a80;
-    --danger-soft: #3d1a17;
-    --streak: #ff9a4d;
-    --focus: #8ab4ff;
-    --shadow-color: 0 0% 0%;
-  }
+  --butter: #f6dd8b;
+  --sage: #abc07f;
+  --blush: #f4bbd9;
+  --lavender: #c8c7fb;
+  --sky: #bdd3f4;
+  --honey: #e3b23c;
+
+  --signal: #ff4b36;
+  --good: #3f7d4e;
+  --warn: #9a6a00;
+  --focus: #3b5bdb;
 }
 
 @theme inline {
   --color-paper: var(--paper);
-  --color-paper-2: var(--paper-2);
-  --color-card: var(--card);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-muted: var(--muted);
   --color-line: var(--line);
-  --color-accent: var(--accent);
-  --color-accent-ink: var(--accent-ink);
-  --color-accent-soft: var(--accent-soft);
-  --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
+  --color-butter: var(--butter);
+  --color-sage: var(--sage);
+  --color-blush: var(--blush);
+  --color-lavender: var(--lavender);
+  --color-sky: var(--sky);
+  --color-honey: var(--honey);
+  --color-signal: var(--signal);
+  --color-good: var(--good);
   --color-warn: var(--warn);
-  --color-warn-soft: var(--warn-soft);
-  --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
-  --color-streak: var(--streak);
   --color-focus: var(--focus);
 
-  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  --radius-card: 1.25rem;
+  --radius-sheet: 2.25rem;
+  --radius-card: 1.5rem;
   --radius-pill: 999px;
-  --radius-field: 0.875rem;
 
-  --shadow-card: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 4px 16px hsl(var(--shadow-color) / 0.06);
-  --shadow-float: 0 8px 28px hsl(var(--shadow-color) / 0.18);
+  --shadow-soft: 0 1px 2px rgb(17 17 17 / 0.04), 0 8px 24px rgb(17 17 17 / 0.05);
+  --shadow-float: 0 12px 40px rgb(17 17 17 / 0.22);
 
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
-  --animate-rise: rise 320ms var(--ease-out-soft) both;
-  --animate-pop: pop 380ms var(--ease-out-soft) both;
+  --animate-rise: rise 520ms var(--ease-out-soft) both;
+  --animate-pop: pop 420ms var(--ease-out-soft) both;
+  --animate-fade: fade 600ms ease-out both;
 }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes pop {
-  0% { transform: scale(0.85); opacity: 0; }
-  60% { transform: scale(1.06); opacity: 1; }
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); opacity: 1; }
   100% { transform: scale(1); }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes draw {
+  from { stroke-dashoffset: var(--len); }
+  to { stroke-dashoffset: 0; }
 }
 
 @layer base {
@@ -104,17 +89,54 @@
     background: var(--paper);
     color: var(--ink);
     font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
     min-height: 100dvh;
     overflow-x: hidden;
   }
   :focus-visible {
-    outline: 3px solid var(--focus);
-    outline-offset: 2px;
-    border-radius: 6px;
+    outline: 2.5px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 10px;
   }
-  .tabular {
-    font-variant-numeric: tabular-nums;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+/* Display type: tight, medium-weight grotesk like the reference work. */
+@utility display {
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+@utility headline {
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+@utility eyebrow {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+/* Dotted divider used between list rows. */
+@utility dotted {
+  background-image: radial-gradient(circle, var(--line) 1px, transparent 1.4px);
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
+  background-position: bottom;
+}
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
+}
+
+/* Leave room for the floating nav when it is on the page. */
+body:has([data-bottom-nav]) [data-powered-by] {
+  padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -129,5 +151,6 @@
 }
 
 dialog::backdrop {
-  background: rgb(20 14 10 / 0.45);
+  background: rgb(17 17 17 / 0.35);
+  backdrop-filter: blur(4px);
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useChallenge } from "@/components/challenge/context";
 import { InviteActions } from "@/components/challenge/invite-actions";
 import { GoalSelector, isGoalValid } from "@/components/goals/goal-selector";
+import { Hero } from "@/components/challenge/hero";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, Eyebrow } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { archiveChallenge, leaveChallenge, removeParticipant, setGoal, updateCha
 
 function Saved({ show }: { show: boolean }) {
   return show ? (
-    <span className="text-sm font-semibold text-success" role="status">
+    <span className="text-sm font-medium text-good" role="status">
       Saved ✓
     </span>
   ) : null;
@@ -48,8 +49,11 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="font-display text-3xl font-semibold">Settings</h1>
+    <>
+      <Hero tone="paper" title="Settings" subtitle={challenge.name} back={{ href: `/c/${challenge.id}`, label: "Back to challenge" }}>
+        <h1 className="display px-5 pb-2 pt-8 text-[56px]">Settings</h1>
+      </Hero>
+      <div className="space-y-3 px-5 pt-4">
 
       <Card className="space-y-4">
         <Eyebrow>Your profile</Eyebrow>
@@ -140,10 +144,10 @@ export default function SettingsPage() {
           </form>
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink-2">Participants</p>
-            <ul className="divide-y divide-line">
+            <p className="text-sm font-medium text-ink-2">Participants</p>
+            <ul>
               {view.members.map((m) => (
-                <li key={m.participant.id} className="flex items-center gap-3 py-2.5">
+                <li key={m.participant.id} className="dotted flex items-center gap-3 py-3">
                   <Avatar name={m.participant.displayName} id={m.participant.id} size="sm" />
                   <span className="min-w-0 flex-1 truncate">{m.participant.displayName}</span>
                   {m.participant.id !== me.participant.id ? (
@@ -157,7 +161,7 @@ export default function SettingsPage() {
                       </Button>
                     )
                   ) : (
-                    <span className="text-xs font-semibold text-muted">Host (you)</span>
+                    <span className="text-xs text-muted">Host (you)</span>
                   )}
                 </li>
               ))}
@@ -212,13 +216,14 @@ export default function SettingsPage() {
       ) : null}
 
       <Notice>
-        <p className="font-semibold">About your data</p>
+        <p className="font-medium text-ink">About your data</p>
         <p className="mt-1">
           Still Reading doesn&apos;t use accounts. Your progress lives on this device and is shared with this challenge&apos;s members: your name, books, goal,
           reading amounts, streak and shared reflections. Private reflections never leave this device. If you clear browser data or lose this device, your
           local profile may not be recoverable.
         </p>
       </Notice>
-    </div>
+      </div>
+    </>
   );
 }

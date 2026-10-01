@@ -48,3 +48,28 @@ export function amountSummary(totals: Record<"pages" | "chapters" | "minutes", n
   const parts = (["pages", "chapters", "minutes"] as const).filter((u) => totals[u] > 0).map((u) => `${totals[u].toLocaleString("en-US")} ${unitLabel(u, totals[u])}`);
   return parts.length ? parts.join(" · ") : "—";
 }
+
+/** The small banner above heroes (reference: "Wow! 25 days without a break"). */
+export function streakBanner(p: ParticipantProgress, crewStreaks: number[], durationDays: number): { title: string; sub: string } {
+  const phase = p.clock.phase;
+  if (phase === "upcoming") return { title: `Starts in ${p.clock.startsInDays} day${p.clock.startsInDays === 1 ? "" : "s"}`, sub: "Invite your crew while you wait" };
+  if (phase === "ended") return { title: `You showed up for ${p.readingDays} day${p.readingDays === 1 ? "" : "s"}`, sub: `Longest streak: ${p.streak.longest} day${p.streak.longest === 1 ? "" : "s"}` };
+  const n = p.streak.current;
+  if (n >= 2) {
+    const others = crewStreaks.length;
+    const behind = crewStreaks.filter((s) => s < n).length;
+    const pct = others ? Math.round((behind / others) * 100) : 0;
+    return { title: `Wow! ${n} days without a break`, sub: pct > 0 ? `You're ahead of ${pct}% of your crew` : "Keep the chain going" };
+  }
+  if (n === 1) return { title: "Day one of a new streak", sub: "Come back tomorrow to make it two" };
+  if (p.missedYesterday && !p.today.read) return { title: "You missed yesterday. That's okay.", sub: "Start again today" };
+  return { title: `Day ${p.clock.dayNumber} of ${durationDays}`, sub: p.today.read ? "Nice work showing up today" : "A few pages is all it takes" };
+}
+
+export function greeting(now = new Date()): string {
+  const h = now.getHours();
+  if (h < 5) return "Still up";
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}

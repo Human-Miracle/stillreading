@@ -5,6 +5,7 @@ import { InviteActions } from "@/components/challenge/invite-actions";
 import { ProfileSteps, StepHeader } from "@/components/challenge/profile-steps";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
+import { Icon } from "@/components/ui/icons";
 import { Notice, Wordmark } from "@/components/ui/misc";
 import { Segmented } from "@/components/ui/segmented";
 import { track } from "@/lib/analytics";
@@ -78,10 +79,10 @@ function CreateFlow() {
   };
 
   return (
-    <main className="mx-auto min-h-dvh max-w-lg px-4 pb-12 pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <nav className="mb-8 flex items-center justify-between">
+    <main className="mx-auto max-w-[440px] px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <nav className="mb-8 flex items-center justify-between py-2">
         <Link href="/" aria-label="Still Reading home">
-          <Wordmark className="text-2xl" />
+          <Wordmark className="text-[19px]" />
         </Link>
       </nav>
 
@@ -127,7 +128,7 @@ function CreateFlow() {
             )}
           </Field>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink-2" id="duration-label">
+            <p className="text-sm font-medium text-ink-2" id="duration-label">
               Duration
             </p>
             <Segmented
@@ -173,17 +174,17 @@ function CreateFlow() {
       ) : null}
 
       {stage === "done" && created ? (
-        <section className="animate-rise space-y-6 pt-6 text-center">
-          <div className="text-6xl animate-pop" aria-hidden>
-            🎉
+        <section className="animate-rise space-y-6 pt-4">
+          <div className="grid size-20 animate-pop place-items-center rounded-full bg-butter" aria-hidden>
+            <Icon.check className="size-9" strokeWidth={2} />
           </div>
-          <h1 className="font-display text-4xl font-semibold">Your challenge is ready</h1>
-          <p className="text-lg text-ink-2">Invite your friends. The more people show up, the easier it gets.</p>
-          <div className="text-left">
+          <h1 className="display text-[52px]">Your challenge is ready</h1>
+          <p className="text-[17px] text-ink/60">Invite your friends. The more people show up, the easier it gets.</p>
+          <div>
             <InviteActions joinCode={created.challenge.joinCode} challengeName={created.challenge.name} challengeId={created.challenge.id} />
           </div>
           <Button variant="secondary" full size="lg" onClick={() => router.push(`/c/${created.challenge.id}`)}>
-            Go to my challenge →
+            Go to my challenge
           </Button>
         </section>
       ) : null}

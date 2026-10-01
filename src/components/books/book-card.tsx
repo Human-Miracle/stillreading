@@ -4,58 +4,61 @@ import type { LocalBook } from "@/local/db";
 import { removeBook, updateBook } from "@/local/repo";
 import { Button } from "../ui/button";
 import { ProgressBar } from "../ui/progress";
+import { BookCover } from "./book-cover";
 
-const STATUS_LABEL = { planned: "Up next", reading: "Reading", completed: "Finished", abandoned: "Set aside" } as const;
+export const STATUS_LABEL = { planned: "Up next", reading: "Reading", completed: "Finished", abandoned: "Set aside" } as const;
 
-export function BookCard({ book, editable }: { book: LocalBook; editable: boolean }) {
+/** Book details + actions, shown inside a sheet. */
+export function BookDetails({ book, editable, onDone }: { book: LocalBook; editable: boolean; onDone?: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const pct = book.totalPages ? (book.currentPage / book.totalPages) * 100 : null;
+  const act = async (fn: () => Promise<void>) => {
+    await fn();
+    onDone?.();
+  };
   return (
-    <li className="rounded-card border border-line/60 bg-card p-4 shadow-card">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-display text-lg font-semibold leading-snug">{book.title}</p>
-          {book.author ? <p className="text-sm text-muted">{book.author}</p> : null}
+    <div className="space-y-5">
+      <div className="flex gap-4">
+        <BookCover book={book} className="w-24 shrink-0" />
+        <div className="min-w-0 pt-1">
+          <p className="eyebrow">{STATUS_LABEL[book.status]}</p>
+          <p className="headline mt-1 text-[24px]">{book.title}</p>
+          {book.author ? <p className="mt-1 text-sm text-muted">{book.author}</p> : null}
         </div>
-        <span className={book.status === "completed" ? "rounded-pill bg-success-soft px-2.5 py-1 text-xs font-bold text-success" : "rounded-pill bg-paper-2 px-2.5 py-1 text-xs font-bold text-muted"}>
-          {STATUS_LABEL[book.status]}
-        </span>
       </div>
       {pct !== null ? (
-        <div className="mt-3 space-y-1">
-          <ProgressBar value={pct} label={`${book.title} progress`} tone={book.status === "completed" ? "success" : "accent"} />
-          <p className="text-xs text-muted tabular">
+        <div className="space-y-1.5">
+          <ProgressBar value={pct} label={`${book.title} progress`} tint={book.status === "completed" ? "sage" : "lavender"} />
+          <p className="text-xs tabular text-muted">
             Page {book.currentPage} of {book.totalPages}
           </p>
         </div>
       ) : null}
       {editable ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           {book.status !== "completed" ? (
-            <Button size="sm" variant="secondary" onClick={() => void updateBook(book.id, { status: "completed" })}>
-              Mark finished 🎉
-            </Button>
+            <Button onClick={() => act(() => updateBook(book.id, { status: "completed" }))}>Mark finished</Button>
           ) : (
-            <Button size="sm" variant="ghost" onClick={() => void updateBook(book.id, { status: "reading" })}>
+            <Button variant="secondary" onClick={() => act(() => updateBook(book.id, { status: "reading" }))}>
               Still reading
             </Button>
           )}
           {book.status === "planned" ? (
-            <Button size="sm" variant="ghost" onClick={() => void updateBook(book.id, { status: "reading" })}>
+            <Button variant="secondary" onClick={() => act(() => updateBook(book.id, { status: "reading" }))}>
               Start reading
             </Button>
           ) : null}
           {confirming ? (
-            <Button size="sm" variant="danger" onClick={() => void removeBook(book.id)}>
+            <Button variant="danger" onClick={() => act(() => removeBook(book.id))}>
               Remove for sure?
             </Button>
           ) : (
-            <Button size="sm" variant="ghost" onClick={() => setConfirming(true)}>
+            <Button variant="ghost" onClick={() => setConfirming(true)}>
               Remove
             </Button>
           )}
         </div>
       ) : null}
-    </li>
+    </div>
   );
 }

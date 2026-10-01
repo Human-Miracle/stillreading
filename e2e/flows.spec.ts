@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createChallenge, join, logReading, waitForSynced } from "./helpers";
+import { createChallenge, expectToday, join, logReading, waitForSynced } from "./helpers";
 
 test("Flow A: create → copy link → join → goal → check-in", async ({ browser }) => {
   const hostCtx = await browser.newContext();
@@ -15,14 +15,15 @@ test("Flow A: create → copy link → join → goal → check-in", async ({ bro
   await join(friend, inviteUrl, "David", { goal: "Minutes", book: "Deep Work" });
 
   await logReading(friend, 25, "Attention residue is real.");
-  await expect(friend.getByText("25 / 30 minutes")).toBeVisible();
+  await expectToday(friend, 25, "of 30 minutes today");
   await waitForSynced(friend);
 
   // The host sees the new member and their check-in.
   await host.reload();
-  await expect(host.getByText("David")).toBeVisible();
+  await expect(host.getByRole("link", { name: /David/ }).first()).toBeVisible();
   await host.getByRole("link", { name: "Feed" }).click();
   await expect(host.getByText("Attention residue is real.")).toBeVisible();
+  await expect(host.getByText("Powered by Pursion")).toBeVisible();
   await hostCtx.close();
   await friendCtx.close();
 });
@@ -38,20 +39,20 @@ test("Flow B: offline check-in survives reload and syncs once on reconnect", asy
   // Make sure the service worker controls the page and has cached it.
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
-  await expect(page.getByText("Your daily goal")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your reading crew" })).toBeVisible();
   const url = page.url();
 
   await ctx.setOffline(true);
   const { offline } = await logReading(page, 17, "Read on the train");
   expect(offline).toBe(true);
   await expect(page.getByText("You're offline.")).toBeVisible();
-  await expect(page.getByText("17 / 20 pages")).toBeVisible();
+  await expectToday(page, 17, "of 20 pages today");
 
   // Close and reopen the app while still offline.
   await page.close();
   const reopened = await ctx.newPage();
   await reopened.goto(url);
-  await expect(reopened.getByText("17 / 20 pages")).toBeVisible();
+  await expectToday(reopened, 17, "of 20 pages today");
   await expect(reopened.getByRole("status").filter({ hasText: /Offline/ })).toBeVisible();
 
   await ctx.setOffline(false);
@@ -60,7 +61,7 @@ test("Flow B: offline check-in survives reload and syncs once on reconnect", asy
 
   await host.goto(`${challengeUrl}/feed`);
   await expect(host.getByText("Read on the train")).toHaveCount(1);
-  await expect(host.getByText("17 pages")).toHaveCount(1);
+  await expect(host.getByRole("listitem").filter({ hasText: "17 pages" })).toHaveCount(1);
   await hostCtx.close();
   await ctx.close();
 });
@@ -93,8 +94,10 @@ test("Flow C: multiple participants → feed → reactions → stats", async ({ 
 
   await host.goto(`${challengeUrl}/stats`);
   await expect(host.getByText("Participants").locator("..")).toContainText("3");
-  await expect(host.getByText("45 pages")).toBeVisible();
-  await expect(host.getByText("Most pages").locator("..")).toContainText("Jessica — 20 pages");
+  await expect(host.getByLabel("45 pages read together")).toBeVisible();
+  const mostPages = host.locator("section").filter({ hasText: "Most pages" }).last();
+  await expect(mostPages).toContainText("20");
+  await expect(mostPages).toContainText("Jessica");
   for (const c of ctxs) await c.close();
   await hostCtx.close();
 });

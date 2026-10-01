@@ -26,12 +26,14 @@ export function ReactionBar({ challengeId, sessionId, reactions, myParticipantId
               if (!mine) track("reaction_added", { challengeId, props: { type } });
             }}
             className={cn(
-              "inline-flex min-h-10 min-w-12 items-center justify-center gap-1 rounded-pill border px-3 text-sm font-semibold tabular transition-colors active:scale-95",
-              mine ? "border-accent/60 bg-accent-soft text-ink" : "border-line bg-card text-muted hover:border-muted/50",
-              !of.length && !mine && "opacity-70",
+              "inline-flex h-9 min-w-11 items-center justify-center gap-1 rounded-pill px-3 text-[13px] font-medium tabular transition-all active:scale-90",
+              mine ? "bg-ink text-white" : "bg-surface-2 text-ink/60 hover:bg-line",
+              !of.length && !mine && "grayscale-[0.6] opacity-70",
             )}
           >
-            <span aria-hidden>{REACTION_EMOJI[type]}</span>
+            <span aria-hidden className="text-[15px]">
+              {REACTION_EMOJI[type]}
+            </span>
             {of.length ? <span>{of.length}</span> : null}
           </button>
         );

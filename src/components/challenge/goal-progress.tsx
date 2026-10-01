@@ -1,27 +1,33 @@
-import { describeGoal, formatAmount } from "@/lib/domain/goals";
+import { describeGoal, unitLabel } from "@/lib/domain/goals";
 import { paceCopy } from "@/lib/copy";
 import type { MemberView } from "@/local/hooks";
 import { Card, Eyebrow } from "../ui/card";
-import { ProgressRing } from "../ui/progress";
+import { ProgressBar, type Tint } from "../ui/progress";
 
-export function GoalProgress({ me, title = "Your challenge goal" }: { me: MemberView; title?: string }) {
+export function GoalProgress({ me, title = "Challenge goal", tint = "lavender" }: { me: MemberView; title?: string; tint?: Tint }) {
   const goal = me.goal;
   const g = me.progress.goal;
   if (!goal || !g) return null;
   const pace = paceCopy(goal, g.pace);
   return (
-    <Card className="flex items-center gap-5">
-      <ProgressRing value={g.percent.display} label="Challenge goal" tone={g.pace.status === "complete" ? "success" : "accent"} size={104}>
-        <span className="font-display text-2xl font-semibold tabular">{g.percent.display}%</span>
-      </ProgressRing>
-      <div className="min-w-0 flex-1 space-y-1">
+    <Card className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
         <Eyebrow>{title}</Eyebrow>
-        <p className="font-display text-2xl font-semibold tabular">
-          {g.actual.toLocaleString("en-US")} <span className="text-lg text-muted">/ {formatAmount(g.target, goal.targetUnit)}</span>
+        <span className="text-xs text-muted">{describeGoal(goal)}</span>
+      </div>
+      <div className="flex items-end justify-between gap-3">
+        <p className="display text-[56px] tabular">
+          {g.actual.toLocaleString("en-US")}
+          <span className="ml-1.5 text-lg tracking-[-0.02em] text-muted">
+            / {g.target.toLocaleString("en-US")} {unitLabel(goal.targetUnit, g.target)}
+          </span>
         </p>
-        <p className="text-sm text-muted">{describeGoal(goal)}</p>
-        <p className="pt-1 font-semibold">{pace.headline}</p>
-        {pace.detail ? <p className="text-sm text-ink-2">{pace.detail}</p> : null}
+        <p className="display pb-1 text-2xl tabular">{g.percent.display}%</p>
+      </div>
+      <ProgressBar value={g.percent.display} label={title} tint={g.pace.status === "complete" ? "sage" : tint} />
+      <div>
+        <p className="font-medium tracking-[-0.01em]">{pace.headline}</p>
+        {pace.detail ? <p className="mt-0.5 text-sm text-ink/60">{pace.detail}</p> : null}
       </div>
     </Card>
   );

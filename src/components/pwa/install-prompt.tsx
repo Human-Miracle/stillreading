@@ -3,7 +3,6 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { track } from "@/lib/analytics";
 import { getPref, setPref } from "@/local/device";
 import { Button } from "../ui/button";
-import { Card } from "../ui/card";
 import { canPromptInstall, isIos, isStandalone, promptInstall, subscribeInstall } from "./install-state";
 
 /** Contextual install card: only after a successful join/create, and only until dismissed. */
@@ -33,18 +32,18 @@ export function InstallPrompt() {
   };
 
   return (
-    <Card className="animate-rise border-accent/30 bg-accent-soft/60">
-      <p className="font-display text-xl font-semibold">Want Still Reading on your home screen?</p>
-      {canPrompt ? (
-        <p className="mt-1 text-ink-2">Open your challenge in one tap, even offline.</p>
-      ) : (
-        <p className="mt-1 text-ink-2">
-          Tap <span className="font-semibold">Share</span> <span aria-hidden>⬆︎</span> then <span className="font-semibold">Add to Home Screen</span>.
-        </p>
-      )}
+    <section className="animate-rise rounded-[1.75rem] bg-lavender px-5 pb-5 pt-4">
+      <p className="eyebrow text-ink/55">Install</p>
+      <p className="mt-1.5 text-[17px] leading-snug tracking-[-0.015em]">
+        Want Still Reading on your home screen?{" "}
+        <span className="text-ink/60">
+          {canPrompt ? "Open your challenge in one tap, even offline." : "Tap Share, then Add to Home Screen."}
+        </span>
+      </p>
       <div className="mt-4 flex gap-2">
         {canPrompt ? (
           <Button
+            size="sm"
             onClick={async () => {
               await promptInstall();
               await dismiss();
@@ -53,10 +52,10 @@ export function InstallPrompt() {
             Install Still Reading
           </Button>
         ) : null}
-        <Button variant="ghost" onClick={dismiss}>
+        <Button size="sm" variant="glass" onClick={dismiss}>
           {canPrompt ? "Maybe later" : "Got it"}
         </Button>
       </div>
-    </Card>
+    </section>
   );
 }

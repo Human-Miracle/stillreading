@@ -1,90 +1,93 @@
 "use client";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useChallenge } from "@/components/challenge/context";
+import { DayRing } from "@/components/challenge/day-ring";
 import { GoalProgress } from "@/components/challenge/goal-progress";
-import { StreakBadge } from "@/components/challenge/streak-badge";
-import { ReadingFeedItem } from "@/components/feed/reading-feed";
-import { DayGrid } from "@/components/people/day-grid";
-import { Avatar } from "@/components/ui/avatar";
-import { Card, Eyebrow } from "@/components/ui/card";
+import { Hero, type HeroTone } from "@/components/challenge/hero";
+import { StreakBanner } from "@/components/challenge/streak-banner";
+import { ReadingFeed } from "@/components/feed/reading-feed";
+import { Avatar, tintFor } from "@/components/ui/avatar";
+import { ButtonLink } from "@/components/ui/button";
+import { Card, Eyebrow, PageSheet } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/misc";
-import { amountSummary } from "@/lib/copy";
+import { amountSummary, streakBanner } from "@/lib/copy";
+
+const HERO_FOR: Record<string, HeroTone> = { butter: "honey", sage: "sky", blush: "blush", lavender: "lavender", sky: "sky" };
 
 export default function ParticipantPage() {
   const { participantId } = useParams<{ participantId: string }>();
   const { view } = useChallenge();
   const member = view.members.find((m) => m.participant.id === participantId);
+  const back = { href: `/c/${view.challenge.id}/people`, label: "Back to people" };
   if (!member) {
     return (
-      <EmptyState title="This reader isn't in the challenge anymore" icon="👋">
-        <Link href={`/c/${view.challenge.id}/people`} className="font-semibold text-accent">
-          Back to people
-        </Link>
-      </EmptyState>
+      <>
+        <Hero tone="paper" title="Reader" back={back} />
+        <div className="px-5 pt-8">
+          <EmptyState title="This reader isn't in the challenge anymore">
+            <ButtonLink href={back.href} size="sm" className="mt-3">
+              Back to people
+            </ButtonLink>
+          </EmptyState>
+        </div>
+      </>
     );
   }
   const p = member.progress;
-  const recent = view.feed.filter((s) => s.participantId === participantId).slice(0, 10);
+  const isMe = member.participant.id === view.challenge.myParticipantId;
+  const others = view.members.filter((m) => m !== member).map((m) => m.progress.streak.current);
+  const banner = streakBanner(p, others, view.challenge.durationDays);
+  const sessions = view.feed.filter((s) => s.participantId === participantId);
 
   return (
-    <div className="space-y-4">
-      <Link href={`/c/${view.challenge.id}/people`} className="text-sm font-semibold text-muted">
-        ← People
-      </Link>
-      <header className="flex items-center gap-4">
-        <Avatar name={member.participant.displayName} id={member.participant.id} size="lg" />
-        <div>
-          <h1 className="font-display text-3xl font-semibold">{member.participant.displayName}</h1>
-          <div className="mt-1">
-            {p.streak.current > 0 ? <StreakBadge days={p.streak.current} /> : <span className="text-sm text-muted">No streak right now</span>}
+    <>
+      <Hero tone={HERO_FOR[tintFor(member.participant.id)] ?? "lavender"} title={member.participant.displayName} subtitle={isMe ? "You" : view.challenge.name} back={back} className="pb-14">
+        <div className="px-5 pt-6">
+          <div className="flex items-center gap-4">
+            <Avatar name={member.participant.displayName} id={member.participant.id} size="xl" className="ring-4 ring-white/60" />
+            <div className="min-w-0">
+              <h1 className="display truncate text-[44px]">{member.participant.displayName}</h1>
+              <p className="mt-1 truncate text-ink/60">{member.currentBook ? `Reading ${member.currentBook.title}` : "No book yet"}</p>
+            </div>
+          </div>
+          <StreakBanner className="mt-6" title={
+              isMe
+                ? banner.title
+                : p.streak.current >= 2
+                  ? `${p.streak.current} days without a break`
+                  : p.streak.current === 1
+                    ? "Day one of a new streak"
+                    : "No streak right now"
+            } sub={isMe ? banner.sub : p.today.read ? `${amountSummary(p.today.totals)} today` : "Hasn't checked in yet today"} />
+          <div className="pt-4">
+            <DayRing progress={p} durationDays={view.challenge.durationDays} size={280}>
+              <div>
+                <p className="display text-[72px] tabular">{p.readingDays}</p>
+                <p className="mt-1 text-sm text-ink/55">reading days of {p.days.length}</p>
+              </div>
+            </DayRing>
           </div>
         </div>
-      </header>
-
-      <Card className="space-y-1">
-        <Eyebrow>Reading now</Eyebrow>
-        <p className="font-display text-xl font-semibold">{member.currentBook?.title ?? "No book yet"}</p>
-        {member.currentBook?.author ? <p className="text-sm text-muted">{member.currentBook.author}</p> : null}
-        <p className="pt-2 text-ink-2">{p.today.read ? `${amountSummary(p.today.totals)} today` : "Hasn't checked in yet today"}</p>
-      </Card>
-
-      <GoalProgress me={member} title="Goal" />
-
-      <div className="grid grid-cols-2 gap-3">
-        <Card pad="sm">
-          <Eyebrow>Reading days</Eyebrow>
-          <p className="mt-1 font-display text-3xl font-semibold tabular">
-            {p.readingDays}
-            <span className="text-lg text-muted"> / {p.days.length}</span>
-          </p>
-        </Card>
-        <Card pad="sm">
-          <Eyebrow>Longest streak</Eyebrow>
-          <p className="mt-1 font-display text-3xl font-semibold tabular">
-            {p.streak.longest}
-            <span className="text-lg text-muted"> day{p.streak.longest === 1 ? "" : "s"}</span>
-          </p>
-        </Card>
-      </div>
-
-      <Card>
-        <Eyebrow className="mb-3">Challenge days</Eyebrow>
-        <DayGrid progress={p} durationDays={view.challenge.durationDays} />
-      </Card>
-
-      <section className="space-y-3">
-        <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Recent reading</h2>
-        {recent.length ? (
-          <ul className="space-y-3">
-            {recent.map((s) => (
-              <ReadingFeedItem key={s.id} view={view} session={s} />
-            ))}
-          </ul>
-        ) : (
-          <EmptyState title="No check-ins yet" />
-        )}
-      </section>
-    </div>
+      </Hero>
+      <PageSheet className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Card tone="muted" pad="sm">
+            <Eyebrow>Longest streak</Eyebrow>
+            <p className="display mt-2 text-[40px] tabular">{p.streak.longest}</p>
+            <p className="text-xs text-muted">day{p.streak.longest === 1 ? "" : "s"}</p>
+          </Card>
+          <Card tone="muted" pad="sm">
+            <Eyebrow>Consistency</Eyebrow>
+            <p className="display mt-2 text-[40px] tabular">{p.consistency.display}%</p>
+            <p className="text-xs text-muted">{p.goalDays} goal days</p>
+          </Card>
+        </div>
+        <GoalProgress me={member} title="Goal" tint={tintFor(member.participant.id)} />
+        <div className="pt-2">
+          <h2 className="headline mb-1 text-[22px]">Recent reading</h2>
+          {sessions.length ? <ReadingFeed view={view} sessions={sessions.slice(0, 20)} showEmpty={false} /> : <EmptyState title="No check-ins yet" />}
+        </div>
+      </PageSheet>
+    </>
   );
 }

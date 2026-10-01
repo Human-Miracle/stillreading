@@ -24,85 +24,79 @@ export async function renderShareCard(data: ShareCardData): Promise<Blob> {
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas not supported");
+  const font = cssVar("--font-geist", "system-ui, sans-serif");
+  const spacing = (px: number) => {
+    (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${px}px`;
+  };
 
-  const display = cssVar("--font-fraunces", "Georgia, serif");
-  const sans = cssVar("--font-inter", "system-ui, sans-serif");
-
-  // Background
-  ctx.fillStyle = "#fbf6ee";
+  // Golden gradient hero fading to white (reference: the activity screen).
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#b77b09");
+  g.addColorStop(0.35, "#d9a535");
+  g.addColorStop(0.6, "#f2dca2");
+  g.addColorStop(0.8, "#ffffff");
+  ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = "#f8e1d5";
-  ctx.beginPath();
-  ctx.arc(W - 120, 160, 360, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#c6532a";
-  ctx.fillRect(0, H - 24, W, 24);
 
-  // Wordmark
-  ctx.textBaseline = "alphabetic";
-  ctx.font = `700 76px ${display}`;
-  ctx.fillStyle = "#221b16";
-  ctx.fillText("Still ", 90, 170);
-  const stillW = ctx.measureText("Still ").width;
-  ctx.fillStyle = "#c6532a";
-  ctx.fillText("Reading", 90 + stillW, 170);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.font = `500 40px ${font}`;
+  spacing(-0.5);
+  ctx.fillText(data.challengeName, W / 2, 150);
 
-  // Headline
-  ctx.fillStyle = "#221b16";
-  ctx.font = `600 64px ${display}`;
-  wrap(ctx, `I completed ${data.challengeName}.`, 90, 330, W - 180, 76);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `500 380px ${font}`;
+  spacing(-18);
+  ctx.fillText(String(data.readingDays), W / 2, 530);
 
-  // Stats
-  const rows: [string, string][] = [
-    [`${data.readingDays}`, `reading day${data.readingDays === 1 ? "" : "s"} of ${data.durationDays}`],
-    [data.totalsLine, ""],
-    [`${data.books}`, `book${data.books === 1 ? "" : "s"} finished`],
-    [`${data.longestStreak}`, `day longest streak 🔥`],
+  ctx.font = `500 46px ${font}`;
+  spacing(-1);
+  ctx.fillText(`days I showed up, of ${data.durationDays}`, W / 2, 620);
+
+  // Frosted tiles
+  const tiles: [string, string][] = [
+    ["Read", data.totalsLine.split(" · ")[0] ?? data.totalsLine],
+    ["Books", String(data.books)],
+    ["Best streak", `${data.longestStreak} days`],
   ];
-  let y = 600;
-  for (const [big, small] of rows) {
-    ctx.font = `600 84px ${display}`;
-    ctx.fillStyle = "#221b16";
-    ctx.fillText(big, 90, y);
-    if (small) {
-      const w = ctx.measureText(big).width;
-      ctx.font = `500 40px ${sans}`;
-      ctx.fillStyle = "#4a3f36";
-      ctx.fillText(small, 90 + w + 22, y);
-    }
-    y += 130;
-  }
+  const tw = 290;
+  const gap = 25;
+  const x0 = (W - (tw * 3 + gap * 2)) / 2;
+  tiles.forEach(([label, value], i) => {
+    const x = x0 + i * (tw + gap);
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    roundRect(ctx, x, 720, tw, 170, 36);
+    ctx.fill();
+    ctx.fillStyle = "rgba(17,17,17,0.55)";
+    ctx.font = `500 30px ${font}`;
+    spacing(0);
+    ctx.fillText(label, x + tw / 2, 785);
+    ctx.fillStyle = "#111111";
+    ctx.font = `500 46px ${font}`;
+    spacing(-1.5);
+    ctx.fillText(value, x + tw / 2, 850);
+  });
 
   if (data.goalPercent !== null) {
-    ctx.fillStyle = "#2f6b4f";
-    roundRect(ctx, 90, y - 30, W - 180, 110, 55);
+    ctx.fillStyle = "#111111";
+    roundRect(ctx, W / 2 - 260, 960, 520, 110, 55);
     ctx.fill();
     ctx.fillStyle = "#ffffff";
-    ctx.font = `700 46px ${sans}`;
-    ctx.fillText(`${data.goalPercent}% of my goal`, 140, y + 40);
+    ctx.font = `500 44px ${font}`;
+    spacing(-1);
+    ctx.fillText(`${data.goalPercent}% of my goal`, W / 2, 1030);
   }
 
-  ctx.fillStyle = "#74675b";
-  ctx.font = `500 34px ${sans}`;
-  ctx.fillText(data.host, 90, H - 80);
+  ctx.fillStyle = "#111111";
+  ctx.font = `500 44px ${font}`;
+  spacing(-1.5);
+  ctx.fillText("Still Reading", W / 2, H - 120);
+  ctx.fillStyle = "#8b877f";
+  ctx.font = `400 30px ${font}`;
+  spacing(0);
+  ctx.fillText(`${data.host} · Powered by Pursion`, W / 2, H - 70);
 
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not render image"))), "image/png"));
-}
-
-function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) {
-  const words = text.split(" ");
-  let line = "";
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      ctx.fillText(line, x, y);
-      line = word;
-      y += lineHeight;
-    } else {
-      line = test;
-    }
-  }
-  if (line) ctx.fillText(line, x, y);
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

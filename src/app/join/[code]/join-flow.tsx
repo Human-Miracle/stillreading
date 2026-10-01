@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import { ProfileSteps } from "@/components/challenge/profile-steps";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icons";
 import { Notice, PageSkeleton, Wordmark } from "@/components/ui/misc";
+import { StreakBanner } from "@/components/challenge/streak-banner";
 import { track } from "@/lib/analytics";
 import type { JoinPreview } from "@/lib/api-types";
 import { participantDuration, todayInTimezone } from "@/lib/domain/dates";
@@ -85,10 +86,10 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
   };
 
   const shell = (children: React.ReactNode) => (
-    <main className="mx-auto min-h-dvh max-w-lg px-4 pb-12 pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <nav className="mb-8">
+    <main className="mx-auto max-w-[440px] px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <nav className="mb-8 py-2">
         <Link href="/" aria-label="Still Reading home">
-          <Wordmark className="text-2xl" />
+          <Wordmark className="text-[19px]" />
         </Link>
       </nav>
       {children}
@@ -98,15 +99,10 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
   if (errorCode && ERROR_COPY[errorCode] && stage !== "joined") {
     const copy = ERROR_COPY[errorCode]!;
     return shell(
-      <section className="animate-rise space-y-4 pt-10 text-center">
-        <div className="text-5xl" aria-hidden>
-          📕
-        </div>
-        <h1 className="font-display text-3xl font-semibold">{copy.title}</h1>
-        <p className="text-ink-2">{copy.body}</p>
-        <ButtonLink href="/" variant="secondary">
-          Back to Still Reading
-        </ButtonLink>
+      <section className="animate-rise space-y-5 pt-10">
+        <h1 className="display text-[48px]">{copy.title}</h1>
+        <p className="text-[17px] text-ink/60">{copy.body}</p>
+        <ButtonLink href="/">Back to Still Reading</ButtonLink>
       </section>,
     );
   }
@@ -116,17 +112,17 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
 
   if (stage === "joined") {
     return shell(
-      <section className="animate-rise space-y-6 pt-6">
-        <div className="text-center">
-          <div className="animate-pop text-6xl" aria-hidden>
-            🎉
+      <section className="animate-rise space-y-6 pt-4">
+        <div>
+          <div className="grid size-20 animate-pop place-items-center rounded-full bg-sage" aria-hidden>
+            <Icon.check className="size-9" strokeWidth={2} />
           </div>
-          <h1 className="mt-4 font-display text-4xl font-semibold">You&apos;re in</h1>
-          <p className="mt-2 text-lg text-ink-2">Welcome to {challenge.name}. Your reading crew is waiting.</p>
+          <h1 className="display mt-8 text-[56px]">You&apos;re in</h1>
+          <p className="mt-3 text-[17px] text-ink/60">Welcome to {challenge.name}. Your reading crew is waiting.</p>
         </div>
         <InstallPrompt />
         <Button full size="lg" onClick={() => router.push(`/c/${joinedId}`)}>
-          Open my challenge →
+          Open my challenge
         </Button>
       </section>,
     );
@@ -151,35 +147,20 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
   const others = preview.participantCount;
   return shell(
     <section className="animate-rise">
-      <Card pad="none">
-        <div className="bg-accent-soft px-6 pb-6 pt-8">
-          <p className="text-4xl" aria-hidden>
-            📚
-          </p>
-          <h1 className="mt-3 font-display text-4xl font-semibold leading-tight text-balance">{challenge.name}</h1>
-          <p className="mt-2 text-lg text-ink-2">{challenge.durationDays} days of reading together.</p>
-        </div>
-        <div className="space-y-3 px-6 py-5 text-ink-2">
-          {preview.hostName ? (
-            <p>
-              Started by <span className="font-semibold text-ink">{preview.hostName}</span>.
-            </p>
-          ) : null}
-          <p>
-            <span className="font-semibold text-ink">
-              {others} {others === 1 ? "person is" : "people are"}
-            </span>{" "}
-            already reading.
-          </p>
-          <p>
-            {formatDateKey(challenge.startDate, { month: "short", day: "numeric" })} – {formatDateKey(challenge.endDate, { month: "short", day: "numeric", year: "numeric" })}
-          </p>
-          {challenge.description ? <p className="whitespace-pre-line border-l-2 border-line pl-3 italic">{challenge.description}</p> : null}
-          <p>Everyone chooses their own goal and their own book.</p>
-        </div>
-      </Card>
+      <div className="rounded-sheet bg-[linear-gradient(180deg,#bdbcfa_0%,#d6d5fb_60%,#e6e4f7_100%)] px-6 pb-7 pt-6">
+        <StreakBanner title={preview.hostName ? `Started by ${preview.hostName}` : "You're invited"} sub={`${others} ${others === 1 ? "person is" : "people are"} already reading`} />
+        <h1 className="display mt-10 text-[52px] text-balance">{challenge.name}</h1>
+        <p className="mt-3 text-[17px] text-ink/60">{challenge.durationDays} days of reading together.</p>
+        <p className="mt-8 text-sm text-ink/55">
+          {formatDateKey(challenge.startDate, { month: "short", day: "numeric" })} – {formatDateKey(challenge.endDate, { month: "short", day: "numeric", year: "numeric" })}
+        </p>
+      </div>
+      <div className="space-y-3 px-1 pt-6 text-[17px] leading-snug text-ink/70">
+        {challenge.description ? <p className="whitespace-pre-line">“{challenge.description}”</p> : null}
+        <p>Everyone chooses their own goal and their own book.</p>
+      </div>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-8 space-y-3">
         {localChallengeId ? (
           <ButtonLink href={`/c/${localChallengeId}`} size="lg" full>
             Open my challenge

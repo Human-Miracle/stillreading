@@ -2,27 +2,31 @@
 import { useSyncState } from "@/local/hooks";
 import { cn } from "../ui/cn";
 
-/** Compact status dot + label for the header. Never blocks anything. */
-export function SyncIndicator() {
+/** A quiet dot + word. Never blocks anything. */
+export function SyncIndicator({ dark = false }: { dark?: boolean }) {
   const s = useSyncState();
   let label = "Synced";
-  let dot = "bg-success";
+  let dot = "bg-good";
   if (!s.online) {
     label = s.pendingCount ? `Offline · ${s.pendingCount} saved` : "Offline";
     dot = "bg-muted";
   } else if (s.failedCount) {
     label = "Needs attention";
-    dot = "bg-danger";
+    dot = "bg-signal";
   } else if (s.syncing || s.pendingCount) {
-    label = "Syncing…";
-    dot = "bg-warn animate-pulse";
+    label = "Syncing";
+    dot = "bg-honey animate-pulse";
   } else if (s.lastError) {
     label = "Will retry";
-    dot = "bg-warn";
+    dot = "bg-honey";
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-pill bg-paper-2 px-2.5 py-1 text-xs font-semibold text-ink-2" role="status" aria-live="polite">
-      <span className={cn("size-2 rounded-full", dot)} aria-hidden />
+    <span
+      className={cn("inline-flex h-8 items-center gap-1.5 rounded-pill px-3 text-xs font-medium", dark ? "bg-white/10 text-white/80" : "bg-white/55 text-ink/70 backdrop-blur-md")}
+      role="status"
+      aria-live="polite"
+    >
+      <span className={cn("size-1.5 rounded-full", dot)} aria-hidden />
       {label}
     </span>
   );

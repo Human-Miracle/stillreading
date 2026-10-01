@@ -13,12 +13,17 @@ export type ProfileStep = "name" | "goal" | "book";
 
 export function StepHeader({ step, total, title, subtitle }: { step: number; total: number; title: string; subtitle?: string }) {
   return (
-    <header className="mb-6">
-      <p className="text-sm font-semibold text-muted">
+    <header className="mb-8">
+      <div className="flex gap-1.5" aria-label={`Step ${step} of ${total}`} role="img">
+        {Array.from({ length: total }, (_, i) => (
+          <span key={i} className={i < step ? "h-1 w-8 rounded-full bg-ink" : "h-1 w-8 rounded-full bg-ink/12"} />
+        ))}
+      </div>
+      <p className="sr-only">
         Step {step} of {total}
       </p>
-      <h1 className="mt-1 font-display text-3xl font-semibold leading-tight text-balance">{title}</h1>
-      {subtitle ? <p className="mt-2 text-ink-2">{subtitle}</p> : null}
+      <h1 className="display mt-6 text-[44px] text-balance">{title}</h1>
+      {subtitle ? <p className="mt-3 text-[17px] leading-snug text-ink/55">{subtitle}</p> : null}
     </header>
   );
 }
@@ -75,7 +80,7 @@ export function ProfileSteps({
         </Field>
         <Notice className="mt-5">
           <p>
-            <span className="font-semibold">Still Reading doesn&apos;t require an account.</span> Your personal progress is stored on this device and shared with
+            <span className="font-medium text-ink">Still Reading doesn&apos;t require an account.</span> Your personal progress is stored on this device and shared with
             your challenge. If you clear browser data or lose this device, your local profile may not be recoverable.
           </p>
           <p className="mt-2">Your name and challenge progress are visible to other members of this challenge.</p>

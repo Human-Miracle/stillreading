@@ -2,7 +2,7 @@ import { useId, type ComponentProps, type ReactNode } from "react";
 import { cn } from "./cn";
 
 export const inputClass =
-  "w-full rounded-field border border-line bg-card px-4 py-3 text-base text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-focus";
+  "w-full rounded-2xl border border-transparent bg-surface px-4 py-3.5 text-base text-ink shadow-soft placeholder:text-muted/70 transition-colors focus:border-ink/20 focus:outline-none";
 
 export function Field({
   label,
@@ -18,13 +18,13 @@ export function Field({
   const id = useId();
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-semibold text-ink-2">
+    <div className="space-y-2">
+      <label htmlFor={id} className="block text-sm font-medium text-ink-2">
         {label}
       </label>
       {children({ id, "aria-describedby": describedBy, "aria-invalid": error ? true : undefined })}
       {error ? (
-        <p id={`${id}-error`} className="text-sm text-danger" role="alert">
+        <p id={`${id}-error`} className="text-sm text-[#c2321f]" role="alert">
           {error}
         </p>
       ) : hint ? (
