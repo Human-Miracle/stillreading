@@ -1,8 +1,8 @@
 "use client";
 import { useEffect } from "react";
-import { findCover } from "@/lib/book-search";
 import { getLocalDb, type LocalBook } from "@/local/db";
 import { updateBook } from "@/local/repo";
+import { lookUpCover } from "./cover-lookup";
 
 const key = (bookId: string) => `sr-cover-checked:${bookId}`;
 const inFlight = new Set<string>();
@@ -25,7 +25,7 @@ export function clearCoverChecked(bookId: string) {
   }
 }
 
-function wasChecked(bookId: string) {
+export function wasCoverChecked(bookId: string) {
   try {
     return localStorage.getItem(key(bookId)) === "1";
   } catch {
@@ -40,13 +40,13 @@ function wasChecked(bookId: string) {
  */
 export function useCoverBackfill(books: readonly LocalBook[]) {
   useEffect(() => {
-    const todo = books.filter((b) => !b.deletedAt && !b.coverUrl && !inFlight.has(b.id) && !wasChecked(b.id));
+    const todo = books.filter((b) => !b.deletedAt && !b.coverUrl && !inFlight.has(b.id) && !wasCoverChecked(b.id));
     if (!todo.length || !navigator.onLine) return;
     for (const b of todo) inFlight.add(b.id);
     void (async () => {
       for (const b of todo) {
         try {
-          const cover = await findCover(b);
+          const cover = await lookUpCover(b);
           markCoverChecked(b.id);
           const current = await getLocalDb().books.get(b.id);
           if (cover && current && !current.coverUrl && !current.deletedAt) await updateBook(b.id, { coverUrl: cover });
