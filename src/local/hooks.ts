@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { joinedDateFor, todayInTimezone } from "@/lib/domain/dates";
 import { isLive } from "@/lib/domain/goals";
 import { participantProgress, type ParticipantProgress } from "@/lib/domain/progress";
+import { leaderboard, type LeaderboardEntry } from "@/lib/domain/leaderboard";
 import { groupStats, type GroupStats } from "@/lib/domain/stats";
 import { getLocalDb, type LocalBook, type LocalChallenge, type LocalGoal, type LocalParticipant, type LocalReaction, type LocalSession } from "./db";
 import { getSyncEngine, type SyncState } from "./sync/engine";
@@ -62,6 +63,8 @@ export interface ChallengeView {
   isHost: boolean;
   members: MemberView[];
   stats: GroupStats;
+  /** Readers ranked by XP earned across every stat category. */
+  leaderboard: LeaderboardEntry[];
   /** Live sessions from active members, newest first. */
   feed: LocalSession[];
   participantsById: Map<string, LocalParticipant>;
@@ -116,13 +119,15 @@ export function buildChallengeView(data: ChallengeData, now: Date): ChallengeVie
   }
 
   const me = members.find((m) => m.participant.id === challenge.myParticipantId) ?? null;
+  const statsRows = members.map((m) => ({ participantId: m.participant.id, displayName: m.participant.displayName, progress: m.progress }));
   return {
     challenge,
     today,
     me,
     isHost: challenge.hostParticipantId === challenge.myParticipantId,
     members,
-    stats: groupStats(members.map((m) => ({ participantId: m.participant.id, displayName: m.participant.displayName, progress: m.progress }))),
+    stats: groupStats(statsRows),
+    leaderboard: leaderboard(statsRows),
     feed: liveSessions.filter((s) => activeIds.has(s.participantId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     participantsById: new Map(data.participants.map((p) => [p.id, p])),
     booksById: new Map(data.books.map((b) => [b.id, b])),

@@ -55,6 +55,20 @@ export default function StatsPage() {
 
       <ChallengeStats stats={stats} />
 
+      <Link href={`/c/${challenge.id}/leaderboard`} className="block rounded-card bg-black px-5 py-4 text-white">
+        <span className="flex items-center justify-between gap-3">
+          <span>
+            <span className="block font-display text-xl font-medium">See the leaderboard</span>
+            <span className="block text-sm text-white/80">Top readers by XP across every stat</span>
+          </span>
+          <span className="flex gap-1" aria-hidden>
+            {["#FE6237", "#FFB62E", "#7CC3FF", "#4164FF"].map((c) => (
+              <span key={c} className="size-3 rounded-sm" style={{ background: c }} />
+            ))}
+          </span>
+        </span>
+      </Link>
+
       <Card>
         <Eyebrow className="mb-2">Participation</Eyebrow>
         <ul className="divide-y divide-line">
