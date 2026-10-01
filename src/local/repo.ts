@@ -197,7 +197,8 @@ export async function deleteSession(sessionId: string) {
   notify();
 }
 
-async function saveBookInTx(book: LocalBook) {
+/** `withCover` false leaves the server's cover alone — it may have found one this device hasn't pulled yet. */
+async function saveBookInTx(book: LocalBook, withCover = false) {
   const db = getLocalDb();
   const t = nowIso();
   const next: LocalBook = { ...book, updatedAt: t, syncStatus: "pending" };
@@ -206,7 +207,7 @@ async function saveBookInTx(book: LocalBook) {
     id: next.id,
     title: next.title,
     author: next.author,
-    coverUrl: next.coverUrl,
+    ...(withCover ? { coverUrl: next.coverUrl } : {}),
     totalPages: next.totalPages,
     currentPage: next.currentPage,
     status: next.status,
@@ -244,7 +245,7 @@ export async function addBook(
     deletedAt: null,
     syncStatus: "pending",
   };
-  const saved = await db.transaction("rw", [db.books, db.syncQueue], () => saveBookInTx(book));
+  const saved = await db.transaction("rw", [db.books, db.syncQueue], () => saveBookInTx(book, true));
   notify();
   return saved;
 }
@@ -262,7 +263,8 @@ export async function updateBook(bookId: string, patch: Partial<Pick<BookDTO, "t
   if (patch.status && patch.status !== "completed") next.completedAt = null;
   if (patch.status === "reading" && !book.startedAt) next.startedAt = t;
   if (next.totalPages && next.currentPage > next.totalPages) next.currentPage = next.totalPages;
-  await db.transaction("rw", [db.books, db.syncQueue], () => saveBookInTx(next));
+  const coverChanged = "coverUrl" in patch && patch.coverUrl !== book.coverUrl;
+  await db.transaction("rw", [db.books, db.syncQueue], () => saveBookInTx(next, coverChanged));
   notify();
 }
 

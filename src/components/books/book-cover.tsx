@@ -3,8 +3,6 @@ import { useState } from "react";
 import type { LocalBook } from "@/local/db";
 import { hash } from "../ui/avatar";
 import { cn } from "../ui/cn";
-import { useLookedUpCover } from "./cover-lookup";
-import { wasCoverChecked } from "./use-cover-backfill";
 
 const SCHEMES = [
   { bg: "#f2683c", fg: "#1a1a1a" },
@@ -26,15 +24,11 @@ function DoneBadge() {
 /** The book's real cover when it has one (from Open Library), otherwise a generated typographic cover. */
 export function BookCover({ book, className }: { book: CoverBook; className?: string }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  // No saved cover (e.g. another reader's book added by hand): show one found on Open Library, unless
-  // this device already looked for it — or its reader removed the cover on purpose.
-  const lookedUp = useLookedUpCover(book, !book.coverUrl && !wasCoverChecked(book.id));
-  const src = book.coverUrl ?? lookedUp;
-  if (src && failedUrl !== src) {
+  if (book.coverUrl && failedUrl !== book.coverUrl) {
     return (
       <div className={cn("relative aspect-[2/3] overflow-hidden rounded-md bg-surface-2 shadow-[0_6px_16px_rgb(17_17_17/0.18)]", className)} aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed */}
-        <img src={src} alt="" loading="lazy" className="size-full object-cover" onError={() => setFailedUrl(src)} />
+        <img src={book.coverUrl} alt="" loading="lazy" className="size-full object-cover" onError={() => setFailedUrl(book.coverUrl ?? null)} />
         {book.status === "completed" ? <DoneBadge /> : null}
       </div>
     );

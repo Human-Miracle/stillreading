@@ -11,7 +11,7 @@ export interface Limit {
 }
 
 export const LIMITS = {
-  createChallenge: { bucket: "create", limit: 10, windowSeconds: 3600 },
+  createChallenge: { bucket: "create", limit: 30, windowSeconds: 3600 },
   createChallengeIp: { bucket: "create-ip", limit: 30, windowSeconds: 3600 },
   join: { bucket: "join", limit: 20, windowSeconds: 600 },
   joinIp: { bucket: "join-ip", limit: 60, windowSeconds: 600 },
@@ -25,9 +25,10 @@ export const LIMITS = {
   pullIp: { bucket: "pull-ip", limit: 600, windowSeconds: 60 },
   claim: { bucket: "claim", limit: 10, windowSeconds: 600 },
   claimIp: { bucket: "claim-ip", limit: 30, windowSeconds: 600 },
-  pass: { bucket: "pass", limit: 10, windowSeconds: 3600 },
+  pass: { bucket: "pass", limit: 30, windowSeconds: 3600 },
   reinvite: { bucket: "reinvite", limit: 20, windowSeconds: 3600 },
   bookSearch: { bucket: "books-ip", limit: 60, windowSeconds: 60 },
+  coverFill: { bucket: "cover-fill", limit: 30, windowSeconds: 3600 },
 } satisfies Record<string, Limit>;
 
 /**

@@ -67,3 +67,18 @@ Merge rule: a pulled row never overwrites a local row whose `syncStatus` is `pen
 ## Conflicts
 One device per participant is the MVP assumption. Sessions are immutable; books/goals/profile are
 last-write-wins by `updated_at`; reactions are idempotent `set(active)`. No CRDTs.
+
+## Book covers
+
+Covers are filled in on the server so every member sees them, whoever added the book.
+`POST /api/challenges/:id/covers` (any member; rate limited per device) looks up to 12 coverless
+books on Open Library and saves the result onto the book (`cover_lookup` = found / missing,
+`cover_checked_at`, bumping `server_updated_at` so the cover arrives on everyone's next pull). The
+client calls it when it sees books without covers (at most every 10 minutes unless more appear).
+
+- Clients only send `coverUrl` in `book.upsert` when the reader changed it, so routine progress
+  updates never clobber a cover the server found.
+- An explicit `coverUrl: null` over an existing cover marks it `removed`: never looked up again.
+  Exception: a null written before the server found the cover (older clients that always send the
+  field) is ignored.
+- Misses are retried after 7 days; correcting a coverless book's title or author retries at once.

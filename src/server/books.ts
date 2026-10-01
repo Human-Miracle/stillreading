@@ -28,9 +28,20 @@ export async function upsertBook(
   if (existing) {
     if (existing.participantId !== ctx.participantId) return { kind: "forbidden" };
     if (existing.updatedAt > updatedAt) return { kind: "stale", row: existing };
+    const patch: Partial<typeof values> & Pick<Partial<BookRow>, "coverLookup"> = { ...values };
+    if (values.coverUrl === null && existing.coverUrl) {
+      if (existing.coverLookup === "found" && existing.coverCheckedAt && updatedAt <= existing.coverCheckedAt) {
+        // Written before the server found this cover (e.g. an older client that always sends coverUrl): keep it.
+        delete patch.coverUrl;
+      } else {
+        patch.coverLookup = "removed"; // Removed on purpose: don't look it up again.
+      }
+    } else if (!existing.coverUrl && !values.coverUrl && (values.title !== existing.title || values.author !== existing.author)) {
+      patch.coverLookup = null; // Title corrected: worth another lookup.
+    }
     const [row] = await db
       .update(books)
-      .set({ ...values, serverUpdatedAt: sql`now()` })
+      .set({ ...patch, serverUpdatedAt: sql`now()` })
       .where(eq(books.id, input.id))
       .returning();
     return { kind: "ok", row: row! };

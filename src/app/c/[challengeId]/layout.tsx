@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { useCoverBackfill } from "@/components/books/use-cover-backfill";
+import { useCoverFill } from "@/components/books/use-cover-fill";
 import { ChallengeContext } from "@/components/challenge/context";
 import { BottomNav } from "@/components/challenge/nav";
 import { CheckInComposer } from "@/components/check-in/check-in-composer";
@@ -9,7 +9,6 @@ import { SyncToasts } from "@/components/sync/offline-banner";
 import { ButtonLink } from "@/components/ui/button";
 import { PageSkeleton, Wordmark } from "@/components/ui/misc";
 import { track } from "@/lib/analytics";
-import type { LocalBook } from "@/local/db";
 import { useChallengeView } from "@/local/hooks";
 import { getSyncEngine } from "@/local/sync/engine";
 
@@ -26,12 +25,10 @@ function FullPageMessage({ title, body }: { title: string; body: string }) {
   );
 }
 
-const NO_BOOKS: LocalBook[] = [];
-
 export default function ChallengeLayout({ children }: { children: ReactNode }) {
   const { challengeId } = useParams<{ challengeId: string }>();
   const view = useChallengeView(challengeId);
-  useCoverBackfill(view?.challenge.access === "ok" ? (view.me?.books ?? NO_BOOKS) : NO_BOOKS);
+  useCoverFill(challengeId, view?.challenge.access === "ok" ? view.members.flatMap((m) => m.books) : undefined);
   const [checkInOpen, setCheckInOpen] = useState(false);
 
   useEffect(() => {

@@ -15,6 +15,13 @@
       "when": 1790889554769,
       "tag": "0001_reading_pass",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790896801611,
+      "tag": "0002_book_cover_lookup",
+      "breakpoints": true
     }
   ]
 }
