@@ -17,8 +17,9 @@ import { formatDateKey } from "@/lib/format";
 import { shareInvite } from "@/lib/invite";
 import type { ChallengeView, MemberView } from "@/local/hooks";
 
-function Hl({ children, tone = "signal" }: { children: ReactNode; tone?: "signal" | "good" }) {
-  return <span className={tone === "signal" ? "text-signal" : "text-good"}>{children}</span>;
+/** Emphasis inside the coach card: bold ink reads clearly on every stop of the sunrise gradient. */
+function Hl({ children }: { children: ReactNode; tone?: "signal" | "good" }) {
+  return <span className="font-semibold">{children}</span>;
 }
 
 /** Pastel assistant-style card (reference: the pink "Intelly assistant" card). */
@@ -71,11 +72,11 @@ function CoachCard({ view, me }: { view: ChallengeView; me: MemberView }) {
   }
   if (!body) return null;
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-blush px-5 pb-5 pt-4">
-      <svg viewBox="0 0 100 90" className="pointer-events-none absolute -bottom-6 right-2 h-28 w-32 text-white/35" aria-hidden>
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-[linear-gradient(110deg,#f2cb67_0%,#efab5c_52%,#d98a5c_100%)] px-5 pb-5 pt-4">
+      <svg viewBox="0 0 100 90" className="pointer-events-none absolute -bottom-6 right-2 h-28 w-32 text-white/25" aria-hidden>
         <path fill="currentColor" d="M50 88S2 60 2 28A24 24 0 0 1 50 16a24 24 0 0 1 48 12c0 32-48 60-48 60z" />
       </svg>
-      <p className="eyebrow text-ink/55">{label}</p>
+      <p className="eyebrow text-ink/60">{label}</p>
       <p className="relative mt-1.5 max-w-[30ch] text-[17px] leading-snug tracking-[-0.015em]">{body}</p>
       {action ? <div className="relative mt-4">{action}</div> : null}
     </section>

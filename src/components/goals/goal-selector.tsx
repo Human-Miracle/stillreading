@@ -5,12 +5,12 @@ import { cn } from "../ui/cn";
 import { Icon } from "../ui/icons";
 
 const OPTIONS: { kind: GoalPresetKind; title: string; unit: string; per: string; tone: string }[] = [
-  { kind: "every_day", title: "Read every day", unit: "", per: "", tone: "bg-butter" },
   { kind: "pages_per_day", title: "Pages", unit: "pages", per: "a day", tone: "bg-lavender" },
   { kind: "chapters_per_day", title: "Chapters", unit: "chapters", per: "a day", tone: "bg-sage" },
   { kind: "minutes_per_day", title: "Minutes", unit: "minutes", per: "a day", tone: "bg-blush" },
   { kind: "books", title: "Books", unit: "books", per: "this challenge", tone: "bg-sky" },
   { kind: "total_pages", title: "Total pages", unit: "pages", per: "this challenge", tone: "bg-butter" },
+  { kind: "every_day", title: "Read every day", unit: "", per: "", tone: "bg-sage" },
 ];
 
 export function GoalSelector({ value, onChange, durationDays }: { value: GoalPreset; onChange: (v: GoalPreset) => void; durationDays: number }) {
