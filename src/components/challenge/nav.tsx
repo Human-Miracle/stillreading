@@ -12,6 +12,12 @@ const ICONS = {
       <path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.5 3 5.2" />
     </>
   ),
+  ranks: (
+    <>
+      <path d="M8 4h8v5a4 4 0 0 1-8 0z" />
+      <path d="M8 6H5a3 3 0 0 0 3 4m8-4h3a3 3 0 0 1-3 4m-4 3v4m-3.5 3h7M10 17h4" />
+    </>
+  ),
   me: (
     <>
       <path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z" />
@@ -27,11 +33,12 @@ export function BottomNav({ challengeId }: { challengeId: string }) {
     { href: base, label: "Home", icon: ICONS.home, exact: true },
     { href: `${base}/feed`, label: "Feed", icon: ICONS.feed },
     { href: `${base}/people`, label: "People", icon: ICONS.people },
+    { href: `${base}/leaderboard`, label: "Ranks", icon: ICONS.ranks },
     { href: `${base}/me`, label: "Me", icon: ICONS.me },
   ];
   return (
     <nav aria-label="Challenge" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
-      <ul className="mx-auto grid max-w-lg grid-cols-4">
+      <ul className="mx-auto grid max-w-lg grid-cols-5">
         {items.map((item) => {
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           return (

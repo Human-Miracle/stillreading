@@ -10,9 +10,14 @@ export default function PeoplePage() {
     <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="font-display text-3xl font-semibold">People</h1>
-        <Link href={`/c/${view.challenge.id}/stats`} className="text-sm font-semibold text-accent">
-          Stats →
-        </Link>
+        <div className="flex gap-4">
+          <Link href={`/c/${view.challenge.id}/leaderboard`} className="text-sm font-semibold text-accent">
+            Leaderboard →
+          </Link>
+          <Link href={`/c/${view.challenge.id}/stats`} className="text-sm font-semibold text-accent">
+            Stats →
+          </Link>
+        </div>
       </div>
       <p className="text-ink-2">
         {view.stats.checkedInToday} of {view.stats.participantCount} checked in today
