@@ -13,7 +13,6 @@ import { endDateFor, todayInTimezone } from "@/lib/domain/dates";
 import { formatDateKey, monthName } from "@/lib/format";
 import { challengeName as nameSchema } from "@/lib/validation/fields";
 import { ApiClientError } from "@/local/api";
-import { setPref } from "@/local/device";
 import { createChallenge, type ProfileInput } from "@/local/repo";
 import type { ChallengeSnapshot } from "@/lib/api-types";
 import Link from "next/link";
@@ -59,7 +58,6 @@ function CreateFlow() {
     setError(null);
     try {
       const snap = await createChallenge({ name: name.trim(), description: description.trim(), startDate, durationDays, timezone, host: profile });
-      await setPref("installPromptPending", true);
       track("challenge_created", { challengeId: snap.challenge.id, props: { durationDays } });
       track("goal_selected", { challengeId: snap.challenge.id, props: { kind: profile.goal.kind } });
       if (profile.book) track("book_added", { challengeId: snap.challenge.id });

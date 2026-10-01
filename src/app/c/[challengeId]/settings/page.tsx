@@ -5,6 +5,7 @@ import { useChallenge } from "@/components/challenge/context";
 import { InviteActions } from "@/components/challenge/invite-actions";
 import { GoalSelector, isGoalValid } from "@/components/goals/goal-selector";
 import { Hero } from "@/components/challenge/hero";
+import { openInstallModal } from "@/components/pwa/install-modal";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, Eyebrow } from "@/components/ui/card";
@@ -214,6 +215,16 @@ export default function SettingsPage() {
           )}
         </Card>
       ) : null}
+
+      <Card className="flex items-center justify-between gap-4">
+        <div>
+          <Eyebrow>App</Eyebrow>
+          <p className="mt-1 text-ink/70">Put Still Reading on your home screen.</p>
+        </div>
+        <Button variant="secondary" size="sm" onClick={openInstallModal}>
+          Install app
+        </Button>
+      </Card>
 
       <Notice>
         <p className="font-medium text-ink">About your data</p>

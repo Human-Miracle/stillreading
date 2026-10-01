@@ -7,7 +7,6 @@ import { Hero } from "@/components/challenge/hero";
 import { InviteActions } from "@/components/challenge/invite-actions";
 import { StreakBanner } from "@/components/challenge/streak-banner";
 import { CrewList } from "@/components/people/crew-list";
-import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { Button, ButtonLink, IconButton, IconLink } from "@/components/ui/button";
 import { Card, PageSheet } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icons";
@@ -170,7 +169,6 @@ export default function ChallengeHome() {
 
       <div className="space-y-3 px-5 pt-5">
         <CoachCard view={view} me={me} />
-        <InstallPrompt />
         {view.members.length <= 1 && phase !== "ended" && phase !== "archived" ? (
           <Card className="space-y-4">
             <div>

@@ -3,7 +3,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ProfileSteps } from "@/components/challenge/profile-steps";
-import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { Notice, PageSkeleton, Wordmark } from "@/components/ui/misc";
@@ -14,7 +13,6 @@ import { participantDuration, todayInTimezone } from "@/lib/domain/dates";
 import { formatDateKey } from "@/lib/format";
 import { ApiClientError, apiRequest } from "@/local/api";
 import { getLocalDb } from "@/local/db";
-import { setPref } from "@/local/device";
 import { joinChallenge, type ProfileInput } from "@/local/repo";
 
 type Stage = "preview" | "profile" | "joined";
@@ -59,7 +57,6 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
     setError(null);
     try {
       const snap = await joinChallenge(code, profile);
-      await setPref("installPromptPending", true);
       track("challenge_joined", { challengeId: snap.challenge.id });
       track("goal_selected", { challengeId: snap.challenge.id, props: { kind: profile.goal.kind } });
       if (profile.book) track("book_added", { challengeId: snap.challenge.id });
@@ -120,7 +117,6 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
           <h1 className="display mt-8 text-[56px]">You&apos;re in</h1>
           <p className="mt-3 text-[17px] text-ink/60">Welcome to {challenge.name}. Your reading crew is waiting.</p>
         </div>
-        <InstallPrompt />
         <Button full size="lg" onClick={() => router.push(`/c/${joinedId}`)}>
           Open my challenge
         </Button>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { EARLY_INSTALL_CAPTURE } from "@/components/pwa/early-capture";
 import { PoweredBy } from "@/components/ui/powered-by";
 import "./globals.css";
 
@@ -29,6 +30,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={geist.variable}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: EARLY_INSTALL_CAPTURE }} />
+      </head>
       <body className="antialiased">
         <Providers>
           {children}

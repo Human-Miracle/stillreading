@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { createChallenge, expectToday, join, logReading, waitForSynced } from "./helpers";
+import { createChallenge, expectToday, join, logReading, newContext, waitForSynced } from "./helpers";
 
 test("Flow A: create → copy link → join → goal → check-in", async ({ browser }) => {
-  const hostCtx = await browser.newContext();
+  const hostCtx = await newContext(browser);
   const host = await hostCtx.newPage();
   const { inviteUrl } = await createChallenge(host, { name: "Flow A Challenge", host: "Jessica" });
   expect(inviteUrl).toMatch(/\/join\/[0-9A-Za-z]{12}$/);
 
-  const friendCtx = await browser.newContext();
+  const friendCtx = await newContext(browser);
   const friend = await friendCtx.newPage();
   await friend.goto(new URL(inviteUrl).pathname);
   await expect(friend.getByRole("heading", { name: "Flow A Challenge" })).toBeVisible();
@@ -29,11 +29,11 @@ test("Flow A: create → copy link → join → goal → check-in", async ({ bro
 });
 
 test("Flow B: offline check-in survives reload and syncs once on reconnect", async ({ browser }) => {
-  const hostCtx = await browser.newContext();
+  const hostCtx = await newContext(browser);
   const host = await hostCtx.newPage();
   const { inviteUrl, challengeUrl } = await createChallenge(host, { name: "Flow B Challenge", host: "Amaka" });
 
-  const ctx = await browser.newContext();
+  const ctx = await newContext(browser);
   const page = await ctx.newPage();
   await join(page, inviteUrl, "Tolu");
   // Make sure the service worker controls the page and has cached it.
@@ -67,7 +67,7 @@ test("Flow B: offline check-in survives reload and syncs once on reconnect", asy
 });
 
 test("Flow C: multiple participants → feed → reactions → stats", async ({ browser }) => {
-  const hostCtx = await browser.newContext();
+  const hostCtx = await newContext(browser);
   const host = await hostCtx.newPage();
   const { inviteUrl, challengeUrl } = await createChallenge(host, { name: "Flow C Challenge", host: "Jessica" });
   await logReading(host, 20, "Identity chapter!");
@@ -76,7 +76,7 @@ test("Flow C: multiple participants → feed → reactions → stats", async ({ 
   const people = ["David", "Amaka"];
   const ctxs = [];
   for (const [i, name] of people.entries()) {
-    const ctx = await browser.newContext();
+    const ctx = await newContext(browser);
     ctxs.push(ctx);
     const page = await ctx.newPage();
     await join(page, inviteUrl, name);
@@ -103,7 +103,7 @@ test("Flow C: multiple participants → feed → reactions → stats", async ({ 
 });
 
 test("Flow D: challenge ends → completion screen and share card", async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await newContext(browser);
   const page = await ctx.newPage();
   const { challengeUrl } = await createChallenge(page, { name: "Flow D Challenge", host: "Samuel", duration: "7 days" });
   await logReading(page, 30);
@@ -122,5 +122,47 @@ test("Flow D: challenge ends → completion screen and share card", async ({ bro
   await page.getByRole("button", { name: "Share my result" }).click();
   expect((await download).suggestedFilename()).toBe("still-reading-result.png");
   await expect(page.getByRole("img", { name: "Your Still Reading result card" })).toBeVisible();
+  await ctx.close();
+});
+
+test("Flow E: install modal pops on every visit and can be skipped", async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.goto("/");
+  const modal = page.getByRole("dialog", { name: /one tap away|one click away|Open in your browser/ });
+  await expect(modal).toBeVisible();
+  // Android without a native prompt yet falls back to browser-menu steps.
+  await expect(modal.getByText("Add to Home screen")).toBeVisible();
+  await modal.getByRole("button", { name: "Not now" }).click();
+  await expect(modal).toBeHidden();
+
+  // Skipped for the rest of this visit…
+  await page.getByRole("link", { name: "Create a challenge" }).click();
+  await page.waitForTimeout(1500);
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  // …but a new visit asks again, and ✕ also closes it.
+  const again = await ctx.newPage();
+  await again.goto("/");
+  const modal2 = again.getByRole("dialog", { name: /one tap away/ });
+  await expect(modal2).toBeVisible();
+  await modal2.getByRole("button", { name: "Close" }).click();
+  await expect(modal2).toBeHidden();
+  await ctx.close();
+});
+
+test("Flow F: iPhone Safari gets Add to Home Screen steps", async ({ browser }) => {
+  const ctx = await browser.newContext({
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  await page.goto("/");
+  const modal = page.getByRole("dialog", { name: /one tap away/ });
+  await expect(modal).toBeVisible();
+  await expect(modal.getByText("Add to Home Screen")).toBeVisible();
+  await expect(modal.getByText("Open as Web App")).toBeVisible();
   await ctx.close();
 });

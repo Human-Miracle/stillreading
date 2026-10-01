@@ -1,4 +1,17 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
+
+/** A browser profile with the install modal already skipped for the visit, so flows aren't blocked by it. */
+export async function newContext(browser: Browser) {
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(() => {
+    try {
+      sessionStorage.setItem("sr-install-dismissed", "1");
+    } catch {
+      // ignore
+    }
+  });
+  return ctx;
+}
 
 export async function createChallenge(page: Page, opts: { name: string; host: string; duration?: "7 days" | "14 days" | "30 days" }) {
   await page.goto("/");
