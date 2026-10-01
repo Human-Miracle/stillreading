@@ -4,7 +4,9 @@ import { useChallenge } from "@/components/challenge/context";
 import { Hero } from "@/components/challenge/hero";
 import { CrewList } from "@/components/people/crew-list";
 import { Avatar } from "@/components/ui/avatar";
+import { ButtonLink } from "@/components/ui/button";
 import { PageSheet } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/misc";
 import { CountTabs } from "@/components/ui/segmented";
 
@@ -22,10 +24,15 @@ export default function PeoplePage() {
     <>
       <Hero tone="sky" title="People" subtitle={view.challenge.name} back={{ href: `/c/${view.challenge.id}`, label: "Back to challenge" }} className="pb-14">
         <div className="px-5 pt-8">
+          <div className="flex items-center justify-between">
           <div className="flex -space-x-2.5" aria-hidden>
             {members.slice(0, 6).map((m) => (
               <Avatar key={m.participant.id} name={m.participant.displayName} id={m.participant.id} size="sm" className="ring-2 ring-[#cddcf5]" />
             ))}
+          </div>
+            <ButtonLink href={`/c/${view.challenge.id}/leaderboard`} size="sm">
+              <Icon.trophy className="size-4" /> Leaderboard
+            </ButtonLink>
           </div>
           <h1 className="display mt-5 text-[52px]">
             {view.stats.participantCount} {view.stats.participantCount === 1 ? "reader" : "readers"},

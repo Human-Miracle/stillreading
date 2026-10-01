@@ -81,6 +81,11 @@ export const Icon = {
       <path d="M21 2 12 14h7l-2 8 9-12h-7z" fill="currentColor" />
     </svg>
   ),
+  trophy: (p: P) => (
+    <svg {...base(p)}>
+      <path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4m8-4h3a3 3 0 0 1-3 4M12 13v4m-3.5 3h7" />
+    </svg>
+  ),
   info: (p: P) => (
     <svg {...base(p)}>
       <circle cx="12" cy="12" r="8.5" />

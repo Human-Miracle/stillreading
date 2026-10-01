@@ -129,6 +129,18 @@ export default function StatsPage() {
           </ul>
         )}
 
+        <Link href={`/c/${challenge.id}/leaderboard`} className="flex items-center justify-between gap-3 rounded-card bg-ink px-5 py-4 text-white">
+          <span>
+            <span className="block text-[17px] font-medium tracking-[-0.02em]">See the leaderboard</span>
+            <span className="block text-sm text-white/60">Top readers by XP across every stat</span>
+          </span>
+          <span className="flex gap-1" aria-hidden>
+            {["bg-butter", "bg-blush", "bg-sky", "bg-lavender"].map((c) => (
+              <span key={c} className={`size-3 rounded-full ${c}`} />
+            ))}
+          </span>
+        </Link>
+
         {view.isHost ? (
           <Card tone="muted" className="space-y-3">
             <Eyebrow>Invite more readers</Eyebrow>

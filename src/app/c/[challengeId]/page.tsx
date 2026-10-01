@@ -162,8 +162,8 @@ export default function ChallengeHome() {
           <IconLink href={`/c/${challenge.id}/stats`} label="Challenge stats" variant="dashed">
             <Icon.chart />
           </IconLink>
-          <IconLink href={`/c/${challenge.id}/me`} label="Your books" variant="dashed">
-            <Icon.book />
+          <IconLink href={`/c/${challenge.id}/leaderboard`} label="Leaderboard" variant="dashed">
+            <Icon.trophy />
           </IconLink>
         </div>
       </Hero>
