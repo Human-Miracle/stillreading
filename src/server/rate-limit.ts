@@ -26,7 +26,7 @@ export const LIMITS = {
  * Throws 429 when exceeded.
  */
 export async function rateLimit(db: Database, { bucket, limit, windowSeconds }: Limit, subject: string): Promise<void> {
-  if (process.env.READ30_DISABLE_RATE_LIMIT === "1") return;
+  if (process.env.STILLREADING_DISABLE_RATE_LIMIT === "1") return;
   const windowMs = windowSeconds * 1000;
   const windowStart = new Date(Math.floor(Date.now() / windowMs) * windowMs);
   const key = `${bucket}:${subject}`;

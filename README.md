@@ -1,4 +1,4 @@
-# READ30 — StillReadingwithJess
+# Still Reading
 
 A mobile-first, installable PWA for 30-day social reading challenges.
 **Set a goal → join a challenge → read → check in → see friends → read again tomorrow.**
@@ -9,7 +9,7 @@ No accounts. Local-first (IndexedDB) with background sync to Postgres. Works off
 
 ```bash
 npm install
-npm run db:seed     # optional: "October READ30" demo with 6 readers on day 12
+npm run db:seed     # optional: "October Reading Challenge" demo with 6 readers on day 12
 npm run dev         # http://localhost:3000
 ```
 
@@ -41,7 +41,7 @@ Environment variables: `DATABASE_URL` only. No auth provider and no Blob token a
 
 ## Docs
 
-- [Architecture](docs/READ30_ARCHITECTURE.md)
-- [Data model](docs/READ30_DATA_MODEL.md)
-- [Sync](docs/READ30_SYNC.md)
-- [Test plan](docs/READ30_TEST_PLAN.md)
+- [Architecture](docs/STILL_READING_ARCHITECTURE.md)
+- [Data model](docs/STILL_READING_DATA_MODEL.md)
+- [Sync](docs/STILL_READING_SYNC.md)
+- [Test plan](docs/STILL_READING_TEST_PLAN.md)

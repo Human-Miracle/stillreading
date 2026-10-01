@@ -214,7 +214,7 @@ export default function SettingsPage() {
       <Notice>
         <p className="font-semibold">About your data</p>
         <p className="mt-1">
-          READ30 doesn&apos;t use accounts. Your progress lives on this device and is shared with this challenge&apos;s members: your name, books, goal,
+          Still Reading doesn&apos;t use accounts. Your progress lives on this device and is shared with this challenge&apos;s members: your name, books, goal,
           reading amounts, streak and shared reflections. Private reflections never leave this device. If you clear browser data or lose this device, your
           local profile may not be recoverable.
         </p>

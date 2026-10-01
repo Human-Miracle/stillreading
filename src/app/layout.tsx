@@ -7,10 +7,10 @@ const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", dis
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "READ30 — Read together", template: "%s · READ30" },
+  title: { default: "Still Reading — Read together", template: "%s · Still Reading" },
   description: "Read whatever you want. Set your own goal. Show up with your friends for 30 days.",
-  applicationName: "READ30",
-  appleWebApp: { capable: true, title: "READ30", statusBarStyle: "default" },
+  applicationName: "Still Reading",
+  appleWebApp: { capable: true, title: "Still Reading", statusBarStyle: "default" },
   formatDetection: { telephone: false },
   icons: {
     icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],

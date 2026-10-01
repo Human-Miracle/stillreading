@@ -20,7 +20,7 @@ export function ChallengeHeader({ view }: { view: ChallengeView }) {
     <header className="sticky top-0 z-20 border-b border-line/70 bg-paper/95 backdrop-blur pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
         <Link href="/" className="grid size-10 shrink-0 place-items-center rounded-full font-display text-sm font-bold text-accent hover:bg-paper-2" aria-label="All challenges">
-          30
+          SR
         </Link>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-lg font-semibold leading-tight">{challenge.name}</p>

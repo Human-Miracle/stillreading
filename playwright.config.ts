@@ -24,7 +24,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       PGLITE_DIR: `.data/e2e-${Date.now()}`,
-      READ30_DISABLE_RATE_LIMIT: "1",
+      STILLREADING_DISABLE_RATE_LIMIT: "1",
     },
   },
 });

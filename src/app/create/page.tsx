@@ -41,7 +41,7 @@ function CreateFlow() {
   const [today] = useState(() => todayInTimezone(timezone));
   const [stage, setStage] = useState<"details" | "profile" | "done">("details");
   const [startDate, setStartDate] = useState(today);
-  const [name, setName] = useState(`${monthName(today)} READ30`);
+  const [name, setName] = useState(`${monthName(today)} Reading Challenge`);
   const [nameTouched, setNameTouched] = useState(false);
   const [duration, setDuration] = useState<number | "custom">(30);
   const [customDays, setCustomDays] = useState("21");
@@ -80,7 +80,7 @@ function CreateFlow() {
   return (
     <main className="mx-auto min-h-dvh max-w-lg px-4 pb-12 pt-[max(1.5rem,env(safe-area-inset-top))]">
       <nav className="mb-8 flex items-center justify-between">
-        <Link href="/" aria-label="READ30 home">
+        <Link href="/" aria-label="Still Reading home">
           <Wordmark className="text-2xl" />
         </Link>
       </nav>
@@ -97,7 +97,7 @@ function CreateFlow() {
             setStage("profile");
           }}
         >
-          <StepHeader step={1} total={TOTAL_STEPS} title="Create your READ30" subtitle="Invite friends. Everyone picks their own book and goal." />
+          <StepHeader step={1} total={TOTAL_STEPS} title="Start a reading challenge" subtitle="Invite friends. Everyone picks their own book and goal." />
           <Field label="Challenge name" error={detailsError}>
             {(p) => (
               <Input
@@ -121,7 +121,7 @@ function CreateFlow() {
                 onChange={(e) => {
                   const v = e.target.value || today;
                   setStartDate(v);
-                  if (!nameTouched) setName(`${monthName(v)} READ30`);
+                  if (!nameTouched) setName(`${monthName(v)} Reading Challenge`);
                 }}
               />
             )}

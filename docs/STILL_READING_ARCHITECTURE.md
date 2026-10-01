@@ -1,6 +1,6 @@
-# READ30 — Architecture
+# Still Reading — Architecture
 
-READ30 is a mobile-first, installable PWA for 30-day social reading challenges.
+Still Reading is a mobile-first, installable PWA for 30-day social reading challenges.
 There are **no accounts**. Each browser/PWA install is an anonymous device identity.
 
 ## Stack (as built)
@@ -46,7 +46,7 @@ Rules:
 ## Identity & authorization (no auth provider)
 
 * On first run the client creates `device_id` (`dvc_…`) and a 256-bit `device_secret` and stores them in
-  IndexedDB (`kv` table). They are sent as `x-read30-device` / `x-read30-secret` headers, never in URLs.
+  IndexedDB (`kv` table). They are sent as `x-stillreading-device` / `x-stillreading-secret` headers, never in URLs.
 * Server stores only `sha256(secret)` in `devices` (trust-on-first-use registration). Ids are random, so
   first use cannot be squatted.
 * **Membership credential is derived, not issued**: a request may mutate participant `P` only if the
@@ -67,7 +67,7 @@ user action → Dexie write (syncStatus=pending) → UI updates (useLiveQuery)
 ```
 
 Create challenge and join are **online-only** (they need the server to mint/validate the join code);
-everything after joining works offline. See `READ30_SYNC.md`.
+everything after joining works offline. See `STILL_READING_SYNC.md`.
 
 ## Time
 

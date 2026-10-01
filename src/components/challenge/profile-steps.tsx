@@ -75,7 +75,7 @@ export function ProfileSteps({
         </Field>
         <Notice className="mt-5">
           <p>
-            <span className="font-semibold">READ30 doesn&apos;t require an account.</span> Your personal progress is stored on this device and shared with
+            <span className="font-semibold">Still Reading doesn&apos;t require an account.</span> Your personal progress is stored on this device and shared with
             your challenge. If you clear browser data or lose this device, your local profile may not be recoverable.
           </p>
           <p className="mt-2">Your name and challenge progress are visible to other members of this challenge.</p>

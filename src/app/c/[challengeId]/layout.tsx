@@ -22,7 +22,7 @@ function FullPageMessage({ icon, title, body }: { icon: string; title: string; b
       <h1 className="font-display text-3xl font-semibold">{title}</h1>
       <p className="text-ink-2">{body}</p>
       <ButtonLink href="/" variant="secondary">
-        Back to READ30
+        Back to Still Reading
       </ButtonLink>
     </main>
   );

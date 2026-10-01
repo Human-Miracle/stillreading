@@ -50,14 +50,14 @@ export default function CompletePage() {
     books: p.booksCompleted,
     longestStreak: p.streak.longest,
     goalPercent: g ? g.percent.display : null,
-    host: typeof window !== "undefined" ? window.location.host : "read30",
+    host: typeof window !== "undefined" ? window.location.host : "stillreading",
   };
 
   const share = async () => {
     setBusy(true);
     try {
       const blob = await renderShareCard(cardData);
-      const file = new File([blob], "read30-result.png", { type: "image/png" });
+      const file = new File([blob], "still-reading-result.png", { type: "image/png" });
       const text = `I read for ${p.readingDays} of ${p.effectiveDuration} days in ${view.challenge.name}. 📚`;
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text });
@@ -66,7 +66,7 @@ export default function CompletePage() {
         setPreview(url);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "read30-result.png";
+        a.download = "still-reading-result.png";
         a.click();
       }
       track("completion_shared", { challengeId: view.challenge.id });
@@ -85,7 +85,7 @@ export default function CompletePage() {
         <div className="animate-pop text-6xl" aria-hidden>
           🎉
         </div>
-        <h1 className="mt-3 font-display text-4xl font-semibold">READ30 complete</h1>
+        <h1 className="mt-3 font-display text-4xl font-semibold">Challenge complete</h1>
         <p className="mt-2 text-lg text-ink-2">
           You showed up for <span className="font-semibold text-ink">{p.readingDays}</span> of {p.effectiveDuration} days.
         </p>
@@ -119,7 +119,7 @@ export default function CompletePage() {
 
       {preview ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="Your READ30 result card" className="w-full rounded-card shadow-card" />
+        <img src={preview} alt="Your Still Reading result card" className="w-full rounded-card shadow-card" />
       ) : null}
 
       <div className="space-y-3">

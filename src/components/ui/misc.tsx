@@ -40,7 +40,7 @@ export function Notice({ tone = "info", children, className }: { tone?: "info" |
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("font-display font-bold tracking-tight", className)}>
-      READ<span className="text-accent">30</span>
+      Still <span className="text-accent">Reading</span>
     </span>
   );
 }

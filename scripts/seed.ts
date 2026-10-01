@@ -1,4 +1,4 @@
-// Creates the "October READ30" demo challenge with six readers and ~11 days of history.
+// Creates the "October Reading Challenge" demo challenge with six readers and ~11 days of history.
 // Usage: npm run db:seed   (stop `npm run dev` first when using local PGlite)
 // Then open the printed invite link to join as a 7th reader and see the whole experience.
 import { eq } from "drizzle-orm";
@@ -94,7 +94,7 @@ async function main() {
   await db.insert(challenges).values({
     id: challengeId,
     publicJoinCode: JOIN_CODE,
-    name: "October READ30",
+    name: "October Reading Challenge",
     description: "30 days of reading together. Any book counts. Show up, check in, cheer each other on.",
     startDate,
     endDate: endDateFor(startDate, DURATION),
@@ -171,7 +171,7 @@ async function main() {
   }
 
   const base = process.env.APP_URL ?? "http://localhost:3000";
-  console.log(`Seeded "October READ30" (day ${DAYS_ELAPSED + 1} of ${DURATION}) with ${readers.length} readers.`);
+  console.log(`Seeded "October Reading Challenge" (day ${DAYS_ELAPSED + 1} of ${DURATION}) with ${readers.length} readers.`);
   console.log(`Join as a new reader: ${base}/join/${JOIN_CODE}`);
 }
 

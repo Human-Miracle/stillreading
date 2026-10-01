@@ -24,7 +24,7 @@ const serwist = new Serwist({
     {
       matcher: ({ request, sameOrigin }) => sameOrigin && request.mode === "navigate",
       handler: new NetworkFirst({
-        cacheName: "read30-pages",
+        cacheName: "stillreading-pages",
         networkTimeoutSeconds: 4,
         plugins: [new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: THIRTY_DAYS })],
       }),
@@ -32,7 +32,7 @@ const serwist = new Serwist({
     {
       matcher: ({ request, sameOrigin }) => sameOrigin && request.headers.get("RSC") === "1",
       handler: new NetworkFirst({
-        cacheName: "read30-rsc",
+        cacheName: "stillreading-rsc",
         networkTimeoutSeconds: 4,
         plugins: [new ExpirationPlugin({ maxEntries: 128, maxAgeSeconds: THIRTY_DAYS })],
       }),

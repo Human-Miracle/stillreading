@@ -42,10 +42,10 @@ export async function renderShareCard(data: ShareCardData): Promise<Blob> {
   ctx.textBaseline = "alphabetic";
   ctx.font = `700 76px ${display}`;
   ctx.fillStyle = "#221b16";
-  ctx.fillText("READ", 90, 170);
-  const readW = ctx.measureText("READ").width;
+  ctx.fillText("Still ", 90, 170);
+  const stillW = ctx.measureText("Still ").width;
   ctx.fillStyle = "#c6532a";
-  ctx.fillText("30", 90 + readW, 170);
+  ctx.fillText("Reading", 90 + stillW, 170);
 
   // Headline
   ctx.fillStyle = "#221b16";

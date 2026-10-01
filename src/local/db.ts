@@ -44,7 +44,7 @@ export interface KvRecord {
   value: unknown;
 }
 
-export class Read30DB extends Dexie {
+export class StillReadingDB extends Dexie {
   kv!: EntityTable<KvRecord, "key">;
   challenges!: EntityTable<LocalChallenge, "id">;
   participants!: EntityTable<LocalParticipant, "id">;
@@ -54,6 +54,7 @@ export class Read30DB extends Dexie {
   reactions!: EntityTable<LocalReaction, "id">;
   syncQueue!: EntityTable<SyncOpRecord, "opId">;
 
+  // Storage name predates the rename to Still Reading; kept so existing devices keep their data.
   constructor(name = "read30") {
     super(name);
     this.version(1).stores({
@@ -69,14 +70,14 @@ export class Read30DB extends Dexie {
   }
 }
 
-let instance: Read30DB | null = null;
+let instance: StillReadingDB | null = null;
 
-export function getLocalDb(): Read30DB {
-  if (!instance) instance = new Read30DB();
+export function getLocalDb(): StillReadingDB {
+  if (!instance) instance = new StillReadingDB();
   return instance;
 }
 
 /** Test hook. */
-export function setLocalDb(db: Read30DB | null) {
+export function setLocalDb(db: StillReadingDB | null) {
   instance = db;
 }

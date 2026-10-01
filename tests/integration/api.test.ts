@@ -44,7 +44,7 @@ function sessionOp(challengeId: string, extra: Record<string, unknown> = {}) {
 
 describe("create challenge", () => {
   it("creates a 30 day challenge with the host as first participant and a random join code", () => {
-    expect(snap.challenge).toMatchObject({ name: "October READ30", durationDays: 30, status: "active" });
+    expect(snap.challenge).toMatchObject({ name: "October Reading Challenge", durationDays: 30, status: "active" });
     expect(snap.challenge.id).toMatch(/^ch_/);
     expect(snap.challenge.joinCode).toMatch(/^[0-9A-Za-z]{12}$/);
     expect(snap.participants).toHaveLength(1);

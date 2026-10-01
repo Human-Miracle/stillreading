@@ -4,13 +4,13 @@ import { createChallenge, join, logReading, waitForSynced } from "./helpers";
 test("Flow A: create → copy link → join → goal → check-in", async ({ browser }) => {
   const hostCtx = await browser.newContext();
   const host = await hostCtx.newPage();
-  const { inviteUrl } = await createChallenge(host, { name: "Flow A READ30", host: "Jessica" });
+  const { inviteUrl } = await createChallenge(host, { name: "Flow A Challenge", host: "Jessica" });
   expect(inviteUrl).toMatch(/\/join\/[0-9A-Za-z]{12}$/);
 
   const friendCtx = await browser.newContext();
   const friend = await friendCtx.newPage();
   await friend.goto(new URL(inviteUrl).pathname);
-  await expect(friend.getByRole("heading", { name: "Flow A READ30" })).toBeVisible();
+  await expect(friend.getByRole("heading", { name: "Flow A Challenge" })).toBeVisible();
   await expect(friend.getByText("Started by")).toContainText("Jessica");
   await join(friend, inviteUrl, "David", { goal: "Minutes", book: "Deep Work" });
 
@@ -30,7 +30,7 @@ test("Flow A: create → copy link → join → goal → check-in", async ({ bro
 test("Flow B: offline check-in survives reload and syncs once on reconnect", async ({ browser }) => {
   const hostCtx = await browser.newContext();
   const host = await hostCtx.newPage();
-  const { inviteUrl, challengeUrl } = await createChallenge(host, { name: "Flow B READ30", host: "Amaka" });
+  const { inviteUrl, challengeUrl } = await createChallenge(host, { name: "Flow B Challenge", host: "Amaka" });
 
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
@@ -68,7 +68,7 @@ test("Flow B: offline check-in survives reload and syncs once on reconnect", asy
 test("Flow C: multiple participants → feed → reactions → stats", async ({ browser }) => {
   const hostCtx = await browser.newContext();
   const host = await hostCtx.newPage();
-  const { inviteUrl, challengeUrl } = await createChallenge(host, { name: "Flow C READ30", host: "Jessica" });
+  const { inviteUrl, challengeUrl } = await createChallenge(host, { name: "Flow C Challenge", host: "Jessica" });
   await logReading(host, 20, "Identity chapter!");
   await waitForSynced(host);
 
@@ -102,22 +102,22 @@ test("Flow C: multiple participants → feed → reactions → stats", async ({ 
 test("Flow D: challenge ends → completion screen and share card", async ({ browser }) => {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
-  const { challengeUrl } = await createChallenge(page, { name: "Flow D READ30", host: "Samuel", duration: "7 days" });
+  const { challengeUrl } = await createChallenge(page, { name: "Flow D Challenge", host: "Samuel", duration: "7 days" });
   await logReading(page, 30);
   await waitForSynced(page);
 
   // Jump the device clock past the end of the 7-day challenge.
   await page.clock.install({ time: new Date(Date.now() + 9 * 86_400_000) });
   await page.goto(challengeUrl);
-  await expect(page.getByText("Flow D READ30 is complete")).toBeVisible();
+  await expect(page.getByText("Flow D Challenge is complete")).toBeVisible();
   await page.getByRole("link", { name: "See your recap" }).click();
-  await expect(page.getByRole("heading", { name: "READ30 complete" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Challenge complete" })).toBeVisible();
   await expect(page.getByText(/You showed up for/)).toContainText("1 of 7 days");
   await expect(page.getByText("30 pages").first()).toBeVisible();
 
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Share my result" }).click();
-  expect((await download).suggestedFilename()).toBe("read30-result.png");
-  await expect(page.getByRole("img", { name: "Your READ30 result card" })).toBeVisible();
+  expect((await download).suggestedFilename()).toBe("still-reading-result.png");
+  await expect(page.getByRole("img", { name: "Your Still Reading result card" })).toBeVisible();
   await ctx.close();
 });

@@ -8,8 +8,8 @@ const svg = ({ size, maskable }) => {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" rx="${radius}" fill="#c6532a"/>
   <g transform="translate(${pad} ${pad})">
-    <text x="${inner / 2}" y="${inner * 0.36}" text-anchor="middle" font-family="Fraunces" font-weight="700" font-size="${inner * 0.2}" fill="#fbf6ee" letter-spacing="${inner * 0.01}">READ</text>
-    <text x="${inner / 2}" y="${inner * 0.86}" text-anchor="middle" font-family="Fraunces" font-weight="700" font-size="${inner * 0.56}" fill="#fbf6ee">30</text>
+    <text x="${inner / 2}" y="${inner * 0.47}" text-anchor="middle" font-family="Fraunces" font-weight="700" font-size="${inner * 0.25}" fill="#fbf6ee">Still</text>
+    <text x="${inner / 2}" y="${inner * 0.74}" text-anchor="middle" font-family="Fraunces" font-weight="700" font-style="italic" font-size="${inner * 0.25}" fill="#fbf6ee">Reading</text>
   </g>
 </svg>`;
 };
@@ -26,7 +26,7 @@ const page = await browser.newPage();
 for (const t of targets) {
   await page.setViewportSize({ width: t.size, height: t.size });
   await page.setContent(
-    `<html><head><link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&display=block" rel="stylesheet"><style>html,body{margin:0;background:transparent}</style></head><body>${svg(t)}</body></html>`,
+    `<html><head><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&display=block" rel="stylesheet"><style>html,body{margin:0;background:transparent}</style></head><body>${svg(t)}</body></html>`,
   );
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: `public/icons/${t.file}`, omitBackground: !t.maskable });

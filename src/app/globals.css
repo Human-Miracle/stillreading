@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * READ30 design tokens. Semantic colours are CSS variables so dark mode is a variable swap;
+ * Still Reading design tokens. Semantic colours are CSS variables so dark mode is a variable swap;
  * Tailwind utilities (bg-paper, text-ink, …) are generated from them via @theme inline.
  */
 :root {

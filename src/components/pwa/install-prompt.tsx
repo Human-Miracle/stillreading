@@ -34,7 +34,7 @@ export function InstallPrompt() {
 
   return (
     <Card className="animate-rise border-accent/30 bg-accent-soft/60">
-      <p className="font-display text-xl font-semibold">Want READ30 on your home screen?</p>
+      <p className="font-display text-xl font-semibold">Want Still Reading on your home screen?</p>
       {canPrompt ? (
         <p className="mt-1 text-ink-2">Open your challenge in one tap, even offline.</p>
       ) : (
@@ -50,7 +50,7 @@ export function InstallPrompt() {
               await dismiss();
             }}
           >
-            Install READ30
+            Install Still Reading
           </Button>
         ) : null}
         <Button variant="ghost" onClick={dismiss}>

@@ -39,7 +39,7 @@ export default function Landing() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col px-4 pb-10 pt-[max(2rem,env(safe-area-inset-top))]">
       <section className="flex flex-1 flex-col justify-center py-10">
-        <Wordmark className="text-6xl" />
+        <Wordmark className="text-5xl" />
         <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.1] text-balance">
           Read together.
           <br />

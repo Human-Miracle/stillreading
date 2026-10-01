@@ -1,4 +1,4 @@
-# READ30 — Test Plan
+# Still Reading — Test Plan
 
 Run everything with `npm run verify` (typecheck, lint, unit+integration, build) and `npm run test:e2e`.
 

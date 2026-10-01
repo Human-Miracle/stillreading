@@ -129,7 +129,7 @@ export class SyncEngine {
   private async withLock(fn: () => Promise<void>) {
     const locks = typeof navigator !== "undefined" ? (navigator as Navigator & { locks?: LockManager }).locks : undefined;
     if (locks?.request) {
-      await locks.request("read30-sync", fn);
+      await locks.request("stillreading-sync", fn);
     } else {
       await fn();
     }
@@ -229,7 +229,7 @@ export class SyncEngine {
       else await db.challenges.update(op.challengeId, { status: "archived" });
       return;
     }
-    console.warn("[read30] sync op rejected", op.type, code);
+    console.warn("[stillreading] sync op rejected", op.type, code);
     await db.syncQueue.update(op.opId, { status: "failed", lastError: message, attempts: op.attempts + 1 });
     await markEntityFailed(op.entityKind, op.entityId);
   }

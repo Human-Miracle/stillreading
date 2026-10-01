@@ -87,7 +87,7 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
   const shell = (children: React.ReactNode) => (
     <main className="mx-auto min-h-dvh max-w-lg px-4 pb-12 pt-[max(1.5rem,env(safe-area-inset-top))]">
       <nav className="mb-8">
-        <Link href="/" aria-label="READ30 home">
+        <Link href="/" aria-label="Still Reading home">
           <Wordmark className="text-2xl" />
         </Link>
       </nav>
@@ -105,7 +105,7 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
         <h1 className="font-display text-3xl font-semibold">{copy.title}</h1>
         <p className="text-ink-2">{copy.body}</p>
         <ButtonLink href="/" variant="secondary">
-          Back to READ30
+          Back to Still Reading
         </ButtonLink>
       </section>,
     );

@@ -8,7 +8,7 @@ import { POST as eventsPOST } from "@/app/api/events/route";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { newDeviceSecret, newId } from "@/lib/ids";
 
-process.env.READ30_DISABLE_RATE_LIMIT ??= "1";
+process.env.STILLREADING_DISABLE_RATE_LIMIT ??= "1";
 
 export async function freshDb(): Promise<Database> {
   const db = await createPgliteDb();
@@ -44,7 +44,7 @@ const routes: { method: string; pattern: RegExp; keys: string[]; handler: Handle
 
 /** A `fetch` that dispatches straight into the Next.js route handlers. */
 export const handlerFetch: typeof fetch = async (input, init) => {
-  const req = new Request(new URL(String(input instanceof Request ? input.url : input), "http://read30.test"), init);
+  const req = new Request(new URL(String(input instanceof Request ? input.url : input), "http://stillreading.test"), init);
   const url = new URL(req.url);
   for (const r of routes) {
     const m = r.method === req.method ? url.pathname.match(r.pattern) : null;
@@ -84,7 +84,7 @@ export function createBody(overrides: { startDate?: string; durationDays?: numbe
   return {
     opId: newId("op"),
     challenge: {
-      name: overrides.name ?? "October READ30",
+      name: overrides.name ?? "October Reading Challenge",
       description: "30 days of reading together.",
       startDate: overrides.startDate ?? today,
       durationDays: overrides.durationDays ?? 30,

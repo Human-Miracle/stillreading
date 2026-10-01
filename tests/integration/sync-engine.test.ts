@@ -4,7 +4,7 @@ import { count } from "drizzle-orm";
 import { readingSessions } from "@/db/schema";
 import type { Database } from "@/db/client";
 import { configureApi } from "@/local/api";
-import { Read30DB, getLocalDb, setLocalDb } from "@/local/db";
+import { StillReadingDB, getLocalDb, setLocalDb } from "@/local/db";
 import { resetDeviceCache } from "@/local/device";
 import * as repo from "@/local/repo";
 import { SyncEngine } from "@/local/sync/engine";
@@ -32,8 +32,8 @@ const flakyFetch: typeof fetch = async (input, init) => {
 let dbCounter = 0;
 /** A fresh "browser profile" (own IndexedDB + device identity). */
 function newBrowser() {
-  const name = `read30-test-${++dbCounter}`;
-  setLocalDb(new Read30DB(name));
+  const name = `stillreading-test-${++dbCounter}`;
+  setLocalDb(new StillReadingDB(name));
   resetDeviceCache();
   return name;
 }
@@ -41,7 +41,7 @@ function newBrowser() {
 /** Re-open the same IndexedDB as if the browser was closed and reopened. */
 function reopenBrowser(name: string) {
   getLocalDb().close();
-  setLocalDb(new Read30DB(name));
+  setLocalDb(new StillReadingDB(name));
   resetDeviceCache();
   return new SyncEngine({ isOnline: () => online, now: () => clock, random: () => 0.5 });
 }
@@ -57,7 +57,7 @@ async function hostChallenge() {
   const tz = "Africa/Lagos";
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
   const snap = await repo.createChallenge({
-    name: "October READ30",
+    name: "October Reading Challenge",
     description: "",
     startDate: today,
     durationDays: 30,

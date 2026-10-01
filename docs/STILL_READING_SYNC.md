@@ -1,4 +1,4 @@
-# READ30 — Sync
+# Still Reading — Sync
 
 ## Principles
 1. The UI never waits for the network for reading-state changes.
@@ -57,7 +57,7 @@ Merge rule: a pulled row never overwrites a local row whose `syncStatus` is `pen
 (the queued op will settle it).
 
 ## Engine (`src/local/sync/engine.ts`)
-* **Single flight**: an in-memory promise plus `navigator.locks` (`read30-sync`) across tabs.
+* **Single flight**: an in-memory promise plus `navigator.locks` (`stillreading-sync`) across tabs.
 * **Triggers**: app start, `online`, tab becomes visible, 400 ms after any local mutation, and every
   30 s while visible (pull keeps the crew feed fresh).
 * Order per run: push all due ops (in creation order, batches of 50) → pull each joined challenge.

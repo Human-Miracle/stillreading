@@ -1,4 +1,4 @@
-# READ30 — Data Model
+# Still Reading — Data Model
 
 Source of truth: `src/db/schema.ts` (server, Drizzle) and `src/local/db.ts` (device, Dexie).
 Ids are client-generated where the client creates the record (`pt_`, `gl_`, `bk_`, `rs_`, `rx_`, `op_`);
@@ -66,7 +66,7 @@ Append-oriented: sessions are created and (soft) deleted, not edited.
 * `UNIQUE (participant_id, reading_session_id, type)` — toggling re-uses the row via `deleted_at`.
 
 ### processed_operations
-`op_id pk, device_id, op_type, result jsonb, created_at` — idempotency ledger (see `READ30_SYNC.md`).
+`op_id pk, device_id, op_type, result jsonb, created_at` — idempotency ledger (see `STILL_READING_SYNC.md`).
 
 ### rate_limits
 `key, window_start, count` — fixed-window counters.
@@ -93,3 +93,5 @@ Append-oriented: sessions are created and (soft) deleted, not edited.
 | syncQueue | opId | pending/failed operations |
 
 Every record has `createdAt`, `updatedAt`; own records have `syncStatus: pending | synced | failed`.
+
+The IndexedDB database is named `read30` (from before the product was renamed); it is kept so existing devices keep their identity and data.

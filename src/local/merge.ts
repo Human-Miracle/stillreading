@@ -1,9 +1,9 @@
 import type { BookDTO, ChallengeSnapshot, EntityKind, GoalDTO, ParticipantDTO, ReactionDTO, SessionDTO } from "@/lib/api-types";
-import { getLocalDb, type LocalChallenge, type LocalSession, type Read30DB } from "./db";
+import { getLocalDb, type LocalChallenge, type LocalSession, type StillReadingDB } from "./db";
 
-type Table = Read30DB["participants"] | Read30DB["goals"] | Read30DB["books"] | Read30DB["sessions"] | Read30DB["reactions"];
+type Table = StillReadingDB["participants"] | StillReadingDB["goals"] | StillReadingDB["books"] | StillReadingDB["sessions"] | StillReadingDB["reactions"];
 
-function tableFor(db: Read30DB, kind: Exclude<EntityKind, "challenge">): Table {
+function tableFor(db: StillReadingDB, kind: Exclude<EntityKind, "challenge">): Table {
   switch (kind) {
     case "participant":
       return db.participants;
@@ -19,9 +19,9 @@ function tableFor(db: Read30DB, kind: Exclude<EntityKind, "challenge">): Table {
 }
 
 /** Server rows win unless the local copy has unsynced changes (the queued op will settle it). */
-async function mergeRows<T extends { id: string }>(db: Read30DB, kind: Exclude<EntityKind, "challenge">, rows: T[], force = false) {
+async function mergeRows<T extends { id: string }>(db: StillReadingDB, kind: Exclude<EntityKind, "challenge">, rows: T[], force = false) {
   if (!rows.length) return;
-  const table = tableFor(db, kind) as unknown as Read30DB["books"];
+  const table = tableFor(db, kind) as unknown as StillReadingDB["books"];
   const existing = await table.bulkGet(rows.map((r) => r.id));
   const puts = [];
   for (let i = 0; i < rows.length; i++) {
@@ -84,11 +84,11 @@ export async function markEntitySynced(kind: EntityKind, entityId: string) {
   if (kind === "challenge") return;
   const remaining = await db.syncQueue.where("entityId").equals(entityId).count();
   if (remaining > 0) return;
-  await (tableFor(db, kind) as unknown as Read30DB["books"]).update(entityId, { syncStatus: "synced" });
+  await (tableFor(db, kind) as unknown as StillReadingDB["books"]).update(entityId, { syncStatus: "synced" });
 }
 
 export async function markEntityFailed(kind: EntityKind, entityId: string) {
   const db = getLocalDb();
   if (kind === "challenge") return;
-  await (tableFor(db, kind) as unknown as Read30DB["books"]).update(entityId, { syncStatus: "failed" });
+  await (tableFor(db, kind) as unknown as StillReadingDB["books"]).update(entityId, { syncStatus: "failed" });
 }

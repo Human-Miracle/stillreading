@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "READ30 — Read together for 30 days",
-    short_name: "READ30",
+    name: "Still Reading — Read together",
+    short_name: "Still Reading",
     description: "A social 30-day reading challenge. Set your goal, read, check in, and see your friends show up too.",
     start_url: "/?source=pwa",
     scope: "/",

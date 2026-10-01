@@ -130,5 +130,5 @@ export interface ApiErrorBody {
   error: { code: string; message: string; issues?: unknown };
 }
 
-export const DEVICE_HEADER = "x-read30-device";
-export const SECRET_HEADER = "x-read30-secret";
+export const DEVICE_HEADER = "x-stillreading-device";
+export const SECRET_HEADER = "x-stillreading-secret";
