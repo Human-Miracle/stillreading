@@ -12,18 +12,20 @@ import { claimWithPass, claimWithReinvite } from "@/local/reader";
 
 const noop = () => () => {};
 
-let cachedLink: { key: string; value: { hash: string; reinvite: string | null } } | null = null;
+let cachedLink: { hash: string; reinvite: string | null } | null = null;
 
+/**
+ * Reads a pass (#WORDS, from the QR) or a re-invite (#reinvite=TOKEN) from the URL fragment, which
+ * browsers never send to the server, then wipes it from the address bar and history.
+ */
 function readLink() {
-  // The pass travels in the fragment (never sent to the server); re-invites in ?reinvite=.
-  const key = window.location.hash + window.location.search;
-  if (cachedLink?.key !== key) {
-    cachedLink = {
-      key,
-      value: { hash: decodeURIComponent(window.location.hash.slice(1)), reinvite: new URLSearchParams(window.location.search).get("reinvite") },
-    };
+  if (!cachedLink) {
+    const raw = decodeURIComponent(window.location.hash.slice(1));
+    const legacy = new URLSearchParams(window.location.search).get("reinvite");
+    cachedLink = raw.startsWith("reinvite=") ? { hash: "", reinvite: raw.slice(9) } : { hash: raw, reinvite: legacy };
+    if (raw || legacy) window.history.replaceState(null, "", window.location.pathname);
   }
-  return cachedLink.value;
+  return cachedLink;
 }
 
 function errorText(err: unknown) {

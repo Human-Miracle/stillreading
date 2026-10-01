@@ -91,6 +91,10 @@ export async function setPass(db: Database, deviceId: string, input: { pass: str
       .set({ passLookup: lookup, wrappedKey: input.wrappedKey, passSetAt: new Date(), updatedAt: new Date() })
       .where(eq(readers.id, reader.id))
       .returning();
+    if (input.rotate) {
+      // A new pass signs out every other device: if the old pass leaked, whoever used it loses access.
+      await tx.update(devices).set({ readerId: null }).where(and(eq(devices.readerId, reader.id), ne(devices.id, deviceId)));
+    }
     log.info(input.rotate ? "reading_pass_rotated" : "reading_pass_created", {});
     return readerStatus(row!);
   });

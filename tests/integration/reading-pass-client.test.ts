@@ -90,12 +90,14 @@ describe("Reading Pass across devices", () => {
     await sync();
     expect(await getLocalDb().sessions.get(fromB.id)).toMatchObject({ reflection: "Written on B", reflectionShared: false });
 
-    // Rotating on A: B's copy of the pass goes stale but its notes still decrypt (same key).
+    // Rotating on A signs B out (a new pass revokes every other device). B can come back with the new pass.
     const rotated = await rotatePass();
     expect(rotated.pass).not.toBe(reader!.pass);
     use(phoneB);
-    const bReader = await ensureReadingPass();
-    expect(bReader?.pass).toBeNull();
-    expect(bReader?.noteKey).toBe(rotated.noteKey);
+    await sync();
+    expect((await getLocalDb().challenges.get(snap.challenge.id))?.access).not.toBe("ok");
+    await claimWithPass(rotated.pass!);
+    expect((await getLocalDb().challenges.get(snap.challenge.id))?.access).toBe("ok");
+    expect((await getLocalReader())?.noteKey).toBe(rotated.noteKey);
   });
 });

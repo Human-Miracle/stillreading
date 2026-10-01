@@ -1,5 +1,5 @@
 import { lt, sql } from "drizzle-orm";
-import type { Database } from "@/db/client";
+import type { DbOrTx } from "@/db/client";
 import { rateLimits } from "@/db/schema";
 import { ApiError } from "./http";
 import { log } from "./log";
@@ -19,6 +19,10 @@ export const LIMITS = {
   push: { bucket: "push", limit: 120, windowSeconds: 60 },
   pull: { bucket: "pull", limit: 120, windowSeconds: 60 },
   events: { bucket: "events-ip", limit: 120, windowSeconds: 60 },
+  // Generous: many phones share one carrier IP (CGNAT), but a flood of fake devices still hits it.
+  register: { bucket: "register-ip", limit: 120, windowSeconds: 3600 },
+  pushIp: { bucket: "push-ip", limit: 600, windowSeconds: 60 },
+  pullIp: { bucket: "pull-ip", limit: 600, windowSeconds: 60 },
   claim: { bucket: "claim", limit: 10, windowSeconds: 600 },
   claimIp: { bucket: "claim-ip", limit: 30, windowSeconds: 600 },
   pass: { bucket: "pass", limit: 10, windowSeconds: 3600 },
@@ -30,8 +34,9 @@ export const LIMITS = {
  * Fixed-window counter in Postgres: one upsert per call, shared across serverless instances.
  * Throws 429 when exceeded.
  */
-export async function rateLimit(db: Database, { bucket, limit, windowSeconds }: Limit, subject: string): Promise<void> {
-  if (process.env.STILLREADING_DISABLE_RATE_LIMIT === "1") return;
+export async function rateLimit(db: DbOrTx, { bucket, limit, windowSeconds }: Limit, subject: string): Promise<void> {
+  // Test-only switch; never honoured on the hosting platform.
+  if (process.env.STILLREADING_DISABLE_RATE_LIMIT === "1" && !process.env.VERCEL) return;
   const windowMs = windowSeconds * 1000;
   const windowStart = new Date(Math.floor(Date.now() / windowMs) * windowMs);
   const key = `${bucket}:${subject}`;

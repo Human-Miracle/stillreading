@@ -44,9 +44,14 @@ export async function readJson(req: Request): Promise<unknown> {
   }
 }
 
+/**
+ * The caller's IP for rate limiting. Prefer headers the hosting platform sets itself (Vercel overwrites
+ * these), so a client can't dodge limits by sending its own X-Forwarded-For.
+ */
 export function clientIp(req: Request): string {
+  const platform = req.headers.get("x-vercel-forwarded-for") ?? req.headers.get("x-real-ip");
   const fwd = req.headers.get("x-forwarded-for");
-  return fwd?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  return (platform ?? fwd)?.split(",")[0]?.trim() || "unknown";
 }
 
 export function route<Ctx>(name: string, fn: (req: Request, ctx: Ctx) => Promise<Response>) {

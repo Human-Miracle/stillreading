@@ -82,6 +82,11 @@ const readers: Reader[] = [
 ];
 
 async function main() {
+  // The demo uses a fixed, guessable invite code: never seed a real database by accident.
+  if ((process.env.DATABASE_URL || process.env.VERCEL || process.env.NODE_ENV === "production") && !process.argv.includes("--force")) {
+    console.error("Refusing to seed: DATABASE_URL points at a real database. Pass --force if this is a throwaway database.");
+    process.exit(1);
+  }
   const db = await getDb();
   const existing = await db.select().from(challenges).where(eq(challenges.publicJoinCode, JOIN_CODE));
   if (existing[0]) {

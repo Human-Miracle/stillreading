@@ -16,7 +16,8 @@ export function ReinviteButton({ challengeId, participantId, name }: { challenge
     setError(null);
     try {
       const res = await apiRequest<{ token: string }>(`/api/challenges/${challengeId}/reinvite`, { method: "POST", body: { participantId } });
-      setLink(`${window.location.origin}/pass?reinvite=${res.token}`);
+      // Fragment, not query: never sent to the server or written to request logs.
+      setLink(`${window.location.origin}/pass#reinvite=${res.token}`);
     } catch (err) {
       setError(err instanceof ApiClientError && err.status === 0 ? "You're offline. Re-invites need a connection." : "Couldn't create a link. Try again.");
       setLink("");

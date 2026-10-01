@@ -1,10 +1,11 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { and, eq, lt, or, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { ID_PATTERN } from "@/lib/ids";
 import type { DbOrTx } from "@/db/client";
 import { devices, participants, type ParticipantRow } from "@/db/schema";
-import { ApiError } from "./http";
+import { ApiError, clientIp } from "./http";
+import { LIMITS, rateLimit } from "./rate-limit";
 import { log } from "./log";
 
 const SECRET_RE = /^[0-9A-Za-z]{32,128}$/;
@@ -34,8 +35,13 @@ export async function authenticateDevice(db: DbOrTx, req: Request, opts: { optio
     throw new ApiError(401, "unauthenticated", "Missing device credentials");
   }
   const hash = hashSecret(creds.secret);
-  await db.insert(devices).values({ id: creds.deviceId, secretHash: hash }).onConflictDoNothing();
-  const [row] = await db.select().from(devices).where(eq(devices.id, creds.deviceId));
+  let [row] = await db.select().from(devices).where(eq(devices.id, creds.deviceId));
+  if (!row) {
+    // New devices cost a row each, so registrations are limited per network to stop floods of fake ids.
+    await rateLimit(db, LIMITS.register, clientIp(req));
+    await db.insert(devices).values({ id: creds.deviceId, secretHash: hash }).onConflictDoNothing();
+    [row] = await db.select().from(devices).where(eq(devices.id, creds.deviceId));
+  }
   if (!row || !timingSafeEqual(Buffer.from(row.secretHash), Buffer.from(hash))) {
     log.warn("device_auth_failed", { deviceId: creds.deviceId });
     if (opts.optional) return null;
@@ -51,10 +57,15 @@ export async function authenticateDevice(db: DbOrTx, req: Request, opts: { optio
 /**
  * The device's membership in a challenge (any status), or null. A device acts for its reader, so a
  * membership created on another of the reader's devices counts. Active memberships win.
+ *
+ * The device that originally created a membership only counts while that membership has never been
+ * linked to a reader (pre-Reading-Pass data). Once a membership belongs to a reader, only that
+ * reader's current devices can use it, so re-invites and pass rotation revoke old devices.
  */
 export async function findMembership(db: DbOrTx, challengeId: string, deviceId: string): Promise<ParticipantRow | null> {
   const [device] = await db.select({ readerId: devices.readerId }).from(devices).where(eq(devices.id, deviceId));
-  const owner = device?.readerId ? or(eq(participants.deviceId, deviceId), eq(participants.readerId, device.readerId)) : eq(participants.deviceId, deviceId);
+  const legacy = and(isNull(participants.readerId), eq(participants.deviceId, deviceId));
+  const owner = device?.readerId ? or(eq(participants.readerId, device.readerId), legacy) : legacy;
   const rows = await db
     .select()
     .from(participants)

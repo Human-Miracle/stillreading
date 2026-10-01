@@ -83,7 +83,7 @@ export function PassSettings() {
           <div className="border-t border-line pt-4">
             {confirmRotate ? (
               <div className="space-y-2">
-                <p className="text-sm text-ink/70">Your current pass will stop working. Use this if someone else has seen it.</p>
+                <p className="text-sm text-ink/70">Your current pass stops working and any other phone using it is signed out. Use this if someone else has seen it.</p>
                 <div className="flex gap-2">
                   <Button size="sm" variant="danger" onClick={rotate} disabled={busy}>
                     {busy ? "Making…" : "Yes, make a new pass"}
