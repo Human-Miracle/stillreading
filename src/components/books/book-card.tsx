@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import { ProgressBar } from "../ui/progress";
 import { BookCover } from "./book-cover";
 import { BookForm, bookDraftToInput, bookToDraft, type BookDraft } from "./book-form";
+import { clearCoverChecked, markCoverChecked } from "./use-cover-backfill";
 
 export const STATUS_LABEL = { planned: "Up next", reading: "Reading", completed: "Finished", abandoned: "Set aside" } as const;
 
@@ -27,6 +28,11 @@ export function BookDetails({ book, editable, onDone }: { book: LocalBook; edita
           e.preventDefault();
           const input = bookDraftToInput(draft);
           if (!input.title) return;
+          if (!input.coverUrl) {
+            // Removed on purpose: don't put one back. No cover yet but the title changed: look again.
+            if (book.coverUrl) markCoverChecked(book.id);
+            else if (input.title !== book.title || input.author !== book.author) clearCoverChecked(book.id);
+          }
           await updateBook(book.id, input);
           setDraft(null);
         }}

@@ -23,6 +23,7 @@ export const LIMITS = {
   claimIp: { bucket: "claim-ip", limit: 30, windowSeconds: 600 },
   pass: { bucket: "pass", limit: 10, windowSeconds: 3600 },
   reinvite: { bucket: "reinvite", limit: 20, windowSeconds: 3600 },
+  bookSearch: { bucket: "books-ip", limit: 60, windowSeconds: 60 },
 } satisfies Record<string, Limit>;
 
 /**

@@ -9,6 +9,7 @@ import { GET as readerGET } from "@/app/api/reader/route";
 import { PUT as passPUT } from "@/app/api/reader/pass/route";
 import { POST as claimPOST } from "@/app/api/reader/claim/route";
 import { POST as reinvitePOST } from "@/app/api/challenges/[id]/reinvite/route";
+import { GET as bookSearchGET } from "@/app/api/books/search/route";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { newDeviceSecret, newId } from "@/lib/ids";
 
@@ -48,6 +49,7 @@ const routes: { method: string; pattern: RegExp; keys: string[]; handler: Handle
   { method: "PUT", pattern: /^\/api\/reader\/pass$/, keys: [], handler: passPUT as Handler },
   { method: "POST", pattern: /^\/api\/reader\/claim$/, keys: [], handler: claimPOST as Handler },
   { method: "POST", pattern: /^\/api\/challenges\/([^/]+)\/reinvite$/, keys: ["id"], handler: reinvitePOST as Handler },
+  { method: "GET", pattern: /^\/api\/books\/search$/, keys: [], handler: bookSearchGET as Handler },
 ];
 
 /** A `fetch` that dispatches straight into the Next.js route handlers. */

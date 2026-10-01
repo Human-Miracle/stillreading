@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { defaultCache } from "@serwist/turbopack/worker";
-import { ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist, type PrecacheEntry, type SerwistGlobalConfig } from "serwist";
+import { CacheableResponsePlugin, CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist, type PrecacheEntry, type SerwistGlobalConfig } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -35,6 +35,14 @@ const serwist = new Serwist({
         cacheName: "stillreading-rsc",
         networkTimeoutSeconds: 4,
         plugins: [new ExpirationPlugin({ maxEntries: 128, maxAgeSeconds: THIRTY_DAYS })],
+      }),
+    },
+    // Book covers never change for a given id: keep them so shelves look right offline.
+    {
+      matcher: ({ url, request }) => url.hostname === "covers.openlibrary.org" && request.destination === "image",
+      handler: new CacheFirst({
+        cacheName: "stillreading-covers",
+        plugins: [new CacheableResponsePlugin({ statuses: [0, 200] }), new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: THIRTY_DAYS })],
       }),
     },
     ...defaultCache,
