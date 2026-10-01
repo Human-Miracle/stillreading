@@ -5,38 +5,47 @@ import { findCoverOnServer } from "./open-library";
 
 /** A title that found nothing is looked up again after this long (Open Library keeps growing). */
 export const MISSING_RETRY_MS = 7 * 24 * 60 * 60 * 1000;
-const BATCH = 12;
-const CONCURRENCY = 4;
+/** Small batches keep each request well inside the serverless time limit; the client asks again for the rest. */
+const BATCH = 3;
+
+export interface CoverFillResult {
+  filled: number;
+  checked: number;
+  remaining: number;
+  /** Lookups that failed this time (Open Library slow or down); the client skips them on its next call. */
+  failed: string[];
+}
 
 /**
  * Finds Open Library covers for this challenge's books that have none — added by hand, or by a reader
  * on an older app version — and saves them onto the books, so every member sees them after their next
- * pull. Books whose reader removed the cover on purpose are left alone. Returns how many were filled.
+ * pull. Books whose reader removed the cover on purpose are left alone. A book whose lookup fails
+ * (Open Library slow or down) stays unchecked and is tried again on a later call.
  */
-export async function fillMissingCovers(db: DbOrTx, challengeId: string, now = new Date()): Promise<number> {
-  const todo = await db
-    .select({ id: books.id, title: books.title, author: books.author })
-    .from(books)
-    .where(
-      and(
-        eq(books.challengeId, challengeId),
-        isNull(books.coverUrl),
-        isNull(books.deletedAt),
-        or(isNull(books.coverLookup), and(eq(books.coverLookup, "missing"), lt(books.coverCheckedAt, new Date(now.getTime() - MISSING_RETRY_MS)))),
-      ),
-    )
-    .orderBy(asc(books.createdAt))
-    .limit(BATCH);
+export async function fillMissingCovers(db: DbOrTx, challengeId: string, opts: { now?: Date; skip?: readonly string[] } = {}): Promise<CoverFillResult> {
+  const now = opts.now ?? new Date();
+  const due = and(
+    eq(books.challengeId, challengeId),
+    isNull(books.coverUrl),
+    isNull(books.deletedAt),
+    or(isNull(books.coverLookup), and(eq(books.coverLookup, "missing"), lt(books.coverCheckedAt, new Date(now.getTime() - MISSING_RETRY_MS)))),
+  );
+  const candidates = await db.select({ id: books.id, title: books.title, author: books.author }).from(books).where(due).orderBy(asc(books.createdAt));
+  const skip = new Set(opts.skip ?? []);
+  const pending = candidates.filter((b) => !skip.has(b.id));
+  const todo = pending.slice(0, BATCH);
 
   let filled = 0;
-  const queue = [...todo];
-  const worker = async () => {
-    for (let book = queue.shift(); book; book = queue.shift()) {
+  let checked = 0;
+  const failed: string[] = [];
+  await Promise.all(
+    todo.map(async (book) => {
       let cover: string | null;
       try {
         cover = await findCoverOnServer(book);
       } catch {
-        return; // Open Library unreachable: leave the rest unchecked for next time.
+        failed.push(book.id);
+        return;
       }
       const saved = await db
         .update(books)
@@ -48,9 +57,9 @@ export async function fillMissingCovers(db: DbOrTx, challengeId: string, now = n
         // Only if nothing changed meanwhile (the reader picked a cover, or edited the title).
         .where(and(eq(books.id, book.id), isNull(books.coverUrl), eq(books.title, book.title), isNull(books.deletedAt)))
         .returning({ id: books.id });
+      checked++;
       if (cover && saved.length) filled++;
-    }
-  };
-  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-  return filled;
+    }),
+  );
+  return { filled, checked, remaining: pending.length - todo.length, failed };
 }

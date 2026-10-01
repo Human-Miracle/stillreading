@@ -5,7 +5,16 @@ import { apiRequest } from "@/local/api";
 import { getSyncEngine } from "@/local/sync/engine";
 
 const MIN_GAP_MS = 10 * 60 * 1000;
+const MAX_ROUNDS = 20;
 const key = (challengeId: string) => `sr-cover-fill:${challengeId}`;
+const running = new Set<string>();
+
+interface FillResult {
+  filled: number;
+  checked: number;
+  remaining: number;
+  failed: string[];
+}
 
 function lastRun(challengeId: string): { at: number; missing: number } | null {
   try {
@@ -13,6 +22,26 @@ function lastRun(challengeId: string): { at: number; missing: number } | null {
   } catch {
     return null;
   }
+}
+
+function remember(challengeId: string, missing: number) {
+  try {
+    localStorage.setItem(key(challengeId), JSON.stringify({ at: Date.now(), missing }));
+  } catch {
+    // ignore
+  }
+}
+
+/** Works through the challenge's coverless books a few at a time, pulling found covers as they land. */
+async function fillCovers(challengeId: string) {
+  const skip: string[] = [];
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    const res = await apiRequest<FillResult>(`/api/challenges/${challengeId}/covers`, { method: "POST", body: { skip }, signal: AbortSignal.timeout(70_000) });
+    if (res.filled) void getSyncEngine().sync();
+    skip.push(...res.failed);
+    if (!res.remaining || (!res.checked && !res.failed.length)) return true;
+  }
+  return true;
 }
 
 /**
@@ -23,17 +52,15 @@ function lastRun(challengeId: string): { at: number; missing: number } | null {
 export function useCoverFill(challengeId: string, books: readonly LocalBook[] | undefined) {
   const missing = books?.filter((b) => !b.coverUrl && !b.deletedAt).length ?? 0;
   useEffect(() => {
-    if (!missing || !navigator.onLine) return;
+    if (!missing || !navigator.onLine || running.has(challengeId)) return;
     const last = lastRun(challengeId);
     if (last && missing <= last.missing && Date.now() - last.at < MIN_GAP_MS) return;
-    try {
-      localStorage.setItem(key(challengeId), JSON.stringify({ at: Date.now(), missing }));
-    } catch {
-      // ignore
-    }
-    void apiRequest<{ filled: number }>(`/api/challenges/${challengeId}/covers`, { method: "POST", signal: AbortSignal.timeout(90_000) }).then(
-      ({ filled }) => (filled ? getSyncEngine().sync() : undefined),
-      () => undefined, // Offline, rate limited or Open Library down: tried again later.
-    );
+    running.add(challengeId);
+    fillCovers(challengeId)
+      .then(
+        () => remember(challengeId, missing),
+        () => undefined, // Offline, rate limited or Open Library down: try again next time.
+      )
+      .finally(() => running.delete(challengeId));
   }, [challengeId, missing]);
 }

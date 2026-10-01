@@ -71,10 +71,10 @@ last-write-wins by `updated_at`; reactions are idempotent `set(active)`. No CRDT
 ## Book covers
 
 Covers are filled in on the server so every member sees them, whoever added the book.
-`POST /api/challenges/:id/covers` (any member; rate limited per device) looks up to 12 coverless
+`POST /api/challenges/:id/covers` (any member; rate limited per device) looks up 3 coverless
 books on Open Library and saves the result onto the book (`cover_lookup` = found / missing,
 `cover_checked_at`, bumping `server_updated_at` so the cover arrives on everyone's next pull). The
-client calls it when it sees books without covers (at most every 10 minutes unless more appear).
+client calls it repeatedly, a batch at a time, when it sees books without covers (at most every 10 minutes unless more appear), skipping lookups that failed.
 
 - Clients only send `coverUrl` in `book.upsert` when the reader changed it, so routine progress
   updates never clobber a cover the server found.

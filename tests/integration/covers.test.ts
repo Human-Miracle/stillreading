@@ -41,7 +41,20 @@ afterEach(() => {
 });
 
 const cover = (id: number) => `https://covers.openlibrary.org/b/id/${id}-M.jpg`;
-const fill = (device: TestDevice) => api<{ filled: number }>("POST", `/api/challenges/${snap.challenge.id}/covers`, { device });
+type Fill = { filled: number; checked: number; remaining: number; failed: string[] };
+const fillOnce = (device: TestDevice, skip: string[] = []) => api<Fill>("POST", `/api/challenges/${snap.challenge.id}/covers`, { device, body: { skip } });
+/** What the app does: keep asking until nothing is left, skipping failures. */
+async function fill(device: TestDevice) {
+  const total = { filled: 0, failed: [] as string[] };
+  for (let i = 0; i < 20; i++) {
+    const res = await fillOnce(device, total.failed);
+    if (res.status !== 200) return { status: res.status, body: total };
+    total.filled += res.body.filled;
+    total.failed.push(...res.body.failed);
+    if (!res.body.remaining) break;
+  }
+  return { status: 200, body: { filled: total.filled } };
+}
 const pull = async (device: TestDevice) => (await api<ChallengeSnapshot>("GET", `/api/challenges/${snap.challenge.id}/sync`, { device })).body;
 const push = (device: TestDevice, payload: Record<string, unknown>) =>
   api<{ results: PushResult[] }>("POST", "/api/sync", { device, body: { ops: [{ opId: newId("op"), challengeId: snap.challenge.id, type: "book.upsert", payload }] } });
@@ -89,9 +102,17 @@ describe("POST /api/challenges/:id/covers", () => {
     expect((await fill(friend)).body).toEqual({ filled: 1 });
   });
 
+  it("works in small batches", async () => {
+    for (const t of ["Red Rising", "Golden Son", "Morning Star", "Iron Gold"]) await push(friend, bookInput(t));
+    const first = (await fillOnce(host)).body;
+    expect(first).toMatchObject({ filled: 2, checked: 3, remaining: 2, failed: [] }); // Atomic Habits, Red Rising, Golden Son
+    expect((await fillOnce(host)).body).toMatchObject({ filled: 0, checked: 2, remaining: 0 });
+  });
+
   it("leaves books unchecked when Open Library is down", async () => {
     down = true;
-    expect((await fill(host)).body).toEqual({ filled: 0 });
+    const res = (await fillOnce(host)).body;
+    expect(res).toMatchObject({ filled: 0, checked: 0, failed: [snap.books[0]!.id] });
     down = false;
     expect((await fill(host)).body).toEqual({ filled: 1 });
   });

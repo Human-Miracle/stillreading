@@ -224,3 +224,22 @@ test("Flow G: Reading Pass carries a reader and their private reflections to a n
   await ctxB.close();
   await ctxC.close();
 });
+
+test("Flow H: opening a challenge asks the server to find missing book covers", async ({ browser }) => {
+  const hostCtx = await newContext(browser);
+  const host = await hostCtx.newPage();
+  const { inviteUrl } = await createChallenge(host, { name: "Flow H Challenge", host: "Victory" });
+  const friendCtx = await newContext(browser);
+  const friend = await friendCtx.newPage();
+  await join(friend, inviteUrl, "Temi", { book: "Red Rising" });
+  await waitForSynced(friend);
+
+  const fill = host.waitForResponse((r) => /\/api\/challenges\/ch_[^/]+\/covers$/.test(r.url()) && r.request().method() === "POST");
+  await host.reload();
+  const res = await fill;
+  expect(res.status()).toBe(200);
+  // Open Library isn't reachable from the test sandbox, so lookups report as failed rather than erroring.
+  expect(await res.json()).toMatchObject({ filled: expect.any(Number), checked: expect.any(Number), remaining: expect.any(Number), failed: expect.any(Array) });
+  await hostCtx.close();
+  await friendCtx.close();
+});
