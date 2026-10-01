@@ -1,3 +1,5 @@
+"use client";
+import { useState } from "react";
 import type { LocalBook } from "@/local/db";
 import { hash } from "../ui/avatar";
 import { cn } from "../ui/cn";
@@ -13,11 +15,32 @@ const SCHEMES = [
   { bg: "#f6f2ea", fg: "#1a1a1a" },
 ];
 
+type CoverBook = Pick<LocalBook, "id" | "title" | "author" | "status"> & { coverUrl?: string | null };
+
+function DoneBadge() {
+  return <span className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded-full bg-white text-[10px] font-bold text-ink">✓</span>;
+}
+
+/** The book's real cover when it has one (from Open Library), otherwise a generated typographic cover. */
+export function BookCover({ book, className }: { book: CoverBook; className?: string }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  if (book.coverUrl && failedUrl !== book.coverUrl) {
+    return (
+      <div className={cn("relative aspect-[2/3] overflow-hidden rounded-md bg-surface-2 shadow-[0_6px_16px_rgb(17_17_17/0.18)]", className)} aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed */}
+        <img src={book.coverUrl} alt="" loading="lazy" className="size-full object-cover" onError={() => setFailedUrl(book.coverUrl ?? null)} />
+        {book.status === "completed" ? <DoneBadge /> : null}
+      </div>
+    );
+  }
+  return <GeneratedCover book={book} className={className} />;
+}
+
 /**
  * Generated typographic cover (no external images): colour and layout are derived from the book id,
  * so every book keeps the same cover on every device.
  */
-export function BookCover({ book, className }: { book: Pick<LocalBook, "id" | "title" | "author" | "status">; className?: string }) {
+function GeneratedCover({ book, className }: { book: CoverBook; className?: string }) {
   const h = hash(book.id);
   const scheme = SCHEMES[h % SCHEMES.length]!;
   const variant = (h >> 3) % 3;
@@ -52,9 +75,7 @@ export function BookCover({ book, className }: { book: Pick<LocalBook, "id" | "t
           </div>
         </div>
       )}
-      {book.status === "completed" ? (
-        <span className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded-full bg-white text-[10px] font-bold text-ink">✓</span>
-      ) : null}
+      {book.status === "completed" ? <DoneBadge /> : null}
     </div>
   );
 }

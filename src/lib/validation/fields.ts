@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isDateKey, isValidTimezone } from "@/lib/domain/dates";
 import { BOOK_STATUSES, REACTION_TYPES, SESSION_UNITS } from "@/lib/domain/types";
+import { COVER_HOST } from "@/lib/book-search";
 import { ID_PATTERN, type IdPrefix } from "@/lib/ids";
 
 // Strip control characters (keeps newlines in multi-line text) and trim.
@@ -15,6 +16,18 @@ export const description = z.string().transform(clean(true)).pipe(z.string().max
 export const reflection = z.string().transform(clean(true)).pipe(z.string().max(500, "Keep it under 500 characters"));
 export const bookTitle = z.string().transform(clean(false)).pipe(z.string().min(1, "Title is required").max(200));
 export const bookAuthor = z.string().transform(clean(false)).pipe(z.string().max(120));
+/** Cover images are shown to every reader in the challenge, so only Open Library cover URLs are accepted. */
+export const coverUrl = z
+  .string()
+  .max(300)
+  .refine((v) => {
+    try {
+      const u = new URL(v);
+      return u.protocol === "https:" && u.hostname === COVER_HOST && !u.username && !u.password && !u.port;
+    } catch {
+      return false;
+    }
+  }, "Unsupported cover image");
 
 export const dateKey = z.string().refine(isDateKey, "Invalid date");
 export const timezone = z.string().max(64).refine(isValidTimezone, "Invalid timezone");

@@ -54,6 +54,11 @@ Goal presets (`lib/domain/goals.ts → goalFromPreset`):
 ### books
 `id, participant_id, challenge_id, title (≤200), author, cover_url, total_pages, current_page, status (planned|reading|completed|abandoned), started_at, completed_at, …timestamps, deleted_at`
 
+`cover_url` is optional and must be an `https://covers.openlibrary.org/…` URL (enforced by the
+op validator), because every reader in the challenge loads it. The book form looks titles up in the
+Open Library search API from the browser and fills in title, author, page count and cover. A
+`book.upsert` that omits `coverUrl` keeps the stored cover; `null` clears it.
+
 A challenge does not belong to a book: participants can read several books in sequence.
 
 ### reading_sessions

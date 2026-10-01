@@ -283,4 +283,28 @@ describe("books", () => {
     const res = await push(host, ops);
     expect(res.body.results.every((r) => r.status === "ok")).toBe(true);
   });
+
+  it("edits book details and cover, keeping the cover when a client omits it", async () => {
+    const book = bookInput("Atomc Habits");
+    const op = (payload: Record<string, unknown>) => ({ opId: newId("op"), challengeId: snap.challenge.id, type: "book.upsert", payload });
+    const later = (s: number) => new Date(Date.now() + s * 1000).toISOString();
+    const cover = "https://covers.openlibrary.org/b/id/12539702-M.jpg";
+    await push(host, [op(book)]);
+
+    const edited = (await push(host, [op({ ...book, title: "Atomic Habits", totalPages: 306, coverUrl: cover, updatedAt: later(1) })])).body.results[0];
+    expect(edited).toMatchObject({ status: "ok", entity: { record: { title: "Atomic Habits", totalPages: 306, coverUrl: cover } } });
+
+    // `bookInput` has no coverUrl key, like a client from before covers existed.
+    const kept = (await push(host, [op({ ...book, title: "Atomic Habits", updatedAt: later(2) })])).body.results[0];
+    expect(kept).toMatchObject({ status: "ok", entity: { record: { coverUrl: cover } } });
+
+    const cleared = (await push(host, [op({ ...book, coverUrl: null, updatedAt: later(3) })])).body.results[0];
+    expect(cleared).toMatchObject({ status: "ok", entity: { record: { coverUrl: null } } });
+  });
+
+  it("rejects cover images from other hosts", async () => {
+    const payload = { ...bookInput("Deep Work"), coverUrl: "https://tracker.example.com/pixel.gif" };
+    const res = await push(host, [{ opId: newId("op"), challengeId: snap.challenge.id, type: "book.upsert", payload }]);
+    expect(res.body.results[0]).toMatchObject({ status: "rejected" });
+  });
 });

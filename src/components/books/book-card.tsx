@@ -5,17 +5,44 @@ import { removeBook, updateBook } from "@/local/repo";
 import { Button } from "../ui/button";
 import { ProgressBar } from "../ui/progress";
 import { BookCover } from "./book-cover";
+import { BookForm, bookDraftToInput, bookToDraft, type BookDraft } from "./book-form";
 
 export const STATUS_LABEL = { planned: "Up next", reading: "Reading", completed: "Finished", abandoned: "Set aside" } as const;
 
 /** Book details + actions, shown inside a sheet. */
 export function BookDetails({ book, editable, onDone }: { book: LocalBook; editable: boolean; onDone?: () => void }) {
   const [confirming, setConfirming] = useState(false);
+  const [draft, setDraft] = useState<BookDraft | null>(null);
   const pct = book.totalPages ? (book.currentPage / book.totalPages) * 100 : null;
   const act = async (fn: () => Promise<void>) => {
     await fn();
     onDone?.();
   };
+  if (draft) {
+    return (
+      <form
+        className="space-y-5"
+        aria-label={`Edit ${book.title}`}
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const input = bookDraftToInput(draft);
+          if (!input.title) return;
+          await updateBook(book.id, input);
+          setDraft(null);
+        }}
+      >
+        <BookForm value={draft} onChange={setDraft} autoFocus />
+        <div className="flex gap-2">
+          <Button type="submit" disabled={!draft.title.trim()}>
+            Save changes
+          </Button>
+          <Button variant="ghost" onClick={() => setDraft(null)}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    );
+  }
   return (
     <div className="space-y-5">
       <div className="flex gap-4">
@@ -48,6 +75,9 @@ export function BookDetails({ book, editable, onDone }: { book: LocalBook; edita
               Start reading
             </Button>
           ) : null}
+          <Button variant="secondary" onClick={() => setDraft(bookToDraft(book))}>
+            Edit details
+          </Button>
           {confirming ? (
             <Button variant="danger" onClick={() => act(() => removeBook(book.id))}>
               Remove for sure?
