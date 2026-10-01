@@ -78,6 +78,8 @@ export interface SessionDTO {
   amount: number;
   unit: SessionUnit;
   reflection: string | null;
+  /** End-to-end encrypted private reflection; only present for the viewer's own sessions. */
+  privateReflection: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -128,6 +130,17 @@ export interface PushResult {
 
 export interface ApiErrorBody {
   error: { code: string; message: string; issues?: unknown };
+}
+
+export interface ReaderStatusDTO {
+  readerId: string;
+  hasPass: boolean;
+  passSetAt: string | null;
+  wrappedKey: string | null;
+}
+
+export interface ClaimResultDTO extends ReaderStatusDTO {
+  challengeIds: string[];
 }
 
 export const DEVICE_HEADER = "x-stillreading-device";

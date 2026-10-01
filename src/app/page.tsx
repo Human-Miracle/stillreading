@@ -96,6 +96,9 @@ export default function Landing() {
               </Button>
             </form>
           )}
+          <Link href="/pass" className="block py-2 text-center text-sm text-ink/60">
+            Already reading? <span className="font-medium text-ink">Use your Reading Pass</span>
+          </Link>
         </div>
       </section>
 

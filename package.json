@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@scure/bip39": "^2.4.0",
     "@serwist/turbopack": "^9.5.12",
     "@vercel/functions": "^3.9.9",
     "dexie": "^4.4.6",

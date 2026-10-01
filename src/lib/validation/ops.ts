@@ -17,6 +17,9 @@ import {
   sessionUnit,
 } from "./fields";
 import { goalPreset } from "./goal";
+import { SEALED_NOTE_PATTERN } from "@/lib/pass";
+
+const sealedNote = z.string().max(4100).regex(SEALED_NOTE_PATTERN, "Invalid encrypted note");
 
 const reactionIdPattern = /^rx_[0-9A-Z]{26}\.[0-9A-Z]{26}\.(heart|fire|clap|book)$/;
 
@@ -50,6 +53,7 @@ export const sessionFields = z.object({
   amount,
   unit: sessionUnit,
   reflection: reflection.nullable().optional(),
+  privateReflection: sealedNote.nullable().optional(),
   createdAt: isoTimestamp,
 });
 
@@ -62,6 +66,7 @@ export const syncOp = z.discriminatedUnion("type", [
   z.object({ ...envelope, type: z.literal("book.upsert"), payload: bookFields }),
   z.object({ ...envelope, type: z.literal("book.delete"), payload: z.object({ id: id("bk"), updatedAt: isoTimestamp }) }),
   z.object({ ...envelope, type: z.literal("session.create"), payload: sessionFields }),
+  z.object({ ...envelope, type: z.literal("session.private"), payload: z.object({ id: id("rs"), privateReflection: sealedNote.nullable() }) }),
   z.object({ ...envelope, type: z.literal("session.delete"), payload: z.object({ id: id("rs"), updatedAt: isoTimestamp }) }),
   z.object({
     ...envelope,

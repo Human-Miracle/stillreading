@@ -23,12 +23,34 @@ const syncColumns = {
   serverUpdatedAt: ts("server_updated_at").notNull().defaultNow(),
 };
 
-export const devices = pgTable("devices", {
-  id: text("id").primaryKey(),
-  secretHash: text("secret_hash").notNull(),
-  createdAt: ts("created_at").notNull().defaultNow(),
-  lastSeenAt: ts("last_seen_at").notNull().defaultNow(),
-});
+/**
+ * A person, independent of device. Holds the Reading Pass lookup (scrypt of the pass, never the pass)
+ * and the reader's note key wrapped with a key derived from the pass (the server cannot unwrap it).
+ */
+export const readers = pgTable(
+  "readers",
+  {
+    id: text("id").primaryKey(),
+    passLookup: text("pass_lookup"),
+    passSetAt: ts("pass_set_at"),
+    wrappedKey: text("wrapped_key"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("readers_pass_lookup_uq").on(t.passLookup)],
+);
+
+export const devices = pgTable(
+  "devices",
+  {
+    id: text("id").primaryKey(),
+    secretHash: text("secret_hash").notNull(),
+    readerId: text("reader_id").references(() => readers.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    lastSeenAt: ts("last_seen_at").notNull().defaultNow(),
+  },
+  (t) => [index("devices_reader_idx").on(t.readerId)],
+);
 
 export const challenges = pgTable(
   "challenges",
@@ -59,6 +81,7 @@ export const participants = pgTable(
     id: text("id").primaryKey(),
     challengeId: text("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
     deviceId: text("device_id").notNull().references(() => devices.id),
+    readerId: text("reader_id").references(() => readers.id, { onDelete: "set null" }),
     displayName: varchar("display_name", { length: 40 }).notNull(),
     avatarUrl: text("avatar_url"),
     role: text("role", { enum: ["host", "participant"] }).notNull().default("participant"),
@@ -68,6 +91,8 @@ export const participants = pgTable(
   },
   (t) => [
     uniqueIndex("participants_challenge_device_uq").on(t.challengeId, t.deviceId),
+    uniqueIndex("participants_challenge_reader_uq").on(t.challengeId, t.readerId),
+    index("participants_reader_idx").on(t.readerId),
     index("participants_challenge_idx").on(t.challengeId),
     index("participants_device_idx").on(t.deviceId),
     index("participants_sync_idx").on(t.challengeId, t.serverUpdatedAt),
@@ -135,6 +160,8 @@ export const readingSessions = pgTable(
     amount: integer("amount").notNull(),
     unit: text("unit", { enum: ["pages", "chapters", "minutes"] }).notNull(),
     reflection: varchar("reflection", { length: 500 }),
+    /** End-to-end encrypted private reflection ("v1.<iv>.<ciphertext>"); only ever sent to its owner. */
+    privateReflection: text("private_reflection"),
     ...syncColumns,
     deletedAt: ts("deleted_at"),
   },
@@ -166,6 +193,18 @@ export const reactions = pgTable(
     check("reactions_type", sql`${t.type} in ('heart','fire','clap','book')`),
   ],
 );
+
+/** One-time links a host creates so a member who lost everything can reconnect. */
+export const reinvites = pgTable("reinvites", {
+  tokenHash: text("token_hash").primaryKey(),
+  participantId: text("participant_id")
+    .notNull()
+    .references(() => participants.id, { onDelete: "cascade" }),
+  createdBy: text("created_by").notNull(),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
 
 export const processedOperations = pgTable("processed_operations", {
   opId: text("op_id").primaryKey(),
@@ -203,3 +242,4 @@ export type GoalRow = typeof goals.$inferSelect;
 export type BookRow = typeof books.$inferSelect;
 export type SessionRow = typeof readingSessions.$inferSelect;
 export type ReactionRow = typeof reactions.$inferSelect;
+export type ReaderRow = typeof readers.$inferSelect;

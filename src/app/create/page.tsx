@@ -14,6 +14,8 @@ import { formatDateKey, monthName } from "@/lib/format";
 import { challengeName as nameSchema } from "@/lib/validation/fields";
 import { ApiClientError } from "@/local/api";
 import { createChallenge, type ProfileInput } from "@/local/repo";
+import { ensureReadingPass } from "@/local/reader";
+import { PassOnboarding } from "@/components/pass/pass-prompt";
 import type { ChallengeSnapshot } from "@/lib/api-types";
 import Link from "next/link";
 
@@ -62,6 +64,7 @@ function CreateFlow() {
       track("goal_selected", { challengeId: snap.challenge.id, props: { kind: profile.goal.kind } });
       if (profile.book) track("book_added", { challengeId: snap.challenge.id });
       setCreated(snap);
+      void ensureReadingPass().catch(() => undefined);
       setStage("done");
     } catch (err) {
       setError(
@@ -181,6 +184,7 @@ function CreateFlow() {
           <div>
             <InviteActions joinCode={created.challenge.joinCode} challengeName={created.challenge.name} challengeId={created.challenge.id} />
           </div>
+          <PassOnboarding />
           <Button variant="secondary" full size="lg" onClick={() => router.push(`/c/${created.challenge.id}`)}>
             Go to my challenge
           </Button>

@@ -166,3 +166,61 @@ test("Flow F: iPhone Safari gets Add to Home Screen steps", async ({ browser }) 
   await expect(modal.getByText("Open as Web App")).toBeVisible();
   await ctx.close();
 });
+
+test("Flow G: Reading Pass carries a reader and their private reflections to a new phone", async ({ browser }) => {
+  const ctxA = await newContext(browser);
+  const phoneA = await ctxA.newPage();
+  await phoneA.goto("/");
+  await phoneA.getByRole("link", { name: "Create a challenge" }).click();
+  await phoneA.getByLabel("Challenge name").fill("Flow G Challenge");
+  await phoneA.getByRole("button", { name: "Continue" }).click();
+  await phoneA.getByLabel("Your name").fill("Miracle");
+  await phoneA.getByRole("button", { name: "Continue" }).click();
+  await phoneA.getByRole("button", { name: "Continue" }).click();
+  await phoneA.getByRole("button", { name: "Skip for now" }).click();
+  // The pass is shown right away on the "ready" screen.
+  await expect(phoneA.getByRole("heading", { name: "Here's your Reading Pass" })).toBeVisible();
+  await phoneA.getByRole("button", { name: /Go to my challenge/ }).click();
+
+  // Private reflection.
+  await phoneA.getByRole("button", { name: "Log reading", exact: true }).click();
+  const dialog = phoneA.getByRole("dialog", { name: "Log reading" });
+  await dialog.getByLabel("How much?").fill("12");
+  await dialog.getByLabel(/What stood out/).fill("Just between me and the book");
+  await dialog.getByText("Share my reflection with the crew").click();
+  await dialog.getByRole("button", { name: "Check in", exact: true }).click();
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await waitForSynced(phoneA);
+
+  // Skipping the home reminder keeps the pass in Settings.
+  await phoneA.getByRole("button", { name: "Skip", exact: true }).click();
+  await phoneA.getByRole("link", { name: "Challenge settings" }).click();
+  await phoneA.getByRole("button", { name: "Show pass" }).click();
+  const label = await phoneA.getByLabel(/^Reading Pass: /).getAttribute("aria-label");
+  const pass = label!.replace("Reading Pass: ", "");
+  expect(pass).toMatch(/^[A-Z]+ [A-Z]+ [A-Z]+ [A-Z]+ \d{2}$/);
+  await waitForSynced(phoneA);
+
+  // New phone: enter the pass (any case) and carry on.
+  const ctxB = await newContext(browser);
+  const phoneB = await ctxB.newPage();
+  await phoneB.goto("/");
+  await phoneB.getByRole("link", { name: /Use your Reading Pass/ }).click();
+  await phoneB.getByLabel("Your Reading Pass").fill(pass.toLowerCase());
+  await phoneB.getByRole("button", { name: "Continue" }).click();
+  await expect(phoneB.getByRole("heading", { name: "Your reading crew" })).toBeVisible();
+  await expectToday(phoneB, 12, "of 20 pages today");
+  await phoneB.getByRole("link", { name: "Feed" }).click();
+  await expect(phoneB.getByText("Just between me and the book")).toBeVisible();
+  await expect(phoneB.getByText("Private", { exact: true })).toBeVisible();
+
+  // A wrong pass is refused.
+  const ctxC = await newContext(browser);
+  const phoneC = await ctxC.newPage();
+  await phoneC.goto("/pass#WRONG-WORDS-HERE-TODAY-00");
+  await phoneC.getByRole("button", { name: "Continue" }).click();
+  await expect(phoneC.getByText("We couldn't find that Reading Pass", { exact: false })).toBeVisible();
+  await ctxA.close();
+  await ctxB.close();
+  await ctxC.close();
+});

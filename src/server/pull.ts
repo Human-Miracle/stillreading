@@ -44,7 +44,7 @@ export async function loadSnapshot(db: DbOrTx, challengeId: string, participantI
     participants: pRows.map(participantDTO),
     goals: gRows.map(goalDTO),
     books: bRows.map(bookDTO),
-    sessions: sRows.map(sessionDTO),
+    sessions: sRows.map((r) => sessionDTO(r, participantId)),
     reactions: rRows.map(reactionDTO),
   };
 }

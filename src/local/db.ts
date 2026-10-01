@@ -21,6 +21,8 @@ export type LocalSession = SessionDTO & {
   syncStatus: SyncStatus;
   /** Private reflections are kept on this device only and never sent to the server. */
   reflectionShared: boolean;
+  /** Private reflection sealed and uploaded for this reader's other devices. */
+  privateSynced?: boolean;
 };
 export type LocalReaction = ReactionDTO & { syncStatus: SyncStatus };
 

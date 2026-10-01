@@ -28,12 +28,19 @@ Run everything with `npm run verify` (typecheck, lint, unit+integration, build) 
   check-ins, transient failure → retry with backoff, validation failure → `failed`, network cut
   mid-sync (server applied, response lost) → retry is a duplicate, not a second row.
 
+* Reading Pass: existing members adopted, pass stored only as scrypt, claim on a new phone, duplicate
+  membership merge, wrong pass, rotation, owner-only sealed private reflections, host re-invite once.
+* Client: note crypto round-trip, pass normalization, backfill of pre-pass private notes, decrypt on
+  a second device, rotation keeps the note key.
+
 ## E2E (`e2e`, Playwright, Chromium)
 * Flow A: create challenge → copy link → second browser context joins → goal → check-in.
 * Flow B: joined user goes offline → logs reading → reload (offline, served by SW) → reading still
   there → back online → synced; other member sees it once.
 * Flow C: multiple participants check in → feed → reactions → stats.
 * Flow D: ended challenge → completion screen + share card.
+* Flow E/F: install modal on every visit, skippable; iPhone Safari steps.
+* Flow G: Reading Pass moves a reader and their private reflections to a new phone; wrong pass refused.
 
 ## Manual (before release)
 iPhone Safari, iPhone installed PWA, Android Chrome install, desktop Chrome, airplane mode,

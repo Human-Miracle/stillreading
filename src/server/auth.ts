@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, eq, lt, or, sql } from "drizzle-orm";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { ID_PATTERN } from "@/lib/ids";
 import type { DbOrTx } from "@/db/client";
@@ -48,13 +48,18 @@ export async function authenticateDevice(db: DbOrTx, req: Request, opts: { optio
   return row.id;
 }
 
-/** The device's membership row in a challenge (any status), or null. */
+/**
+ * The device's membership in a challenge (any status), or null. A device acts for its reader, so a
+ * membership created on another of the reader's devices counts. Active memberships win.
+ */
 export async function findMembership(db: DbOrTx, challengeId: string, deviceId: string): Promise<ParticipantRow | null> {
-  const [row] = await db
+  const [device] = await db.select({ readerId: devices.readerId }).from(devices).where(eq(devices.id, deviceId));
+  const owner = device?.readerId ? or(eq(participants.deviceId, deviceId), eq(participants.readerId, device.readerId)) : eq(participants.deviceId, deviceId);
+  const rows = await db
     .select()
     .from(participants)
-    .where(and(eq(participants.challengeId, challengeId), eq(participants.deviceId, deviceId)));
-  return row ?? null;
+    .where(and(eq(participants.challengeId, challengeId), owner));
+  return rows.find((r) => r.status === "active") ?? rows[0] ?? null;
 }
 
 export type MembershipFailure = "not_member" | "removed" | "left";

@@ -7,6 +7,7 @@ import type { createChallengeBody, joinChallengeBody } from "@/lib/validation/ap
 import type { Database, DbOrTx } from "@/db/client";
 import { challenges, participants, processedOperations, type ChallengeRow, type ParticipantRow } from "@/db/schema";
 import { findMembership } from "./auth";
+import { ensureReader } from "./readers";
 import { upsertBook } from "./books";
 import { upsertGoal } from "./goals";
 import { ApiError } from "./http";
@@ -76,10 +77,12 @@ export async function createChallenge(db: Database, deviceId: string, input: Cre
       timezone: input.challenge.timezone,
       status: "active",
     });
+    const reader = await ensureReader(tx, deviceId);
     await tx.insert(participants).values({
       id: input.host.participantId,
       challengeId,
       deviceId,
+      readerId: reader.id,
       displayName: input.host.displayName,
       role: "host",
     });
@@ -172,7 +175,7 @@ export async function joinChallenge(db: Database, deviceId: string, code: string
       participantId = existing.id;
       await tx
         .update(participants)
-        .set({ status: "active", displayName: input.displayName, updatedAt: new Date(), serverUpdatedAt: sql`now()` })
+        .set({ status: "active", displayName: input.displayName, readerId: (await ensureReader(tx, deviceId)).id, updatedAt: new Date(), serverUpdatedAt: sql`now()` })
         .where(eq(participants.id, existing.id));
     } else {
       const [clash] = await tx.select({ id: participants.id }).from(participants).where(eq(participants.id, input.participantId));
@@ -182,6 +185,7 @@ export async function joinChallenge(db: Database, deviceId: string, code: string
         id: participantId,
         challengeId: challenge.id,
         deviceId,
+        readerId: (await ensureReader(tx, deviceId)).id,
         displayName: input.displayName,
         role: "participant",
       });

@@ -116,3 +116,25 @@ Product events go to `POST /api/events` → `product_events` (no PII: event name
   from the challenge start. (`participantStart` / `participantDuration` in `lib/domain/dates.ts`.)
 * **Logging for yesterday** is allowed (forgot to check in), but never for days before joining. The
   server accepts any date inside the challenge up to today, so offline check-ins that sync late are kept.
+
+## Reading Pass (cross-device identity without accounts)
+
+* A **reader** sits above devices: `devices.reader_id` and `challenge_participants.reader_id`. A device
+  acts for its reader, so membership checks match `device_id` *or* the device's `reader_id`.
+* Every reader gets a **Reading Pass**: four BIP-39 words + two digits (≈50 bits), generated on the
+  device. The server stores only `scrypt(pass)` with a fixed salt (lookup key, slow to brute-force).
+  Claiming is rate limited per device and IP.
+* Readers that existed before the pass are adopted lazily: `GET /api/reader` creates a reader for the
+  device and attaches its memberships; the client then creates a pass and shows a home-screen prompt.
+  The pass always stays in Settings (hidden until "Show pass"), with copy, save-as-image and a
+  "move to a new phone" QR (`/pass#WORDS`; the fragment never reaches the server).
+* Claiming on a device that already has its own memberships merges them: duplicate memberships in the
+  same challenge are folded into the original (check-ins, books and reactions move; the duplicate is
+  marked `left`).
+* **Host re-invite**: a one-time, 7-day link (`/pass?reinvite=…`, stored hashed) that hands one
+  membership to a member who lost both phone and pass.
+* **Private reflections** are end-to-end encrypted: a random per-reader AES-GCM note key seals them
+  (`reading_sessions.private_reflection`, only ever returned to the owner). The note key is stored on
+  the server wrapped with a PBKDF2 key derived from the pass, so new devices with the pass can unwrap
+  it and the server cannot. Rotating the pass re-wraps the same key. Private notes written before the
+  pass existed are sealed and uploaded automatically (`session.private` op).

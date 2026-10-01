@@ -14,6 +14,8 @@ import { formatDateKey } from "@/lib/format";
 import { ApiClientError, apiRequest } from "@/local/api";
 import { getLocalDb } from "@/local/db";
 import { joinChallenge, type ProfileInput } from "@/local/repo";
+import { ensureReadingPass } from "@/local/reader";
+import { PassOnboarding } from "@/components/pass/pass-prompt";
 
 type Stage = "preview" | "profile" | "joined";
 
@@ -61,6 +63,7 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
       track("goal_selected", { challengeId: snap.challenge.id, props: { kind: profile.goal.kind } });
       if (profile.book) track("book_added", { challengeId: snap.challenge.id });
       setJoinedId(snap.challenge.id);
+      void ensureReadingPass().catch(() => undefined);
       setStage("joined");
     } catch (err) {
       if (err instanceof ApiClientError && ERROR_COPY[err.code]) setErrorCode(err.code);
@@ -117,6 +120,7 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
           <h1 className="display mt-8 text-[56px]">You&apos;re in</h1>
           <p className="mt-3 text-[17px] text-ink/60">Welcome to {challenge.name}. Your reading crew is waiting.</p>
         </div>
+        <PassOnboarding />
         <Button full size="lg" onClick={() => router.push(`/c/${joinedId}`)}>
           Open my challenge
         </Button>
@@ -172,6 +176,11 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
             Join the challenge
           </Button>
         )}
+        {!localChallengeId && !memberOnServer ? (
+          <Link href="/pass" className="block py-2 text-center text-sm text-ink/60">
+            Already in this challenge on another phone? <span className="font-medium text-ink">Use your Reading Pass</span>
+          </Link>
+        ) : null}
       </div>
     </section>,
   );

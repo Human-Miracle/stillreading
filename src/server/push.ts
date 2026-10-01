@@ -129,7 +129,7 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
     const [existing] = await tx.select().from(readingSessions).where(eq(readingSessions.id, payload.id));
     if (existing) {
       if (existing.participantId !== me.id) return rejected("forbidden", "That reading session belongs to someone else.");
-      return ok("session", sessionDTO(existing));
+      return ok("session", sessionDTO(existing, me.id));
     }
     const today = todayInTimezone(challenge.timezone);
     if (!isWithinChallenge(challenge, payload.date) || diffDays(today, payload.date) > 1) {
@@ -152,11 +152,21 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
         amount: payload.amount,
         unit: payload.unit,
         reflection: payload.reflection || null,
+        privateReflection: payload.privateReflection ?? null,
         createdAt,
         updatedAt: createdAt,
       })
       .returning();
-    return ok("session", sessionDTO(row!));
+    return ok("session", sessionDTO(row!, me.id));
+  },
+
+  async "session.private"(tx, { payload }, { me }) {
+    const [row] = await tx
+      .update(readingSessions)
+      .set({ privateReflection: payload.privateReflection, serverUpdatedAt: now })
+      .where(and(eq(readingSessions.id, payload.id), eq(readingSessions.participantId, me.id)))
+      .returning();
+    return row ? ok("session", sessionDTO(row, me.id)) : rejected("not_found", "That check-in isn't yours.");
   },
 
   async "session.delete"(tx, { payload }, { me }) {
@@ -165,7 +175,7 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
       .set({ deletedAt: new Date(payload.updatedAt), updatedAt: new Date(payload.updatedAt), serverUpdatedAt: now })
       .where(and(eq(readingSessions.id, payload.id), eq(readingSessions.participantId, me.id)))
       .returning();
-    return row ? ok("session", sessionDTO(row)) : ok();
+    return row ? ok("session", sessionDTO(row, me.id)) : ok();
   },
 
   async "reaction.set"(tx, { payload }, { challenge, me }) {

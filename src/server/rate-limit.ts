@@ -19,6 +19,10 @@ export const LIMITS = {
   push: { bucket: "push", limit: 120, windowSeconds: 60 },
   pull: { bucket: "pull", limit: 120, windowSeconds: 60 },
   events: { bucket: "events-ip", limit: 120, windowSeconds: 60 },
+  claim: { bucket: "claim", limit: 10, windowSeconds: 600 },
+  claimIp: { bucket: "claim-ip", limit: 30, windowSeconds: 600 },
+  pass: { bucket: "pass", limit: 10, windowSeconds: 3600 },
+  reinvite: { bucket: "reinvite", limit: 20, windowSeconds: 3600 },
 } satisfies Record<string, Limit>;
 
 /**

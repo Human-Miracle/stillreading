@@ -5,6 +5,8 @@ import { getSyncEngine } from "@/local/sync/engine";
 import { getDevice } from "@/local/device";
 import { listenForInstallPrompt } from "./pwa/install-state";
 import { InstallModal } from "./pwa/install-modal";
+import { getLocalDb } from "@/local/db";
+import { ensureReadingPass } from "@/local/reader";
 
 function SyncBoot() {
   useEffect(() => {
@@ -14,9 +16,19 @@ function SyncBoot() {
     const engine = getSyncEngine();
     engine.start();
     const off = listenForInstallPrompt();
+    // Every reader with a challenge gets a Reading Pass (existing readers too, on their next visit).
+    const ensurePass = () => {
+      void getLocalDb()
+        .challenges.count()
+        .then((n) => (n > 0 ? ensureReadingPass() : null))
+        .catch(() => undefined);
+    };
+    ensurePass();
+    window.addEventListener("online", ensurePass);
     return () => {
       engine.stop();
       off();
+      window.removeEventListener("online", ensurePass);
     };
   }, []);
   return null;

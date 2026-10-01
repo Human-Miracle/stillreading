@@ -16,7 +16,8 @@
 | `participant.leave` | self | — |
 | `goal.upsert` | self | goal fields |
 | `book.upsert` / `book.delete` | self | book fields / id |
-| `session.create` / `session.delete` | self | session fields (reflection only if shared) / id |
+| `session.create` / `session.delete` | self | session fields (shared reflection in plain text, private one sealed) / id |
+| `session.private` | self | id, sealed private reflection (backfill for notes written before the pass) |
 | `reaction.set` | self | sessionId, type, active |
 | `challenge.update` | host | name, description |
 | `challenge.archive` | host | — |

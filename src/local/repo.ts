@@ -7,6 +7,7 @@ import type { CreateChallengeBody, JoinChallengeBody } from "@/lib/validation/ap
 import type { SyncOpInput, SyncOpType } from "@/lib/validation/ops";
 import { apiRequest } from "./api";
 import { getLocalDb, type LocalBook, type LocalSession, type SyncOpRecord } from "./db";
+import { sealNote } from "./crypto";
 import { applySnapshot, markEntitySynced } from "./merge";
 
 type Listener = () => void;
@@ -16,6 +17,11 @@ const mutationListeners = new Set<Listener>();
 export function onLocalMutation(fn: Listener): () => void {
   mutationListeners.add(fn);
   return () => mutationListeners.delete(fn);
+}
+
+/** Lets other local modules (e.g. the reader) trigger a sync after writing. */
+export function onLocalMutationNotify() {
+  notify();
 }
 
 function notify() {
@@ -132,6 +138,9 @@ export async function logReading(input: LogReadingInput): Promise<LocalSession> 
   const t = nowIso();
   const reflection = input.reflection?.trim() || null;
   const shared = input.reflectionShared ?? true;
+  // Private reflections travel end-to-end encrypted to the reader's other devices.
+  const noteKey = !shared && reflection ? ((await db.kv.get("reader"))?.value as { noteKey?: string | null } | undefined)?.noteKey : null;
+  const sealed = noteKey && reflection ? await sealNote(reflection, noteKey) : null;
   const session: LocalSession = {
     id: newId("rs"),
     challengeId: challenge.id,
@@ -142,6 +151,8 @@ export async function logReading(input: LogReadingInput): Promise<LocalSession> 
     unit: input.unit,
     reflection,
     reflectionShared: shared,
+    privateReflection: sealed,
+    privateSynced: Boolean(sealed),
     createdAt: t,
     updatedAt: t,
     deletedAt: null,
@@ -154,6 +165,7 @@ export async function logReading(input: LogReadingInput): Promise<LocalSession> 
     amount: session.amount,
     unit: session.unit,
     reflection: shared ? reflection : null,
+    privateReflection: sealed,
     createdAt: t,
   };
 

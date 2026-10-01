@@ -5,6 +5,10 @@ import { GET as pullGET } from "@/app/api/challenges/[id]/sync/route";
 import { GET as previewGET, POST as joinPOST } from "@/app/api/join/[code]/route";
 import { POST as pushPOST } from "@/app/api/sync/route";
 import { POST as eventsPOST } from "@/app/api/events/route";
+import { GET as readerGET } from "@/app/api/reader/route";
+import { PUT as passPUT } from "@/app/api/reader/pass/route";
+import { POST as claimPOST } from "@/app/api/reader/claim/route";
+import { POST as reinvitePOST } from "@/app/api/challenges/[id]/reinvite/route";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { newDeviceSecret, newId } from "@/lib/ids";
 
@@ -18,7 +22,7 @@ export async function freshDb(): Promise<Database> {
 
 export async function resetDb(db: Database) {
   await db.execute(
-    sql`truncate table reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
+    sql`truncate table reinvites, readers, reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
   );
 }
 
@@ -40,6 +44,10 @@ const routes: { method: string; pattern: RegExp; keys: string[]; handler: Handle
   { method: "POST", pattern: /^\/api\/join\/([^/]+)$/, keys: ["code"], handler: joinPOST as Handler },
   { method: "POST", pattern: /^\/api\/sync$/, keys: [], handler: pushPOST as Handler },
   { method: "POST", pattern: /^\/api\/events$/, keys: [], handler: eventsPOST as Handler },
+  { method: "GET", pattern: /^\/api\/reader$/, keys: [], handler: readerGET as Handler },
+  { method: "PUT", pattern: /^\/api\/reader\/pass$/, keys: [], handler: passPUT as Handler },
+  { method: "POST", pattern: /^\/api\/reader\/claim$/, keys: [], handler: claimPOST as Handler },
+  { method: "POST", pattern: /^\/api\/challenges\/([^/]+)\/reinvite$/, keys: ["id"], handler: reinvitePOST as Handler },
 ];
 
 /** A `fetch` that dispatches straight into the Next.js route handlers. */

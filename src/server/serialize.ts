@@ -72,7 +72,8 @@ export function bookDTO(r: BookRow): BookDTO {
   };
 }
 
-export function sessionDTO(r: SessionRow): SessionDTO {
+/** Private reflections are only ever returned to their owner. */
+export function sessionDTO(r: SessionRow, viewerParticipantId: string | null = null): SessionDTO {
   return {
     id: r.id,
     challengeId: r.challengeId,
@@ -82,6 +83,7 @@ export function sessionDTO(r: SessionRow): SessionDTO {
     amount: r.amount,
     unit: r.unit,
     reflection: r.reflection,
+    privateReflection: viewerParticipantId && r.participantId === viewerParticipantId ? r.privateReflection : null,
     createdAt: iso(r.createdAt),
     updatedAt: iso(r.updatedAt),
     deletedAt: isoOrNull(r.deletedAt),

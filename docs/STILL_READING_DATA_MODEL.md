@@ -84,11 +84,20 @@ Append-oriented: sessions are created and (soft) deleted, not edited.
 `goals(participant_id)`, `reading_sessions(challenge_id, date)`, `(participant_id)`, `(book_id)`,
 `(challenge_id, server_updated_at)` on every synced table, `reactions(reading_session_id)`.
 
+### readers
+`id (rd_…), pass_lookup (scrypt hex, unique), pass_set_at, wrapped_key ("v1.salt.iv.ct"), created_at, updated_at`
+* `devices.reader_id` and `challenge_participants.reader_id` point here; `UNIQUE (challenge_id, reader_id)`.
+
+### reinvites
+`token_hash pk, participant_id, created_by, expires_at, used_at` — one-time host re-invite links.
+
+`reading_sessions.private_reflection` holds the sealed private reflection ("v1.iv.ct").
+
 ## Device (IndexedDB / Dexie)
 
 | table | key | purpose |
 | --- | --- | --- |
-| kv | key | device identity, small prefs (install prompt dismissed, …) |
+| kv | key | device identity, `reader` (reader id, Reading Pass, note key), small prefs |
 | challenges | id | challenge + `myParticipantId`, `cursor`, `access` |
 | participants | id | public profiles |
 | goals | id | |

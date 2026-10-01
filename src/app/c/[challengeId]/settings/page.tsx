@@ -6,6 +6,8 @@ import { InviteActions } from "@/components/challenge/invite-actions";
 import { GoalSelector, isGoalValid } from "@/components/goals/goal-selector";
 import { Hero } from "@/components/challenge/hero";
 import { openInstallModal } from "@/components/pwa/install-modal";
+import { PassSettings } from "@/components/pass/pass-settings";
+import { ReinviteButton } from "@/components/pass/reinvite";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, Eyebrow } from "@/components/ui/card";
@@ -80,6 +82,8 @@ export default function SettingsPage() {
           </div>
         </form>
       </Card>
+
+      <PassSettings />
 
       <Card className="space-y-4">
         <Eyebrow>Your goal</Eyebrow>
@@ -157,9 +161,12 @@ export default function SettingsPage() {
                         Confirm remove
                       </Button>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setConfirm(`remove:${m.participant.id}`)}>
-                        Remove
-                      </Button>
+                      <span className="flex">
+                        <ReinviteButton challengeId={challenge.id} participantId={m.participant.id} name={m.participant.displayName} />
+                        <Button size="sm" variant="ghost" onClick={() => setConfirm(`remove:${m.participant.id}`)}>
+                          Remove
+                        </Button>
+                      </span>
                     )
                   ) : (
                     <span className="text-xs text-muted">Host (you)</span>
