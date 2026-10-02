@@ -40,9 +40,9 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
-          // Isolates the app from other windows. Deployed builds only: it makes Chromium swap processes
-          // on navigation, which drops Playwright's offline emulation in the local end-to-end tests.
-          ...(process.env.VERCEL ? [{ key: "Cross-Origin-Opener-Policy", value: "same-origin" }] : []),
+          // No Cross-Origin-Opener-Policy on purpose: "same-origin" stops the page loading at all in
+          // Instagram's and Facebook's in-app browsers on iOS ("This page couldn't load"), where many
+          // invite links get opened. The app opens no popups, so it protects little here.
           // Dev mode needs eval for fast refresh, so the policy applies to production builds only.
           ...(isProd ? [{ key: "Content-Security-Policy", value: CSP }] : []),
         ],
