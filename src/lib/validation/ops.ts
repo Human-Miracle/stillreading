@@ -92,6 +92,7 @@ export const syncOp = z.discriminatedUnion("type", [
   z.object({ ...envelope, type: z.literal("challenge.update"), payload: z.object({ name: challengeName, description, updatedAt: isoTimestamp }) }),
   z.object({ ...envelope, type: z.literal("challenge.archive"), payload: z.object({}).default({}) }),
   z.object({ ...envelope, type: z.literal("participant.remove"), payload: z.object({ participantId: id("pt") }) }),
+  z.object({ ...envelope, type: z.literal("participant.merge"), payload: z.object({ fromId: id("pt"), intoId: id("pt") }) }),
 ]);
 
 export type SyncOp = z.output<typeof syncOp>;

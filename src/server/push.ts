@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { EntityKind, PushResult } from "@/lib/api-types";
 import { diffDays, isWithinChallenge, todayInTimezone } from "@/lib/domain/dates";
 import { reactionId, replyLikeId } from "@/lib/ids";
@@ -9,6 +9,7 @@ import { findMembership, membershipFailure } from "./auth";
 import { upsertBook } from "./books";
 import { challengePhase, goalDurationFor } from "./challenges";
 import { upsertGoal } from "./goals";
+import { mergeParticipants } from "./merge";
 import { errorFields, log } from "./log";
 import { afterResponse, notifyReply } from "./notifications";
 import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, replyDTO, replyLikeDTO, sessionDTO } from "./serialize";
@@ -315,6 +316,22 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
       .returning();
     if (!row) return rejected("not_found", "Participant not found.");
     log.info("participant_removed", { challengeId: challenge.id });
+    return ok("participant", participantDTO(row));
+  },
+
+  async "participant.merge"(tx, { payload }, { challenge, me }) {
+    if (me.role !== "host") return rejected("forbidden", "Only the host can merge participants.");
+    if (payload.fromId === payload.intoId) return rejected("invalid", "Pick two different participants.");
+    const rows = await tx
+      .select()
+      .from(participants)
+      .where(and(eq(participants.challengeId, challenge.id), inArray(participants.id, [payload.fromId, payload.intoId])));
+    const from = rows.find((r) => r.id === payload.fromId);
+    const into = rows.find((r) => r.id === payload.intoId);
+    if (!from || !into || from.status !== "active" || into.status !== "active") return rejected("not_found", "Participant not found.");
+    if (from.role === "host") return rejected("invalid", "The host can't be merged into someone else. Merge the other copy into the host instead.");
+    const row = await mergeParticipants(tx, from, into);
+    log.info("participants_merged", { challengeId: challenge.id });
     return ok("participant", participantDTO(row));
   },
 };
