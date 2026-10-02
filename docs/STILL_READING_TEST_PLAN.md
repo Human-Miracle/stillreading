@@ -11,7 +11,7 @@ Run everything with `npm run verify` (typecheck, lint, unit+integration, build) 
 * streaks: spec example (✓✓✓✗✓ → current 1, longest 3, 4 reading days), today-in-progress does not
   break a streak, consistency.
 * group stats: categories, no universal score, participation.
-* leaderboard XP: effort XP by estimated reading time (page ≈ 1.5 min, chapter ≈ 20 min), habit XP, top-3 placement bonus (ties share), no day-one ties across units.
+* leaderboard XP: pages are the main score (10 XP/page); minutes, chapters, goal days, reading days, streak and finished books are small add-ons; no placement bonuses; more pages beats more add-ons; equal XP shares a rank.
 * validation: Zod limits (name 1–40, challenge 1–80, description ≤500, amount positive int,
   reflection ≤500).
 

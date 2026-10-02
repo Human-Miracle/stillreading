@@ -46,16 +46,20 @@ export const goalFields = z.object({
   updatedAt: isoTimestamp,
 });
 
-export const sessionFields = z.object({
-  id: id("rs"),
-  bookId: id("bk").nullable().optional(),
-  date: dateKey,
-  amount,
-  unit: sessionUnit,
-  reflection: reflection.nullable().optional(),
-  privateReflection: sealedNote.nullable().optional(),
-  createdAt: isoTimestamp,
-});
+export const sessionFields = z
+  .object({
+    id: id("rs"),
+    bookId: id("bk").nullable().optional(),
+    date: dateKey,
+    amount,
+    unit: sessionUnit,
+    /** Pages covered during a minutes or chapters check-in. Optional so older clients' queued ops still sync. */
+    pages: amount.nullable().optional(),
+    reflection: reflection.nullable().optional(),
+    privateReflection: sealedNote.nullable().optional(),
+    createdAt: isoTimestamp,
+  })
+  .refine((s) => s.unit !== "pages" || s.pages == null, { message: "Pages check-ins record pages as the amount", path: ["pages"] });
 
 const envelope = { opId: id("op"), challengeId: id("ch") };
 

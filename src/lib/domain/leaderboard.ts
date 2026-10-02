@@ -3,43 +3,32 @@ import type { ParticipantProgress } from "./progress";
 import type { ParticipantStatsRow } from "./stats";
 
 /**
- * XP rewards what readers actually do, so equal XP is rare.
- *
- * 1. Effort: every unit of reading earns XP. Units are put on one footing by estimated reading time
- *    (a page ≈ 1.5 min, a chapter ≈ 20 min, a minute = 1 min), so 180 pages earns far more than
- *    30 minutes.
- * 2. Habit: reading days, goal days, the current streak and finished books.
- * 3. Placement: a small bonus for 1st/2nd/3rd in each stat (ties share a place).
+ * Pages read are the leaderboard's source of truth: every page earns {@link PAGE_XP} XP. Books and
+ * chapters vary wildly in length (a chapter can be 9 pages or 50), so pages are the only fair measure
+ * of how much someone read. Everything else (minutes, chapters, goal days, reading days, the current
+ * streak, finished books) is a small add-on on top. There are no placement bonuses, so leading a
+ * minor stat can't lift someone past a reader who read more pages.
  */
+export const PAGE_XP = 10;
+
 export const XP_CATEGORIES = [
-  { key: "pages", label: "Pages", icon: "📖", rate: 1.5, per: "page", pick: (p: ParticipantProgress) => p.totals.pages },
-  { key: "minutes", label: "Minutes", icon: "⏱️", rate: 1, per: "minute", pick: (p: ParticipantProgress) => p.totals.minutes },
-  { key: "chapters", label: "Chapters", icon: "📑", rate: 20, per: "chapter", pick: (p: ParticipantProgress) => p.totals.chapters },
-  { key: "goalDays", label: "Goal days", icon: "🎯", rate: 25, per: "day you hit your goal", pick: (p: ParticipantProgress) => p.goalDays },
-  { key: "readingDays", label: "Reading days", icon: "📅", rate: 10, per: "day you read", pick: (p: ParticipantProgress) => p.readingDays },
-  { key: "streak", label: "Current streak", icon: "🔥", rate: 5, per: "day of your current streak", pick: (p: ParticipantProgress) => p.streak.current },
-  { key: "books", label: "Books finished", icon: "📚", rate: 50, per: "book finished", pick: (p: ParticipantProgress) => p.booksCompleted },
+  { key: "pages", label: "Pages", icon: "📖", rate: PAGE_XP, per: "page read", core: true, pick: (p: ParticipantProgress) => p.totals.pages },
+  { key: "minutes", label: "Minutes", icon: "⏱️", rate: 1, per: "minute logged", core: false, pick: (p: ParticipantProgress) => p.totals.minutes },
+  { key: "chapters", label: "Chapters", icon: "📑", rate: 5, per: "chapter logged", core: false, pick: (p: ParticipantProgress) => p.totals.chapters },
+  { key: "goalDays", label: "Goal days", icon: "🎯", rate: 25, per: "day you hit your goal", core: false, pick: (p: ParticipantProgress) => p.goalDays },
+  { key: "readingDays", label: "Reading days", icon: "📅", rate: 10, per: "day you read", core: false, pick: (p: ParticipantProgress) => p.readingDays },
+  { key: "streak", label: "Current streak", icon: "🔥", rate: 5, per: "day of your current streak", core: false, pick: (p: ParticipantProgress) => p.streak.current },
+  { key: "books", label: "Books finished", icon: "📚", rate: 50, per: "book finished", core: false, pick: (p: ParticipantProgress) => p.booksCompleted },
 ] as const;
 
 export type XpCategory = (typeof XP_CATEGORIES)[number]["key"];
-
-/** Bonus for placing 1st, 2nd, 3rd in a category. */
-export const PLACE_BONUS = [30, 20, 10] as const;
-
-export function placeBonus(rank: number | null): number {
-  return rank === null ? 0 : (PLACE_BONUS[rank - 1] ?? 0);
-}
 
 export interface CategoryResult {
   key: XpCategory;
   value: number;
   /** Competition rank within the category (1, 1, 3…); null when the reader has no progress in it. */
   rank: number | null;
-  /** XP from the amount itself (value × rate, rounded). */
-  earned: number;
-  /** Placement bonus for this category. */
-  bonus: number;
-  /** earned + bonus */
+  /** value × rate, rounded. */
   xp: number;
 }
 
@@ -49,10 +38,13 @@ export interface LeaderboardEntry {
   /** Overall competition rank by XP (equal XP shares a rank). */
   rank: number;
   xp: number;
-  /** Categories this reader ranks first in. */
-  firsts: number;
+  pages: number;
+  /** XP from pages read. */
+  pageXp: number;
+  /** XP from everything else. */
+  bonusXp: number;
   categories: CategoryResult[];
-  /** Highest-XP category, for a one-line "best at" label. */
+  /** Pages when the reader has read any, otherwise their biggest add-on: a one-line "best at" label. */
   best: CategoryResult | null;
 }
 
@@ -67,34 +59,32 @@ export function leaderboard(rows: readonly ParticipantStatsRow[]): LeaderboardEn
     return { key: c.key, rate: c.rate, values, ranks: rankValues(values) };
   });
 
-  const entries = rows.map((r, i) => {
+  const entries = rows.map((r, i): LeaderboardEntry => {
     const categories: CategoryResult[] = perCategory.map(({ key, rate, values, ranks }) => {
       const value = values[i]!;
-      const rank = ranks[i]!;
-      const earned = Math.round(value * rate);
-      const bonus = placeBonus(rank);
-      return { key, value, rank, earned, bonus, xp: earned + bonus };
+      return { key, value, rank: ranks[i]!, xp: Math.round(value * rate) };
     });
-    const best = categories.reduce<CategoryResult | null>((b, c) => (c.xp > 0 && (!b || c.xp > b.xp) ? c : b), null);
+    const pages = categories.find((c) => c.key === "pages")!;
+    const xp = categories.reduce((sum, c) => sum + c.xp, 0);
+    const best = pages.value > 0 ? pages : categories.reduce<CategoryResult | null>((b, c) => (c.xp > 0 && (!b || c.xp > b.xp) ? c : b), null);
     return {
       participantId: r.participantId,
       displayName: r.displayName,
       rank: 0,
-      xp: categories.reduce((sum, c) => sum + c.xp, 0),
-      firsts: categories.filter((c) => c.rank === 1).length,
+      xp,
+      pages: pages.value,
+      pageXp: pages.xp,
+      bonusXp: xp - pages.xp,
       categories,
       best,
     };
   });
   const goalDays = new Map(rows.map((r) => [r.participantId, r.progress.goalDays]));
 
-  // Equal XP is now rare; when it happens the reader with more goal days is listed first.
+  // On equal XP, more pages first, then more goal days.
   entries.sort(
     (a, b) =>
-      b.xp - a.xp ||
-      goalDays.get(b.participantId)! - goalDays.get(a.participantId)! ||
-      b.firsts - a.firsts ||
-      a.displayName.localeCompare(b.displayName),
+      b.xp - a.xp || b.pages - a.pages || goalDays.get(b.participantId)! - goalDays.get(a.participantId)! || a.displayName.localeCompare(b.displayName),
   );
   for (const e of entries) e.rank = 1 + entries.filter((o) => o.xp > e.xp).length;
   return entries;

@@ -63,7 +63,7 @@ export interface ChallengeView {
   isHost: boolean;
   members: MemberView[];
   stats: GroupStats;
-  /** Readers ranked by XP earned across every stat category. */
+  /** Readers ranked by XP: pages read, plus small add-ons (see domain/leaderboard). */
   leaderboard: LeaderboardEntry[];
   /** Live sessions from active members, newest first. */
   feed: LocalSession[];

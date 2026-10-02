@@ -1,5 +1,5 @@
 import type { BookDTO, ChallengeSnapshot, EntityKind } from "@/lib/api-types";
-import { goalFromPreset, type GoalPreset } from "@/lib/domain/goals";
+import { goalFromPreset, pagesRead, type GoalPreset } from "@/lib/domain/goals";
 import { joinedDateFor, participantDuration, todayInTimezone } from "@/lib/domain/dates";
 import type { BookStatus, ReactionType, SessionUnit } from "@/lib/domain/types";
 import { newId, reactionId } from "@/lib/ids";
@@ -126,6 +126,8 @@ export interface LogReadingInput {
   bookId: string | null;
   amount: number;
   unit: SessionUnit;
+  /** Pages covered, for a minutes or chapters check-in. */
+  pages?: number | null;
   reflection?: string;
   reflectionShared?: boolean;
   /** Defaults to today in the challenge timezone. */
@@ -149,6 +151,7 @@ export async function logReading(input: LogReadingInput): Promise<LocalSession> 
     date: input.date ?? todayInTimezone(challenge.timezone),
     amount: input.amount,
     unit: input.unit,
+    pages: input.unit === "pages" ? null : (input.pages ?? null),
     reflection,
     reflectionShared: shared,
     privateReflection: sealed,
@@ -164,6 +167,7 @@ export async function logReading(input: LogReadingInput): Promise<LocalSession> 
     date: session.date,
     amount: session.amount,
     unit: session.unit,
+    pages: session.pages,
     reflection: shared ? reflection : null,
     privateReflection: sealed,
     createdAt: t,
@@ -172,11 +176,12 @@ export async function logReading(input: LogReadingInput): Promise<LocalSession> 
   await db.transaction("rw", [db.sessions, db.books, db.syncQueue], async () => {
     await db.sessions.add(session);
     await db.syncQueue.add(opRecord(challenge.id, "session.create", payload, "session", session.id));
-    // Advance the book's current page when reading pages.
-    if (session.bookId && session.unit === "pages") {
+    // Advance the book's current page by the pages read (for any unit).
+    const read = pagesRead(session);
+    if (session.bookId && read > 0) {
       const book = await db.books.get(session.bookId);
       if (book && !book.deletedAt) {
-        const currentPage = Math.min(book.totalPages ?? Number.MAX_SAFE_INTEGER, book.currentPage + session.amount);
+        const currentPage = Math.min(book.totalPages ?? Number.MAX_SAFE_INTEGER, book.currentPage + read);
         await saveBookInTx({ ...book, currentPage, status: book.status === "planned" ? "reading" : book.status });
       }
     }

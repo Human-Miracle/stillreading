@@ -29,6 +29,13 @@
       "when": 1790923275372,
       "tag": "0003_app_handoff",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790942222223,
+      "tag": "0004_session_pages",
+      "breakpoints": true
     }
   ]
 }

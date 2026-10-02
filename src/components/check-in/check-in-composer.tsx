@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { track } from "@/lib/analytics";
 import { addDays, isWithinChallenge } from "@/lib/domain/dates";
-import { defaultSessionUnit, formatAmount, unitLabel } from "@/lib/domain/goals";
+import { defaultSessionUnit, formatAmount, formatSession, unitLabel } from "@/lib/domain/goals";
 import type { SessionUnit } from "@/lib/domain/types";
 import type { ChallengeView } from "@/local/hooks";
 import { addBook, logReading, updateBook } from "@/local/repo";
@@ -21,6 +21,7 @@ const NO_BOOK = "__none__";
 interface Logged {
   amount: number;
   unit: SessionUnit;
+  pages: number | null;
   bookTitle: string | null;
   offline: boolean;
 }
@@ -45,6 +46,7 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
   const [newTitle, setNewTitle] = useState("");
   const [unit, setUnit] = useState<SessionUnit>(() => defaultSessionUnit(me.goal));
   const [amount, setAmount] = useState("");
+  const [pages, setPages] = useState("");
   const [reflection, setReflection] = useState("");
   const [shared, setShared] = useState(true);
   const [finished, setFinished] = useState(false);
@@ -63,6 +65,11 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
     const value = Number.parseInt(amount, 10);
     if (!Number.isFinite(value) || value <= 0) return setError("How much did you read? Enter a number above 0.");
     if (value > 10_000) return setError("That's a lot! Please enter 10,000 or less.");
+    const pageCount = unit === "pages" ? null : Number.parseInt(pages, 10);
+    if (pageCount !== null && (!Number.isFinite(pageCount) || pageCount <= 0)) {
+      return setError(`How many pages did those ${unit} cover? Pages are how everyone is compared on the leaderboard.`);
+    }
+    if (pageCount !== null && pageCount > 10_000) return setError("That's a lot of pages! Please enter 10,000 or less.");
     if (bookId === NEW_BOOK && !newTitle.trim()) return setError("Add the book title, or choose “No book”.");
     setError(null);
     setSaving(true);
@@ -81,6 +88,7 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
         bookId: useBookId,
         amount: value,
         unit,
+        pages: pageCount,
         reflection,
         reflectionShared: shared,
         date: day === "yesterday" ? yesterday : view.today,
@@ -88,7 +96,7 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
       if (finished && useBookId) await updateBook(useBookId, { status: "completed" });
       track("reading_logged", { challengeId: view.challenge.id, props: { unit, hasReflection: Boolean(reflection.trim()) } });
       if (!wasMet && day === "today") track("reading_goal_completed", { challengeId: view.challenge.id });
-      setLogged({ amount: value, unit, bookTitle: title, offline: !sync.online });
+      setLogged({ amount: value, unit, pages: pageCount, bookTitle: title, offline: !sync.online });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save. Please try again.");
     } finally {
@@ -155,9 +163,30 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
           ]}
         />
         {me.goal && me.goal.targetUnit !== "days" && me.goal.targetUnit !== "books" && me.goal.targetUnit !== unit ? (
-          <p className="mt-2 text-sm text-muted">Your goal is in {me.goal.targetUnit}, so this counts as a reading day but not toward your {me.goal.targetUnit}.</p>
+          <p className="mt-2 text-sm text-muted">
+            {me.goal.targetUnit === "pages"
+              ? "The pages you enter below count toward your pages goal."
+              : `Your goal is in ${me.goal.targetUnit}, so this counts as a reading day but not toward your ${me.goal.targetUnit}.`}
+          </p>
         ) : null}
       </div>
+
+      {unit !== "pages" ? (
+        <Field label={`How many pages did those ${unit} cover?`} hint="Chapters and reading time vary from book to book, so the leaderboard compares everyone by pages.">
+          {(p) => (
+            <Input
+              {...p}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
+              placeholder={unit === "chapters" ? "25" : "15"}
+              value={pages}
+              onChange={(e) => setPages(e.target.value.replace(/\D/g, "").slice(0, 5))}
+              className="bg-surface-2 shadow-none"
+            />
+          )}
+        </Field>
+      ) : null}
 
       <fieldset>
         <legend className="mb-2.5 text-sm font-medium text-ink-2">What did you read?</legend>
@@ -219,7 +248,7 @@ function Success({ view, logged, onClose }: { view: ChallengeView; logged: Logge
       <div>
         <p className="headline text-[32px]">{logged.offline ? "Saved on this device" : "Reading logged"}</p>
         <p className="mt-1 text-lg text-ink/60">
-          {formatAmount(logged.amount, logged.unit)}
+          {formatSession(logged)}
           {logged.bookTitle ? ` · ${logged.bookTitle}` : ""}
         </p>
       </div>
