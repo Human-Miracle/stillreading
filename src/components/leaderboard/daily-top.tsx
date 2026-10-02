@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { addDays, dayNumberOf, diffDays, joinedDateFor } from "@/lib/domain/dates";
+import { standingsReaders } from "@/lib/domain/history";
 import { leaderboardOn } from "@/lib/domain/leaderboard";
 import type { DateKey } from "@/lib/domain/types";
 import { formatDateKey, n } from "@/lib/format";
@@ -33,18 +34,7 @@ export function DailyTop({ view }: { view: ChallengeView }) {
   const [picked, setPicked] = useState<DateKey>(last);
 
   const date = choice === "today" ? today : choice === "yesterday" ? yesterday : picked;
-  const readers = useMemo(
-    () =>
-      view.members.map((m) => ({
-        participantId: m.participant.id,
-        displayName: m.participant.displayName,
-        goal: m.goal,
-        sessions: m.sessions,
-        books: m.books,
-        joinedDate: joinedDateFor(challenge, m.participant),
-      })),
-    [view.members, challenge],
-  );
+  const readers = useMemo(() => standingsReaders(view.members, (p) => joinedDateFor(challenge, p)), [view.members, challenge]);
   const { board, dayPages } = useMemo(() => leaderboardOn(challenge, readers, date), [challenge, readers, date]);
   const isToday = date === today;
   const dayNote = (e: { participantId: string }) => {

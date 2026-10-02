@@ -1,8 +1,8 @@
-import { diffDays, todayInTimezone } from "./dates";
 import { formatAmount, sumByUnit } from "./goals";
-import { participantProgress, type ParticipantProgress } from "./progress";
+import { progressAsOf, type StandingsReader } from "./history";
+import type { ParticipantProgress } from "./progress";
 import type { ParticipantStatsRow } from "./stats";
-import type { BookLike, ChallengeLike, DateKey, GoalLike, SessionLike } from "./types";
+import type { ChallengeLike, DateKey } from "./types";
 
 /**
  * Pages read are the leaderboard's source of truth: every page earns {@link PAGE_XP} XP. Books and
@@ -65,40 +65,12 @@ export function leaderboard(rows: readonly ParticipantStatsRow[]): LeaderboardEn
   );
 }
 
-export interface StandingsReader {
-  participantId: string;
-  displayName: string;
-  goal: GoalLike | null;
-  sessions: readonly SessionLike[];
-  books: readonly (BookLike & { completedAt?: string | null })[];
-  /** Calendar date the reader joined (null for the host / founding members), as for their progress. */
-  joinedDate: DateKey | null;
-}
-
-/**
- * The leaderboard as it stood at the end of `date`: everyone's progress recomputed as if that day were
- * today, ignoring later check-ins and books finished afterwards. For today it is exactly the live
- * leaderboard. `dayPages` is what each reader read on that day itself.
- */
 export function leaderboardOn(
   challenge: ChallengeLike,
   readers: readonly StandingsReader[],
   date: DateKey,
 ): { board: LeaderboardEntry[]; dayPages: Map<string, number> } {
-  const finishedBy = (b: StandingsReader["books"][number]) =>
-    !b.completedAt || diffDays(todayInTimezone(challenge.timezone, new Date(b.completedAt)), date) >= 0;
-  const rows = readers.map((r) => ({
-    participantId: r.participantId,
-    displayName: r.displayName,
-    progress: participantProgress({
-      challenge,
-      goal: r.goal,
-      sessions: r.sessions.filter((s) => s.date <= date),
-      books: r.books.map((b) => (b.status === "completed" && !finishedBy(b) ? { ...b, status: "reading" as const } : b)),
-      today: date,
-      joinedDate: r.joinedDate,
-    }),
-  }));
+  const rows = readers.map((r) => ({ participantId: r.participantId, displayName: r.displayName, progress: progressAsOf(challenge, r, date) }));
   const dayPages = new Map(readers.map((r) => [r.participantId, sumByUnit(r.sessions.filter((s) => s.date === date)).pages]));
   return { board: leaderboard(rows), dayPages };
 }
