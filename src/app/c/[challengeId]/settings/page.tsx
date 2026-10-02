@@ -7,6 +7,7 @@ import { GoalSelector, isGoalValid } from "@/components/goals/goal-selector";
 import { Hero } from "@/components/challenge/hero";
 import { openInstallModal } from "@/components/pwa/install-modal";
 import { PassSettings } from "@/components/pass/pass-settings";
+import { PasteFromBrowser } from "@/components/pwa/open-in-app";
 import { ReinviteButton } from "@/components/pass/reinvite";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -84,6 +85,7 @@ export default function SettingsPage() {
       </Card>
 
       <PassSettings />
+      <PasteFromBrowser />
 
       <Card className="space-y-4">
         <Eyebrow>Your goal</Eyebrow>

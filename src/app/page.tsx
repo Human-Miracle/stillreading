@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SegmentRing, type DayState } from "@/components/challenge/day-ring";
 import { isStandalone } from "@/components/pwa/install-state";
+import { PasteFromBrowser } from "@/components/pwa/open-in-app";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icons";
@@ -96,6 +97,7 @@ export default function Landing() {
               </Button>
             </form>
           )}
+          <PasteFromBrowser className="pt-1" />
           <Link href="/pass" className="block py-2 text-center text-sm text-ink/60">
             Already reading? <span className="font-medium text-ink">Use your Reading Pass</span>
           </Link>

@@ -10,6 +10,8 @@ import { PUT as passPUT } from "@/app/api/reader/pass/route";
 import { POST as claimPOST } from "@/app/api/reader/claim/route";
 import { POST as reinvitePOST } from "@/app/api/challenges/[id]/reinvite/route";
 import { POST as coversPOST } from "@/app/api/challenges/[id]/covers/route";
+import { POST as handoffPOST } from "@/app/api/handoff/route";
+import { POST as handoffClaimPOST } from "@/app/api/handoff/claim/route";
 import { GET as bookSearchGET } from "@/app/api/books/search/route";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { newDeviceSecret, newId } from "@/lib/ids";
@@ -24,7 +26,7 @@ export async function freshDb(): Promise<Database> {
 
 export async function resetDb(db: Database) {
   await db.execute(
-    sql`truncate table reinvites, readers, reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
+    sql`truncate table handoffs, reinvites, readers, reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
   );
 }
 
@@ -51,6 +53,8 @@ const routes: { method: string; pattern: RegExp; keys: string[]; handler: Handle
   { method: "POST", pattern: /^\/api\/reader\/claim$/, keys: [], handler: claimPOST as Handler },
   { method: "POST", pattern: /^\/api\/challenges\/([^/]+)\/reinvite$/, keys: ["id"], handler: reinvitePOST as Handler },
   { method: "POST", pattern: /^\/api\/challenges\/([^/]+)\/covers$/, keys: ["id"], handler: coversPOST as Handler },
+  { method: "POST", pattern: /^\/api\/handoff$/, keys: [], handler: handoffPOST as Handler },
+  { method: "POST", pattern: /^\/api\/handoff\/claim$/, keys: [], handler: handoffClaimPOST as Handler },
   { method: "GET", pattern: /^\/api\/books\/search$/, keys: [], handler: bookSearchGET as Handler },
 ];
 

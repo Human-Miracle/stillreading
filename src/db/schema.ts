@@ -209,6 +209,19 @@ export const reinvites = pgTable("reinvites", {
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
+/**
+ * Browser → installed app handoff: an encrypted blob (the Reading Pass, sealed with a key that only
+ * travels in the copied link's fragment), single use and short-lived. The server can't read it.
+ */
+export const handoffs = pgTable("handoffs", {
+  tokenHash: text("token_hash").primaryKey(),
+  blob: text("blob").notNull(),
+  createdBy: text("created_by").notNull(),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
 export const processedOperations = pgTable("processed_operations", {
   opId: text("op_id").primaryKey(),
   deviceId: text("device_id").notNull(),

@@ -49,21 +49,30 @@ export function amountSummary(totals: Record<"pages" | "chapters" | "minutes", n
   return parts.length ? parts.join(" · ") : "—";
 }
 
-/** The small banner above heroes (reference: "Wow! 25 days without a break"). */
+const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+/** "two", "three" … "ten", then digits. */
+export const countWord = (n: number) => WORDS[n] ?? String(n);
+
+/** The small banner above heroes (reference: "Wow! 25 days without a break"). Follows the challenge day. */
 export function streakBanner(p: ParticipantProgress, crewStreaks: number[], durationDays: number): { title: string; sub: string } {
   const phase = p.clock.phase;
   if (phase === "upcoming") return { title: `Starts in ${p.clock.startsInDays} day${p.clock.startsInDays === 1 ? "" : "s"}`, sub: "Invite your crew while you wait" };
   if (phase === "ended") return { title: `You showed up for ${p.readingDays} day${p.readingDays === 1 ? "" : "s"}`, sub: `Longest streak: ${p.streak.longest} day${p.streak.longest === 1 ? "" : "s"}` };
+  const day = p.clock.dayNumber;
   const n = p.streak.current;
+  const doneToday = p.today.goalMet;
   if (n >= 2) {
     const others = crewStreaks.length;
     const behind = crewStreaks.filter((s) => s < n).length;
     const pct = others ? Math.round((behind / others) * 100) : 0;
-    return { title: `Wow! ${n} days without a break`, sub: pct > 0 ? `You're ahead of ${pct}% of your crew` : "Keep the chain going" };
+    const sub = !doneToday ? `Read today to make it ${countWord(n + 1)} in a row` : pct > 0 ? `You're ahead of ${pct}% of your crew` : "Keep the chain going";
+    return { title: `Wow! ${n} days without a break`, sub };
   }
-  if (n === 1) return { title: "Day one of a new streak", sub: "Come back tomorrow to make it two" };
-  if (p.missedYesterday && !p.today.read) return { title: "You missed yesterday. That's okay.", sub: "Start again today" };
-  return { title: `Day ${p.clock.dayNumber} of ${durationDays}`, sub: p.today.read ? "Nice work showing up today" : "A few pages is all it takes" };
+  // A one-day streak that is today: just started. One that is yesterday: today can extend it.
+  if (n === 1 && doneToday) return { title: `Day ${day}: your streak starts here`, sub: day < durationDays ? "Come back tomorrow to make it two" : "What a way to finish" };
+  if (n === 1) return { title: `Day ${day} of ${durationDays}`, sub: "You read yesterday. Read today to make it two in a row" };
+  if (p.missedYesterday && !p.today.read) return { title: "You missed yesterday. That's okay.", sub: `Start again today, on day ${day}` };
+  return { title: `Day ${day} of ${durationDays}`, sub: p.today.read ? "Nice work showing up today" : "A few pages is all it takes" };
 }
 
 export function greeting(now = new Date()): string {

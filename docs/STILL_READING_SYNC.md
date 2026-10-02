@@ -82,3 +82,18 @@ client calls it repeatedly, a batch at a time, when it sees books without covers
   Exception: a null written before the server found the cover (older clients that always send the
   field) is ignored.
 - Misses are retried after 7 days; correcting a coverless book's title or author retries at once.
+
+## Open in the app (browser → installed app)
+
+Phones don't let a website launch a Home Screen web app, and on iPhone Safari and the installed app
+don't share storage. So a phone browser shows an "Open in the app" bar. Its sheet copies a one-time
+link, `/continue#t=<token>&k=<key>&to=<path>`, and the app picks it up with "Paste from browser"
+(on the landing page and in Settings).
+
+- The browser syncs pending progress first, then seals `{ pass }` (the Reading Pass) with a random
+  AES key `k` and parks the sealed blob with `POST /api/handoff`. The server stores only the blob
+  and a sha256 of the token, for 15 minutes, single use. `k` only exists in the URL fragment.
+- The app collects it with `POST /api/handoff/claim`, opens it with `k` and runs the normal Reading
+  Pass claim, so the app becomes the same reader, with challenges, books and private reflections.
+- On Android the manifest's `launch_handler` / `handle_links` make links tapped in other apps open
+  in the installed app. Chrome and the installed app share storage there, so nothing needs copying.

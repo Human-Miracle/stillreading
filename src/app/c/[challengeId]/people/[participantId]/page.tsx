@@ -65,7 +65,9 @@ export default function ParticipantPage() {
                 : p.streak.current >= 2
                   ? `${p.streak.current} days without a break`
                   : p.streak.current === 1
-                    ? "Day one of a new streak"
+                    ? p.today.goalMet
+                      ? "Started a streak today"
+                      : "Read yesterday, streak of one"
                     : "No streak right now"
             } sub={isMe ? banner.sub : p.today.read ? `${amountSummary(p.today.totals)} today` : "Hasn't checked in yet today"} />
           <div className="pt-4">

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { track } from "@/lib/analytics";
 import { Button } from "../ui/button";
+import { openHandoffSheet } from "./handoff-state";
 import { cn } from "../ui/cn";
 import { Icon } from "../ui/icons";
 import {
@@ -384,6 +385,18 @@ export function InstallModal() {
                 <Button variant="ghost" full onClick={close}>
                   Not now
                 </Button>
+                {platform.os !== "desktop" ? (
+                  <button
+                    type="button"
+                    className="block w-full py-1 text-center text-sm text-ink/60"
+                    onClick={() => {
+                      close();
+                      openHandoffSheet();
+                    }}
+                  >
+                    Already have the app? <span className="font-medium text-ink">Open it</span>
+                  </button>
+                ) : null}
                 {pointToToolbar ? (
                   <div className={cn("flex text-ink/40", (platform.iosVersion ?? 26) >= 26 ? "justify-end pr-2" : "justify-center")} aria-hidden>
                     <svg viewBox="0 0 24 24" className="size-7 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

@@ -5,6 +5,7 @@ import { getSyncEngine } from "@/local/sync/engine";
 import { getDevice } from "@/local/device";
 import { listenForInstallPrompt } from "./pwa/install-state";
 import { InstallModal } from "./pwa/install-modal";
+import { HandoffSheet, OpenInAppBar } from "./pwa/open-in-app";
 import { getLocalDb } from "@/local/db";
 import { ensureReadingPass } from "@/local/reader";
 
@@ -38,8 +39,10 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV === "development"} reloadOnOnline={false}>
       <SyncBoot />
+      <OpenInAppBar />
       {children}
       <InstallModal />
+      <HandoffSheet />
     </SerwistProvider>
   );
 }

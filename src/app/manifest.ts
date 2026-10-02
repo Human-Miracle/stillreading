@@ -1,7 +1,11 @@
 import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
+  // Newer fields Next's type doesn't know yet. On Android, links to this site tapped in other apps
+  // (WhatsApp, Messages…) open in the installed app, reusing its window.
+  const linkCapture = { launch_handler: { client_mode: ["navigate-existing", "auto"] }, handle_links: "preferred" };
   return {
+    ...(linkCapture as object),
     id: "/",
     name: "Still Reading — Read together",
     short_name: "Still Reading",
