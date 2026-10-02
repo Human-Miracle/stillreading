@@ -137,8 +137,8 @@ export const books = pgTable(
     title: varchar("title", { length: 200 }).notNull(),
     author: varchar("author", { length: 120 }),
     coverUrl: text("cover_url"),
-    /** Server-side cover lookup: null = not looked up yet, found / missing, or removed by the reader. */
-    coverLookup: text("cover_lookup", { enum: ["found", "missing", "removed"] }),
+    /** Server-side cover lookup: null = not looked up yet, found / missing, or the reader removed / picked the cover. */
+    coverLookup: text("cover_lookup", { enum: ["found", "missing", "removed", "picked"] }),
     coverCheckedAt: ts("cover_checked_at"),
     totalPages: integer("total_pages"),
     currentPage: integer("current_page").notNull().default(0),

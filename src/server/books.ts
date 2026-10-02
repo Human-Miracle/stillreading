@@ -36,6 +36,8 @@ export async function upsertBook(
       } else {
         patch.coverLookup = "removed"; // Removed on purpose: don't look it up again.
       }
+    } else if (values.coverUrl && values.coverUrl !== existing.coverUrl) {
+      patch.coverLookup = "picked"; // The reader chose this cover.
     } else if (!existing.coverUrl && !values.coverUrl && (values.title !== existing.title || values.author !== existing.author)) {
       patch.coverLookup = null; // Title corrected: worth another lookup.
     }

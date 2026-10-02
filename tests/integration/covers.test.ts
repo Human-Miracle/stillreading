@@ -1,11 +1,13 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChallengeSnapshot, PushResult } from "@/lib/api-types";
 import { newId } from "@/lib/ids";
+import { eq } from "drizzle-orm";
 import type { Database } from "@/db/client";
+import { books } from "@/db/schema";
 import { api, bookInput, createBody, freshDb, joinBody, newDevice, resetDb, type TestDevice } from "../helpers/server";
 
 const realFetch = globalThis.fetch;
-const COVERS: Record<string, number> = { "atomic habits": 12539702, "red rising": 7222246 };
+const COVERS: Record<string, { id: number; author: string }> = { "atomic habits": { id: 12539702, author: "James Clear" }, "red rising": { id: 7222246, author: "Pierce Brown" } };
 let calls: URL[] = [];
 let down = false;
 
@@ -27,8 +29,8 @@ beforeEach(async () => {
     const url = new URL(String(input instanceof Request ? input.url : input));
     calls.push(url);
     if (down) throw new TypeError("fetch failed");
-    const id = COVERS[(url.searchParams.get("title") ?? "").toLowerCase()];
-    return Response.json({ docs: id ? [{ key: "/works/OL1W", title: url.searchParams.get("title"), cover_i: id }] : [] });
+    const hit = COVERS[(url.searchParams.get("title") ?? "").toLowerCase()];
+    return Response.json({ docs: hit ? [{ key: "/works/OL1W", title: url.searchParams.get("title"), author_name: [hit.author], cover_i: hit.id }] : [] });
   }) as typeof fetch;
   host = newDevice();
   friend = newDevice();
@@ -103,7 +105,7 @@ describe("POST /api/challenges/:id/covers", () => {
   });
 
   it("works in small batches", async () => {
-    for (const t of ["Red Rising", "Golden Son", "Morning Star", "Iron Gold"]) await push(friend, bookInput(t));
+    for (const t of ["Red Rising", "Golden Son", "Morning Star", "Iron Gold"]) await push(friend, { ...bookInput(t), author: "Pierce Brown" });
     const first = (await fillOnce(host)).body;
     expect(first).toMatchObject({ filled: 2, checked: 3, remaining: 2, failed: [] }); // Atomic Habits, Red Rising, Golden Son
     expect((await fillOnce(host)).body).toMatchObject({ filled: 0, checked: 2, remaining: 0 });
@@ -125,8 +127,8 @@ describe("POST /api/challenges/:id/covers", () => {
       calls.push(url);
       const [q, title] = [url.searchParams.get("q"), url.searchParams.get("title")];
       const coverless = Array.from({ length: 4 }, (_, i) => ({ key: `/works/OL${i}W`, title: title ?? q }));
-      if (q === "The Psychology of Money Morgan Housel") return Response.json({ docs: [...coverless, { key: "/works/OL9W", title: "The Psychology of Money", cover_i: 10521270 }] });
-      if (title === "Dune" && url.searchParams.get("author") === "Frank Herbert") return Response.json({ docs: [{ key: "/works/OL8W", title: "Dune", cover_i: 11481354 }] });
+      if (q === "The Psychology of Money Morgan Housel") return Response.json({ docs: [...coverless, { key: "/works/OL9W", title: "The Psychology of Money", author_name: ["Morgan Housel"], cover_i: 10521270 }] });
+      if (title === "Dune" && url.searchParams.get("author") === "Frank Herbert") return Response.json({ docs: [{ key: "/works/OL8W", title: "Dune", author_name: ["Frank Herbert"], cover_i: 11481354 }] });
       return Response.json({ docs: coverless });
     }) as typeof fetch;
     await push(friend, { ...bookInput("The Psychology of Money"), author: "Morgan Housel" });
@@ -137,6 +139,34 @@ describe("POST /api/challenges/:id/covers", () => {
     expect(byTitle["The Psychology of Money"]).toBe(cover(10521270));
     expect(byTitle["Dune (Dune Chronicles #1)"]).toBe(cover(11481354));
     expect(calls.every((u) => u.searchParams.get("limit") === "10")).toBe(true);
+  });
+
+  it("never takes another book's cover from a loose search", async () => {
+    // Open Library doesn't have the book: its keyword and title searches return other books, with covers.
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      calls.push(new URL(String(input instanceof Request ? input.url : input)));
+      return Response.json({
+        docs: [
+          { key: "/works/OL1W", title: "The Writer's Resource", author_name: ["Susan Day"], cover_i: 111 },
+          { key: "/works/OL2W", title: "Thank You for Remembering Me", author_name: ["Ann Lee"], cover_i: 222 },
+          { key: "/works/OL3W", title: "Thank You for Remembering", author_name: ["Someone Else"], cover_i: 333 },
+        ],
+      });
+    }) as typeof fetch;
+    const book = { ...bookInput("Thank you for remembering"), author: "Emily Harding" };
+    await push(friend, book);
+    await fill(host);
+    expect((await pull(friend)).books.find((b) => b.id === book.id)?.coverUrl).toBeNull();
+  });
+
+  it("a cover the reader picks is theirs: never cleared or replaced by a lookup", async () => {
+    const red = { ...bookInput("Red Rising"), author: "Pierce Brown" };
+    await push(friend, red);
+    await fill(host);
+    const picked = "https://covers.openlibrary.org/b/id/999-M.jpg";
+    await push(friend, { ...red, coverUrl: picked, updatedAt: new Date(Date.now() + 1000).toISOString() });
+    const [row] = await db.select().from(books).where(eq(books.id, red.id));
+    expect(row).toMatchObject({ coverUrl: picked, coverLookup: "picked" });
   });
 
   it("is only open to members", async () => {
