@@ -1,6 +1,7 @@
-import { formatAmount } from "./goals";
+import { formatAmount, isGoalDay, isLive, sumByUnit } from "./goals";
 import type { ParticipantProgress } from "./progress";
 import type { ParticipantStatsRow } from "./stats";
+import type { DateKey, GoalLike, SessionLike } from "./types";
 
 /**
  * Pages read are the leaderboard's source of truth: every page earns {@link PAGE_XP} XP. Books and
@@ -54,8 +55,50 @@ function rankValues(values: readonly number[]): (number | null)[] {
 }
 
 export function leaderboard(rows: readonly ParticipantStatsRow[]): LeaderboardEntry[] {
+  return rankByXp(
+    rows.map((r) => ({
+      participantId: r.participantId,
+      displayName: r.displayName,
+      values: Object.fromEntries(XP_CATEGORIES.map((c) => [c.key, c.pick(r.progress)])) as Record<XpCategory, number>,
+    })),
+  );
+}
+
+export interface DailyReader {
+  participantId: string;
+  displayName: string;
+  goal: GoalLike | null;
+  sessions: readonly SessionLike[];
+}
+
+/**
+ * One day's standings: XP earned from that day's check-ins alone (pages, minutes and chapters logged,
+ * plus the goal and reading-day add-ons). Streaks and finished books belong to the whole challenge, so
+ * they don't count here. Only readers who read that day are ranked.
+ */
+export function dailyLeaderboard(readers: readonly DailyReader[], date: DateKey): LeaderboardEntry[] {
+  const rows = readers.flatMap((r) => {
+    const day = r.sessions.filter((s) => s.date === date && isLive(s));
+    if (!day.some((s) => s.amount > 0)) return [];
+    const totals = sumByUnit(day);
+    const values: Record<XpCategory, number> = {
+      pages: totals.pages,
+      minutes: totals.minutes,
+      chapters: totals.chapters,
+      goalDays: r.goal && isGoalDay(r.goal, day) ? 1 : 0,
+      readingDays: 1,
+      streak: 0,
+      books: 0,
+    };
+    return [{ participantId: r.participantId, displayName: r.displayName, values }];
+  });
+  return rankByXp(rows);
+}
+
+/** Ranks readers by the XP their category values earn. */
+function rankByXp(rows: readonly { participantId: string; displayName: string; values: Record<XpCategory, number> }[]): LeaderboardEntry[] {
   const perCategory = XP_CATEGORIES.map((c) => {
-    const values = rows.map((r) => c.pick(r.progress));
+    const values = rows.map((r) => r.values[c.key]);
     return { key: c.key, rate: c.rate, values, ranks: rankValues(values) };
   });
 
@@ -79,7 +122,7 @@ export function leaderboard(rows: readonly ParticipantStatsRow[]): LeaderboardEn
       best,
     };
   });
-  const goalDays = new Map(rows.map((r) => [r.participantId, r.progress.goalDays]));
+  const goalDays = new Map(rows.map((r) => [r.participantId, r.values.goalDays]));
 
   // On equal XP, more pages first, then more goal days.
   entries.sort(

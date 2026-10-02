@@ -122,6 +122,21 @@ test("Flow C: multiple participants → feed → reactions → stats", async ({ 
   const mostPages = host.locator("section").filter({ hasText: "Most pages" }).last();
   await expect(mostPages).toContainText("20");
   await expect(mostPages).toContainText("Jessica");
+
+  // The host can pull up any day's top three (to screenshot and share); other readers can't.
+  await host.goto(`${challengeUrl}/leaderboard`);
+  const daily = host.getByRole("region", { name: "Top 3 by day" });
+  await expect(daily.getByRole("radio", { name: "Today" })).toHaveAttribute("aria-checked", "true");
+  const top = daily.getByRole("list", { name: "Top readers" });
+  await expect(top.getByRole("listitem")).toHaveCount(3);
+  await expect(top.getByRole("listitem").first()).toContainText("Jessica");
+  await expect(top.getByRole("listitem").first()).toContainText("20 pages");
+  await daily.getByRole("radio", { name: "Pick a day" }).click();
+  await expect(daily.getByRole("textbox", { name: "Day" })).toBeVisible();
+  const friend = await ctxs[0]!.newPage();
+  await friend.goto(`${challengeUrl}/leaderboard`);
+  await expect(friend.getByText("How XP works")).toBeVisible();
+  await expect(friend.getByRole("region", { name: "Top 3 by day" })).toHaveCount(0);
   for (const c of ctxs) await c.close();
   await hostCtx.close();
 });
@@ -279,7 +294,7 @@ test("Flow H: opening a challenge asks the server to find missing book covers", 
   await dialog.getByRole("button", { name: "Done" }).click();
   await host.getByRole("link", { name: "Me", exact: true }).click();
   await host.getByRole("button", { name: "The Creative Act" }).click();
-  await expect(host.getByRole("dialog", { name: "Book" }).getByText("Rick Rubin")).toBeVisible();
+  await expect(host.getByRole("dialog", { name: "Book" }).getByRole("paragraph").filter({ hasText: "Rick Rubin" })).toBeVisible();
   await hostCtx.close();
   await friendCtx.close();
 });
