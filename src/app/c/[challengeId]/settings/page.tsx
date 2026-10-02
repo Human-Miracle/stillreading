@@ -244,7 +244,7 @@ export default function SettingsPage() {
         <div>
           <Eyebrow>Version</Eyebrow>
           <p className="mt-1 text-ink/70">
-            Build <span className="tabular">{APP_VERSION}</span>. Not seeing something new?
+            You&apos;re on <span className="tabular">{APP_VERSION}</span>. Not seeing something new?
           </p>
         </div>
         <Button

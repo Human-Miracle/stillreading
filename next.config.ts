@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { withSerwist } from "@serwist/turbopack";
 import type { NextConfig } from "next";
 
@@ -30,8 +32,9 @@ const nextConfig: NextConfig = {
   // Database drivers stay as runtime dependencies instead of being bundled.
   serverExternalPackages: ["@electric-sql/pglite", "pg", "web-push"],
   poweredByHeader: false,
-  // Shown in settings so readers can tell which build their installed app is running.
-  env: { NEXT_PUBLIC_APP_VERSION: process.env.VERCEL_GIT_COMMIT_SHA ?? "" },
+  // Shown in settings (V1.0.2…) so readers can tell which version their installed app is running.
+  // Bump "version" in package.json with every release: npm version patch --no-git-tag-version
+  env: { NEXT_PUBLIC_APP_VERSION: (JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as { version: string }).version },
   async headers() {
     return [
       {

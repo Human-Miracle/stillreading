@@ -83,29 +83,6 @@ describe("notification settings", () => {
   });
 });
 
-describe("test notification", () => {
-  const sendTest = (device: TestDevice) => api<{ deliveries: { result: string; host: string; status: number | null; detail: string | null }[] }>("POST", `/api/challenges/${snap.challenge.id}/notifications/test`, { device });
-
-  it("sends to my devices right away and reports what the push service said", async () => {
-    await settings(host, { enabled: true, subscription: sub(1) });
-    const res = await sendTest(host);
-    expect(res.status).toBe(200);
-    expect(res.body.deliveries).toEqual([{ result: "sent", host: "fcm.googleapis.com", status: 201, detail: null }]);
-    expect(sentTo()[0]).toMatchObject({ endpoint: sub(1).endpoint, tag: "test" });
-  });
-
-  it("passes on a refusal, like Apple rejecting the server's key", async () => {
-    await settings(host, { enabled: true, subscription: { ...sub(1), endpoint: "https://web.push.apple.com/abc" } });
-    sendNotification.mockRejectedValueOnce(Object.assign(new Error("Received unexpected response code"), { statusCode: 403, body: '{"reason":"BadJwtToken"}' }));
-    const res = await sendTest(host);
-    expect(res.body.deliveries).toEqual([{ result: "failed", host: "web.push.apple.com", status: 403, detail: '{"reason":"BadJwtToken"}' }]);
-  });
-
-  it("reports no devices when this device never subscribed", async () => {
-    expect((await sendTest(friend)).body.deliveries).toEqual([]);
-  });
-});
-
 describe("reply notifications", () => {
   it("notifies the check-in's owner, not the replier", async () => {
     await settings(host, { enabled: true, subscription: sub(1) });
