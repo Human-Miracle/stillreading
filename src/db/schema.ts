@@ -188,7 +188,7 @@ export const reactions = pgTable(
     challengeId: text("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
     participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
     readingSessionId: text("reading_session_id").notNull().references(() => readingSessions.id, { onDelete: "cascade" }),
-    type: text("type", { enum: ["heart", "fire", "clap", "book"] }).notNull(),
+    type: text("type", { enum: ["heart", "fire", "clap", "laugh", "book"] }).notNull(),
     ...syncColumns,
     deletedAt: ts("deleted_at"),
   },
@@ -196,7 +196,26 @@ export const reactions = pgTable(
     uniqueIndex("reactions_unique_per_type_uq").on(t.participantId, t.readingSessionId, t.type),
     index("reactions_session_idx").on(t.readingSessionId),
     index("reactions_sync_idx").on(t.challengeId, t.serverUpdatedAt),
-    check("reactions_type", sql`${t.type} in ('heart','fire','clap','book')`),
+    check("reactions_type", sql`${t.type} in ('heart','fire','clap','laugh','book')`),
+  ],
+);
+
+/** Replies on a check-in, shown as a thread under it. */
+export const replies = pgTable(
+  "replies",
+  {
+    id: text("id").primaryKey(),
+    challengeId: text("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
+    participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
+    readingSessionId: text("reading_session_id").notNull().references(() => readingSessions.id, { onDelete: "cascade" }),
+    body: varchar("body", { length: 500 }).notNull(),
+    ...syncColumns,
+    deletedAt: ts("deleted_at"),
+  },
+  (t) => [
+    index("replies_session_idx").on(t.readingSessionId),
+    index("replies_participant_idx").on(t.participantId),
+    index("replies_sync_idx").on(t.challengeId, t.serverUpdatedAt),
   ],
 );
 
@@ -261,4 +280,5 @@ export type GoalRow = typeof goals.$inferSelect;
 export type BookRow = typeof books.$inferSelect;
 export type SessionRow = typeof readingSessions.$inferSelect;
 export type ReactionRow = typeof reactions.$inferSelect;
+export type ReplyRow = typeof replies.$inferSelect;
 export type ReaderRow = typeof readers.$inferSelect;

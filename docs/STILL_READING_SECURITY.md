@@ -28,7 +28,7 @@ obtains a copy of the database.
 ## Verified as sound
 * Every endpoint validates input with Zod; bodies capped at 256 KB; batch ops capped at 50.
 * No SQL injection paths: Drizzle parameterises everything, including the raw merge SQL.
-* Authorization is server-side for every mutation: owner checks on books/sessions/reactions, host
+* Authorization is server-side for every mutation: owner checks on books/sessions/reactions/replies, host
   checks on rename/archive/remove/re-invite; removed members get 403; device ids never leave the server.
 * Idempotency: op ids are random 80-bit and scoped to the device that used them.
 * Secrets: device secret stored as SHA-256, compared in constant time; pass stored only as scrypt

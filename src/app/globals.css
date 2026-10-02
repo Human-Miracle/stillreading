@@ -47,7 +47,9 @@
   --color-warn: var(--warn);
   --color-focus: var(--focus);
 
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Colour emoji fonts come before the system text fonts: some (DejaVu Sans on Linux) carry
+     black-and-white smileys like 😂 that would otherwise win over the colour ones. */
+  --font-sans: var(--font-geist), "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --radius-sheet: 2.25rem;
   --radius-card: 1.5rem;

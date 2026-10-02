@@ -26,7 +26,7 @@ export async function freshDb(): Promise<Database> {
 
 export async function resetDb(db: Database) {
   await db.execute(
-    sql`truncate table handoffs, reinvites, readers, reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
+    sql`truncate table handoffs, reinvites, readers, replies, reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
   );
 }
 

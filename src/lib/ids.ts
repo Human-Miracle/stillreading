@@ -2,7 +2,7 @@
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-export type IdPrefix = "dvc" | "rd" | "ch" | "pt" | "gl" | "bk" | "rs" | "op";
+export type IdPrefix = "dvc" | "rd" | "ch" | "pt" | "gl" | "bk" | "rs" | "rp" | "op";
 
 function randomString(length: number, alphabet: string): string {
   // Rejection sampling keeps the distribution uniform.

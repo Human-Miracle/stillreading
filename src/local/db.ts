@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { BookDTO, ChallengeDTO, EntityKind, GoalDTO, ParticipantDTO, ReactionDTO, SessionDTO } from "@/lib/api-types";
+import type { BookDTO, ChallengeDTO, EntityKind, GoalDTO, ParticipantDTO, ReactionDTO, ReplyDTO, SessionDTO } from "@/lib/api-types";
 import type { SyncOpType } from "@/lib/validation/ops";
 
 export type SyncStatus = "pending" | "synced" | "failed";
@@ -25,6 +25,7 @@ export type LocalSession = SessionDTO & {
   privateSynced?: boolean;
 };
 export type LocalReaction = ReactionDTO & { syncStatus: SyncStatus };
+export type LocalReply = ReplyDTO & { syncStatus: SyncStatus };
 
 export interface SyncOpRecord {
   opId: string;
@@ -54,6 +55,7 @@ export class StillReadingDB extends Dexie {
   books!: EntityTable<LocalBook, "id">;
   sessions!: EntityTable<LocalSession, "id">;
   reactions!: EntityTable<LocalReaction, "id">;
+  replies!: EntityTable<LocalReply, "id">;
   syncQueue!: EntityTable<SyncOpRecord, "opId">;
 
   // Storage name predates the rename to Still Reading; kept so existing devices keep their data.
@@ -69,6 +71,8 @@ export class StillReadingDB extends Dexie {
       reactions: "id, challengeId, sessionId",
       syncQueue: "opId, createdAt, challengeId, status, entityId",
     });
+    // v2: replies on check-ins.
+    this.version(2).stores({ replies: "id, challengeId, sessionId" });
   }
 }
 
