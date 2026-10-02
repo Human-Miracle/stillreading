@@ -162,6 +162,8 @@ export const readingSessions = pgTable(
     date: date("date", { mode: "string" }).notNull(),
     amount: integer("amount").notNull(),
     unit: text("unit", { enum: ["pages", "chapters", "minutes"] }).notNull(),
+    /** Pages covered during a minutes or chapters check-in; null for pages check-ins (and older rows). */
+    pages: integer("pages"),
     reflection: varchar("reflection", { length: 500 }),
     /** End-to-end encrypted private reflection ("v1.<iv>.<ciphertext>"); only ever sent to its owner. */
     privateReflection: text("private_reflection"),
@@ -175,6 +177,7 @@ export const readingSessions = pgTable(
     index("sessions_sync_idx").on(t.challengeId, t.serverUpdatedAt),
     check("sessions_amount_positive", sql`${t.amount} > 0`),
     check("sessions_unit", sql`${t.unit} in ('pages','chapters','minutes')`),
+    check("sessions_pages", sql`${t.pages} is null or (${t.pages} > 0 and ${t.unit} <> 'pages')`),
   ],
 );
 

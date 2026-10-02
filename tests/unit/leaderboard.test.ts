@@ -37,6 +37,19 @@ describe("leaderboard XP", () => {
     expect(board[0]).toMatchObject({ pages: 43, pageXp: 430, bonusXp: 40 });
   });
 
+  it("minutes and chapters readers earn page XP for the pages they enter", () => {
+    const day1 = "2026-10-01";
+    const board = leaderboard([
+      row("p", "Pages", "pages_per_day", 20, [sess("p", day1, 30)], [], day1),
+      row("m", "Minutes", "minutes_per_day", 30, [{ ...sess("m", day1, 60, "minutes"), pages: 40 }], [], day1),
+    ]);
+    // Minutes: 40 pages (400) + 60 minutes (60) + goal, reading day, streak (40).
+    expect(board.map((e) => [e.displayName, e.pages, e.xp])).toEqual([
+      ["Minutes", 40, 500],
+      ["Pages", 30, 340],
+    ]);
+  });
+
   it("add-ons can't lift a reader past someone who read clearly more pages", () => {
     const board = leaderboard([
       // 50 pages in one sitting, goal hit once.

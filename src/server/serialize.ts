@@ -82,6 +82,7 @@ export function sessionDTO(r: SessionRow, viewerParticipantId: string | null = n
     date: r.date,
     amount: r.amount,
     unit: r.unit,
+    pages: r.pages,
     reflection: r.reflection,
     privateReflection: viewerParticipantId && r.participantId === viewerParticipantId ? r.privateReflection : null,
     createdAt: iso(r.createdAt),

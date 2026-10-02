@@ -62,6 +62,12 @@ export function formatAmount(amount: number, unit: GoalUnit | SessionUnit): stri
   return `${amount.toLocaleString("en-US")} ${unitLabel(unit, amount)}`;
 }
 
+/** "30 minutes · 12 pages" for a minutes / chapters check-in with pages, else just the amount. */
+export function formatSession(s: Pick<SessionLike, "unit" | "amount" | "pages">): string {
+  const main = formatAmount(s.amount, s.unit);
+  return s.unit !== "pages" && s.pages ? `${main} · ${formatAmount(s.pages, "pages")}` : main;
+}
+
 export function describeGoal(goal: GoalLike): string {
   if (goal.targetUnit === "days") return `Read every day · ${goal.totalTarget} reading days`;
   if (goal.goalType === "daily") return `${formatAmount(goal.targetValue, goal.targetUnit)}/day`;
@@ -81,13 +87,32 @@ export function sessionCountsTowardAmount(goal: GoalLike, unit: SessionUnit): bo
   return goal.targetUnit === unit;
 }
 
+/** Amount a single check-in adds toward a pages / chapters / minutes goal. */
+function amountFor(goal: GoalLike, s: SessionLike): number {
+  if (goal.targetUnit === "pages") return pagesRead(s);
+  return sessionCountsTowardAmount(goal, s.unit) ? s.amount : 0;
+}
+
 export function isLive<T extends { deletedAt?: string | null }>(row: T): boolean {
   return !row.deletedAt;
 }
 
+/**
+ * Pages a check-in covered: the amount for a pages check-in, or the pages entered alongside a
+ * minutes or chapters check-in. Pages are the common measure of how much someone read.
+ */
+export function pagesRead(s: Pick<SessionLike, "unit" | "amount" | "pages">): number {
+  return s.unit === "pages" ? s.amount : (s.pages ?? 0);
+}
+
+/** Totals per unit. `pages` includes pages covered during minutes and chapters check-ins. */
 export function sumByUnit(sessions: readonly SessionLike[]): Record<SessionUnit, number> {
   const totals: Record<SessionUnit, number> = { pages: 0, chapters: 0, minutes: 0 };
-  for (const s of sessions) if (isLive(s)) totals[s.unit] += s.amount;
+  for (const s of sessions) {
+    if (!isLive(s)) continue;
+    if (s.unit !== "pages") totals[s.unit] += s.amount;
+    totals.pages += pagesRead(s);
+  }
   return totals;
 }
 
@@ -118,7 +143,7 @@ export function isGoalDay(goal: GoalLike, daySessions: readonly SessionLike[]): 
 export function amountTowardGoal(goal: GoalLike, sessions: readonly SessionLike[]): number {
   let total = 0;
   for (const s of sessions) {
-    if (isLive(s) && sessionCountsTowardAmount(goal, s.unit)) total += s.amount;
+    if (isLive(s)) total += amountFor(goal, s);
   }
   return total;
 }

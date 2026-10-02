@@ -151,6 +151,7 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
         date: payload.date,
         amount: payload.amount,
         unit: payload.unit,
+        pages: payload.unit === "pages" ? null : (payload.pages ?? null),
         reflection: payload.reflection || null,
         privateReflection: payload.privateReflection ?? null,
         createdAt,

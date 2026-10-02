@@ -155,6 +155,8 @@ async function main() {
         date,
         amount,
         unit: r.unit,
+        // Minutes and chapters check-ins also record the pages they covered.
+        pages: r.unit === "chapters" ? amount * 18 : r.unit === "minutes" ? Math.round(amount / 1.5) : null,
         reflection: r.reflections?.[d] ?? null,
         createdAt: at,
         updatedAt: at,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeGoal, goalFromPreset, isGoalDay, percent, presetFromGoal } from "@/lib/domain/goals";
+import { amountTowardGoal, describeGoal, formatSession, goalFromPreset, isGoalDay, pagesRead, percent, presetFromGoal, sumByUnit } from "@/lib/domain/goals";
 import type { SessionLike } from "@/lib/domain/types";
 
 const s = (amount: number, unit: SessionLike["unit"] = "pages", extra: Partial<SessionLike> = {}): SessionLike => ({
@@ -58,5 +58,31 @@ describe("percent", () => {
   it("never produces negatives or NaN", () => {
     expect(percent(-5, 600).display).toBe(0);
     expect(percent(10, 0)).toEqual({ raw: 0, display: 0 });
+  });
+});
+
+describe("pages from every check-in", () => {
+  const minutes = { participantId: "a", date: "2026-10-01", amount: 30, unit: "minutes" as const, pages: 14 };
+  const chapters = { participantId: "a", date: "2026-10-01", amount: 2, unit: "chapters" as const, pages: 41 };
+  const pages = { participantId: "a", date: "2026-10-01", amount: 20, unit: "pages" as const };
+  const legacy = { participantId: "a", date: "2026-10-01", amount: 45, unit: "minutes" as const };
+
+  it("counts pages entered with minutes and chapters", () => {
+    expect([minutes, chapters, pages, legacy].map(pagesRead)).toEqual([14, 41, 20, 0]);
+    expect(sumByUnit([minutes, chapters, pages, legacy])).toEqual({ pages: 75, chapters: 2, minutes: 75 });
+  });
+
+  it("counts those pages toward a pages goal, but leaves minutes and chapters goals unchanged", () => {
+    const pagesGoal = goalFromPreset({ kind: "pages_per_day", value: 50 }, 30);
+    const minutesGoal = goalFromPreset({ kind: "minutes_per_day", value: 30 }, 30);
+    expect(amountTowardGoal(pagesGoal, [minutes, chapters])).toBe(55);
+    expect(isGoalDay(pagesGoal, [minutes, chapters])).toBe(true);
+    expect(amountTowardGoal(minutesGoal, [minutes, chapters, pages])).toBe(30);
+  });
+
+  it("describes a check-in with its pages", () => {
+    expect(formatSession(minutes)).toBe("30 minutes · 14 pages");
+    expect(formatSession(pages)).toBe("20 pages");
+    expect(formatSession(legacy)).toBe("45 minutes");
   });
 });

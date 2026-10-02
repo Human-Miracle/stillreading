@@ -15,7 +15,7 @@ import { CountTabs } from "@/components/ui/segmented";
 import { Sheet } from "@/components/ui/sheet";
 import { track } from "@/lib/analytics";
 import { amountSummary, streakBanner } from "@/lib/copy";
-import { formatAmount } from "@/lib/domain/goals";
+import { formatAmount, formatSession } from "@/lib/domain/goals";
 import { relativeDayLabel } from "@/lib/format";
 import type { LocalBook } from "@/local/db";
 import { addBook, deleteSession } from "@/local/repo";
@@ -119,7 +119,7 @@ export default function MePage() {
                   <li key={s.id} className="dotted flex items-center gap-3 py-4">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted">{relativeDayLabel(s.date, view.today)}</p>
-                      <p className="mt-0.5 text-[22px] font-medium tracking-[-0.03em] tabular">{formatAmount(s.amount, s.unit)}</p>
+                      <p className="mt-0.5 text-[22px] font-medium tracking-[-0.03em] tabular">{formatSession(s)}</p>
                       <p className="truncate text-sm text-muted">
                         {book?.title ?? "No book"}
                         {s.syncStatus !== "synced" ? ` · ${s.syncStatus === "failed" ? "not synced" : "saved on device"}` : ""}

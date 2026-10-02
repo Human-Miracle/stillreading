@@ -37,6 +37,8 @@ export interface SessionLike {
   date: DateKey;
   amount: number;
   unit: SessionUnit;
+  /** Pages covered during a minutes or chapters check-in (pages check-ins use `amount`). */
+  pages?: number | null;
   bookId?: string | null;
   deletedAt?: string | null;
 }

@@ -153,6 +153,21 @@ describe("sync push", () => {
     expect(Number(row!.n)).toBe(1);
   });
 
+  it("stores the pages covered by a minutes or chapters check-in", async () => {
+    const res = await push(host, [
+      sessionOp(snap.challenge.id, { amount: 30, unit: "minutes", pages: 14 }),
+      sessionOp(snap.challenge.id, { amount: 2, unit: "chapters", pages: 41 }),
+      sessionOp(snap.challenge.id, { amount: 20, unit: "pages", pages: 20 }),
+      sessionOp(snap.challenge.id, { amount: 30, unit: "minutes", pages: 0 }),
+      sessionOp(snap.challenge.id, { amount: 30, unit: "minutes" }),
+    ]);
+    expect(res.body.results.map((r) => r.status)).toEqual(["ok", "ok", "rejected", "rejected", "ok"]);
+    expect(res.body.results[0]).toMatchObject({ entity: { kind: "session", record: { unit: "minutes", amount: 30, pages: 14 } } });
+    expect(res.body.results[1]).toMatchObject({ entity: { record: { unit: "chapters", pages: 41 } } });
+    // Older clients that don't send pages still sync.
+    expect(res.body.results[4]).toMatchObject({ entity: { record: { pages: null } } });
+  });
+
   it("rejects invalid amounts and out-of-range dates per op without failing the batch", async () => {
     const res = await push(host, [
       sessionOp(snap.challenge.id, { amount: 0 }),
