@@ -1,5 +1,5 @@
-import type { BookDTO, ChallengeDTO, GoalDTO, ParticipantDTO, ReactionDTO, ReplyDTO, SessionDTO } from "@/lib/api-types";
-import type { BookRow, ChallengeRow, GoalRow, ParticipantRow, ReactionRow, ReplyRow, SessionRow } from "@/db/schema";
+import type { BookDTO, ChallengeDTO, GoalDTO, ParticipantDTO, ReactionDTO, ReplyDTO, ReplyLikeDTO, SessionDTO } from "@/lib/api-types";
+import type { BookRow, ChallengeRow, GoalRow, ParticipantRow, ReactionRow, ReplyLikeRow, ReplyRow, SessionRow } from "@/db/schema";
 
 const iso = (d: Date) => d.toISOString();
 const isoOrNull = (d: Date | null) => (d ? d.toISOString() : null);
@@ -110,7 +110,20 @@ export function replyDTO(r: ReplyRow): ReplyDTO {
     challengeId: r.challengeId,
     participantId: r.participantId,
     sessionId: r.readingSessionId,
+    parentId: r.parentId,
     body: r.body,
+    createdAt: iso(r.createdAt),
+    updatedAt: iso(r.updatedAt),
+    deletedAt: isoOrNull(r.deletedAt),
+  };
+}
+
+export function replyLikeDTO(r: ReplyLikeRow): ReplyLikeDTO {
+  return {
+    id: r.id,
+    challengeId: r.challengeId,
+    participantId: r.participantId,
+    replyId: r.replyId,
     createdAt: iso(r.createdAt),
     updatedAt: iso(r.updatedAt),
     deletedAt: isoOrNull(r.deletedAt),

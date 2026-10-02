@@ -212,6 +212,8 @@ export const replies = pgTable(
     participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
     readingSessionId: text("reading_session_id").notNull().references(() => readingSessions.id, { onDelete: "cascade" }),
     body: varchar("body", { length: 500 }).notNull(),
+    /** Top-level reply this one answers (one level deep, like Instagram); null for replies to the check-in. */
+    parentId: text("parent_id"),
     /** Set once notifications for this reply have been sent, so retries never notify twice. */
     notifiedAt: ts("notified_at"),
     ...syncColumns,
@@ -219,8 +221,27 @@ export const replies = pgTable(
   },
   (t) => [
     index("replies_session_idx").on(t.readingSessionId),
+    index("replies_parent_idx").on(t.parentId),
     index("replies_participant_idx").on(t.participantId),
     index("replies_sync_idx").on(t.challengeId, t.serverUpdatedAt),
+  ],
+);
+
+/** ♥ on a reply. Unique per (participant, reply), so the id is derived; toggling reuses the row. */
+export const replyLikes = pgTable(
+  "reply_likes",
+  {
+    id: text("id").primaryKey(),
+    challengeId: text("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
+    participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
+    replyId: text("reply_id").notNull().references(() => replies.id, { onDelete: "cascade" }),
+    ...syncColumns,
+    deletedAt: ts("deleted_at"),
+  },
+  (t) => [
+    uniqueIndex("reply_likes_unique_uq").on(t.participantId, t.replyId),
+    index("reply_likes_reply_idx").on(t.replyId),
+    index("reply_likes_sync_idx").on(t.challengeId, t.serverUpdatedAt),
   ],
 );
 
@@ -306,4 +327,5 @@ export type SessionRow = typeof readingSessions.$inferSelect;
 export type ReactionRow = typeof reactions.$inferSelect;
 export type ReplyRow = typeof replies.$inferSelect;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type ReplyLikeRow = typeof replyLikes.$inferSelect;
 export type ReaderRow = typeof readers.$inferSelect;

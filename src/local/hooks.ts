@@ -6,7 +6,7 @@ import { isLive } from "@/lib/domain/goals";
 import { participantProgress, type ParticipantProgress } from "@/lib/domain/progress";
 import { leaderboard, type LeaderboardEntry } from "@/lib/domain/leaderboard";
 import { groupStats, type GroupStats } from "@/lib/domain/stats";
-import { getLocalDb, type LocalBook, type LocalChallenge, type LocalGoal, type LocalParticipant, type LocalReaction, type LocalReply, type LocalSession } from "./db";
+import { getLocalDb, type LocalBook, type LocalChallenge, type LocalGoal, type LocalParticipant, type LocalReaction, type LocalReply, type LocalReplyLike, type LocalSession } from "./db";
 import { getSyncEngine, type SyncState } from "./sync/engine";
 
 /** Re-render periodically so "today" rolls over at midnight in the challenge timezone. */
@@ -31,12 +31,13 @@ export interface ChallengeData {
   sessions: LocalSession[];
   reactions: LocalReaction[];
   replies: LocalReply[];
+  replyLikes: LocalReplyLike[];
 }
 
 export function useChallengeData(challengeId: string): ChallengeData | undefined {
   return useLiveQuery(async () => {
     const db = getLocalDb();
-    const [challenge, participants, goals, books, sessions, reactions, replies] = await Promise.all([
+    const [challenge, participants, goals, books, sessions, reactions, replies, replyLikes] = await Promise.all([
       db.challenges.get(challengeId),
       db.participants.where("challengeId").equals(challengeId).toArray(),
       db.goals.where("challengeId").equals(challengeId).toArray(),
@@ -44,8 +45,9 @@ export function useChallengeData(challengeId: string): ChallengeData | undefined
       db.sessions.where("challengeId").equals(challengeId).toArray(),
       db.reactions.where("challengeId").equals(challengeId).toArray(),
       db.replies.where("challengeId").equals(challengeId).toArray(),
+      db.replyLikes.where("challengeId").equals(challengeId).toArray(),
     ]);
-    return { challenge: challenge ?? null, participants, goals, books, sessions, reactions, replies };
+    return { challenge: challenge ?? null, participants, goals, books, sessions, reactions, replies, replyLikes };
   }, [challengeId]);
 }
 
@@ -74,6 +76,8 @@ export interface ChallengeView {
   reactionsBySession: Map<string, LocalReaction[]>;
   /** Live replies from active members, oldest first. */
   repliesBySession: Map<string, LocalReply[]>;
+  /** Live likes from active members, per reply. */
+  likesByReply: Map<string, LocalReplyLike[]>;
 }
 
 function pickCurrentBook(books: LocalBook[], sessions: LocalSession[]): LocalBook | null {
@@ -130,6 +134,14 @@ export function buildChallengeView(data: ChallengeData, now: Date): ChallengeVie
     else repliesBySession.set(r.sessionId, [r]);
   }
 
+  const likesByReply = new Map<string, LocalReplyLike[]>();
+  for (const l of data.replyLikes) {
+    if (l.deletedAt || !activeIds.has(l.participantId)) continue;
+    const list = likesByReply.get(l.replyId);
+    if (list) list.push(l);
+    else likesByReply.set(l.replyId, [l]);
+  }
+
   const me = members.find((m) => m.participant.id === challenge.myParticipantId) ?? null;
   const statsRows = members.map((m) => ({ participantId: m.participant.id, displayName: m.participant.displayName, progress: m.progress }));
   return {
@@ -145,6 +157,7 @@ export function buildChallengeView(data: ChallengeData, now: Date): ChallengeVie
     booksById: new Map(data.books.map((b) => [b.id, b])),
     reactionsBySession,
     repliesBySession,
+    likesByReply,
   };
 }
 

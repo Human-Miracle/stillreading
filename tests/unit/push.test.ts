@@ -33,12 +33,12 @@ describe("isAllowedPushEndpoint", () => {
 
 describe("replyPayload", () => {
   it("names the replier, previews long replies and links to the thread", () => {
-    const p = replyPayload({ replier: "David", body: "x".repeat(200), toOwner: true, challengeId: "ch_1", sessionId: "rs_1" });
+    const p = replyPayload({ replier: "David", body: "x".repeat(200), to: "owner", challengeId: "ch_1", sessionId: "rs_1" });
     expect(p.title).toBe("David replied to your check-in");
     expect(p.body).toHaveLength(140);
     expect(p.body.endsWith("…")).toBe(true);
     expect(p).toMatchObject({ url: "/c/ch_1/feed/rs_1", tag: "thread-rs_1" });
-    expect(replyPayload({ replier: "Amaka", body: "Hi", toOwner: false, challengeId: "ch_1", sessionId: "rs_1" }).title).toBe("Amaka also replied");
+    expect(replyPayload({ replier: "Amaka", body: "Hi", to: "thread", challengeId: "ch_1", sessionId: "rs_1" }).title).toBe("Amaka also replied");
   });
 });
 

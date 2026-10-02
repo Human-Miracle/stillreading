@@ -21,7 +21,7 @@ Run everything with `npm run verify` (typecheck, lint, unit+integration, build) 
   invalid code 404.
 * authorization: wrong secret 401; mutating someone else's book/session rejected; non-host cannot
   remove/rename.
-* sync push: session create, duplicate op id → no duplicate row; stale LWW; reaction toggle unique; laugh reaction; replies create/idempotent/forbidden/author-only delete, tombstone in delta pull.
+* sync push: session create, duplicate op id → no duplicate row; stale LWW; reaction toggle unique; laugh reaction; replies create/idempotent/forbidden/author-only delete, tombstone in delta pull; nested replies normalised to one level, cross-check-in parent rejected; reply likes toggle, forged id rejected.
 * sync pull: since-cursor deltas, tombstones, device ids never exposed, removed member gets 403.
 * client sync engine against real handlers (fake-indexeddb): offline check-in stays local, survives
   "restart" (new engine instance on same DB), syncs on reconnect without duplicates, multiple queued

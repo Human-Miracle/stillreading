@@ -21,6 +21,7 @@
 | `reaction.set` | self | sessionId, type, active |
 | `reply.create` | self | id, sessionId, body (check-in must be in this challenge and not deleted) |
 | `reply.delete` | self (author only) | id, updatedAt |
+| `reply.like` | self | id (derived), replyId, active, updatedAt |
 | `challenge.update` | host | name, description |
 | `challenge.archive` | host | — |
 | `participant.remove` | host | participantId |
@@ -51,7 +52,7 @@ Status handling on the client:
 Backoff: `min(2s × 2^attempts, 5 min)` with ±20% jitter.
 
 ## Pull — `GET /api/challenges/:id/sync?since=<cursor>`
-Returns challenge, participants, goals, books, sessions, reactions, replies with
+Returns challenge, participants, goals, books, sessions, reactions, replies, replyLikes with
 `server_updated_at > since − 30s` (overlap absorbs commit-order skew; merges are idempotent),
 including tombstones. Without `since` the full live dataset is returned. The response `cursor` is the
 server time at query start.
@@ -81,7 +82,8 @@ subscription (`push_subscriptions`, keyed by endpoint) and sets `challenge_parti
   the server sends requests to them.
 - After a `reply.create` commits, `notifyReply` runs in the background (`waitUntil`). It claims the
   reply once (`replies.notified_at`), so retried ops never notify twice. It then sends to the
-  check-in's owner and everyone who replied in the thread, minus the replier, limited to active
+  check-in's owner, the author of the reply being answered ("replied to you") and everyone who
+  replied in the thread, minus the replier, limited to active
   members with `notify_replies`. Sends go to every subscription on the member's device or any device
   of the same reader. Payload: `{ title, body (≤140), url: /c/:id/feed/:sessionId, tag: thread-:sessionId }`,
   TTL 24h, `Topic` = session id so a phone that's offline gets one message per thread.

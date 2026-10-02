@@ -56,9 +56,18 @@ export async function settleBackgroundTasks() {
 
 const preview = (s: string, max = 140) => (s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s);
 
-export function replyPayload(input: { replier: string; body: string; toOwner: boolean; challengeId: string; sessionId: string }): PushPayload {
+/** owner: their check-in; parent: the reply this one answers; thread: someone else in the thread. */
+export type ReplyAudience = "owner" | "parent" | "thread";
+
+const TITLES: Record<ReplyAudience, (name: string) => string> = {
+  parent: (n) => `${n} replied to you`,
+  owner: (n) => `${n} replied to your check-in`,
+  thread: (n) => `${n} also replied`,
+};
+
+export function replyPayload(input: { replier: string; body: string; to: ReplyAudience; challengeId: string; sessionId: string }): PushPayload {
   return {
-    title: input.toOwner ? `${input.replier} replied to your check-in` : `${input.replier} also replied`,
+    title: TITLES[input.to](input.replier),
     body: preview(input.body),
     url: `/c/${input.challengeId}/feed/${input.sessionId}`,
     tag: `thread-${input.sessionId}`,
@@ -89,7 +98,8 @@ export async function notifyReply(db: Database, replyId: string): Promise<{ sent
     .selectDistinct({ id: replies.participantId })
     .from(replies)
     .where(and(eq(replies.readingSessionId, reply.readingSessionId), isNull(replies.deletedAt)));
-  const followerIds = [...new Set([session.ownerId, ...coRepliers.map((r) => r.id)])].filter((id) => id !== reply.participantId);
+  const [parent] = reply.parentId ? await db.select({ authorId: replies.participantId }).from(replies).where(eq(replies.id, reply.parentId)) : [];
+  const followerIds = [...new Set([session.ownerId, ...(parent ? [parent.authorId] : []), ...coRepliers.map((r) => r.id)])].filter((id) => id !== reply.participantId);
   if (!followerIds.length) return { sent: 0, removed: 0 };
 
   const people = await db
@@ -106,7 +116,13 @@ export async function notifyReply(db: Database, replyId: string): Promise<{ sent
   for (const person of recipients) {
     const subs = await subscriptionsFor(db, person);
     const payload = JSON.stringify(
-      replyPayload({ replier: replier.displayName, body: reply.body, toOwner: person.id === session.ownerId, challengeId: reply.challengeId, sessionId: reply.readingSessionId }),
+      replyPayload({
+        replier: replier.displayName,
+        body: reply.body,
+        to: person.id === parent?.authorId ? "parent" : person.id === session.ownerId ? "owner" : "thread",
+        challengeId: reply.challengeId,
+        sessionId: reply.readingSessionId,
+      }),
     );
     for (const sub of subs) {
       const { result } = await deliver(sub, payload, reply.readingSessionId);
