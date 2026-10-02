@@ -64,6 +64,13 @@
       "when": 1790957531036,
       "tag": "0008_retry_missing_covers",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790960687430,
+      "tag": "0009_recheck_found_covers",
+      "breakpoints": true
     }
   ]
 }

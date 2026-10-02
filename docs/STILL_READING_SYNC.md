@@ -106,8 +106,12 @@ client calls it repeatedly, a batch at a time, when it sees books without covers
 - An explicit `coverUrl: null` over an existing cover marks it `removed`: never looked up again.
   Exception: a null written before the server found the cover (older clients that always send the
   field) is ignored.
-- The lookup widens step by step until a result has a cover (10 results each): title + author, a
-  keyword search of both, the title without its subtitle, then the title alone. The app asks for the
+- The lookup widens step by step (10 results each): title + author, a keyword search of both, the
+  title without its subtitle, then the title alone. Loose searches also return unrelated books, so a
+  result only counts when it is the same book (`sameBook` in `src/lib/book-match.ts`): the title
+  matches, ignoring case, punctuation, a leading article, a subtitle and a small typo, and one of its
+  authors shares the reader's author's surname. No cover beats a wrong cover.
+- A cover the reader picks is marked `picked`, so it is never cleared or replaced by a lookup. The app asks for the
   author whenever a book is added, since the title alone often matches the wrong edition.
 - Misses are retried after 3 days; correcting a coverless book's title or author retries at once.
 - A cover image that fails to load is retried twice (by the proxy and by the page) before the app
