@@ -23,6 +23,8 @@ interface PodiumProps {
   myParticipantId: string | null;
   /** Show everyone below the top three in a closing card (default). Off: just the top three. */
   showRest?: boolean;
+  /** Extra text after a flag's "best at" line, e.g. "+12 today". */
+  note?: (entry: LeaderboardEntry) => string | null;
 }
 
 function BestAt({ entry }: { entry: LeaderboardEntry }) {
@@ -40,7 +42,7 @@ function BestAt({ entry }: { entry: LeaderboardEntry }) {
  * larger card with everyone else. Flags have a square top-left corner, a rounded top-right corner and a
  * triangular tail that drops from the bottom-left edge.
  */
-export function Podium({ entries, challengeId, myParticipantId, showRest = true }: PodiumProps) {
+export function Podium({ entries, challengeId, myParticipantId, showRest = true, note }: PodiumProps) {
   const top = entries.filter((e) => e.xp > 0).slice(0, PODIUM_SIZE);
   const rest = entries.slice(top.length);
   // Without the closing card, the last flag needs no room to its right.
@@ -68,8 +70,9 @@ export function Podium({ entries, challengeId, myParticipantId, showRest = true 
                 <p className="mt-0.5 text-sm font-medium tabular" style={{ color: flag.sub }}>
                   #{entry.rank} · {n(entry.xp)} XP{isMe ? " · you" : ""}
                 </p>
-                <p className="mt-3 flex text-xs font-medium" style={{ color: flag.sub }}>
+                <p className="mt-3 flex gap-1 text-xs font-medium" style={{ color: flag.sub }}>
                   <BestAt entry={entry} />
+                  {note?.(entry) ? <span className="shrink-0">· {note(entry)}</span> : null}
                 </p>
               </Link>
               <span

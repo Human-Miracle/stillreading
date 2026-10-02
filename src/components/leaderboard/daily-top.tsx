@@ -1,9 +1,9 @@
 "use client";
 import { useMemo, useState } from "react";
-import { addDays, dayNumberOf, diffDays } from "@/lib/domain/dates";
-import { dailyLeaderboard } from "@/lib/domain/leaderboard";
+import { addDays, dayNumberOf, diffDays, joinedDateFor } from "@/lib/domain/dates";
+import { leaderboardOn } from "@/lib/domain/leaderboard";
 import type { DateKey } from "@/lib/domain/types";
-import { formatDateKey } from "@/lib/format";
+import { formatDateKey, n } from "@/lib/format";
 import type { ChallengeView } from "@/local/hooks";
 import { Field, Input } from "../ui/field";
 import { Segmented } from "../ui/segmented";
@@ -14,8 +14,9 @@ type Choice = "today" | "yesterday" | "pick";
 const within = (date: DateKey, first: DateKey, last: DateKey) => diffDays(first, date) >= 0 && diffDays(date, last) >= 0;
 
 /**
- * Host only: the day's top three readers for any day of the challenge, laid out as a self-contained
- * card (date, challenge name, podium) that reads well as a screenshot in the group chat.
+ * Host only: the leaderboard's top three as it stood at the end of any day of the challenge (today:
+ * the live leaderboard), with what each read that day, laid out as a self-contained card (date,
+ * challenge name, podium) that reads well as a screenshot in the group chat.
  */
 export function DailyTop({ view }: { view: ChallengeView }) {
   const { challenge, today } = view;
@@ -33,10 +34,23 @@ export function DailyTop({ view }: { view: ChallengeView }) {
 
   const date = choice === "today" ? today : choice === "yesterday" ? yesterday : picked;
   const readers = useMemo(
-    () => view.members.map((m) => ({ participantId: m.participant.id, displayName: m.participant.displayName, goal: m.goal, sessions: m.sessions })),
-    [view.members],
+    () =>
+      view.members.map((m) => ({
+        participantId: m.participant.id,
+        displayName: m.participant.displayName,
+        goal: m.goal,
+        sessions: m.sessions,
+        books: m.books,
+        joinedDate: joinedDateFor(challenge, m.participant),
+      })),
+    [view.members, challenge],
   );
-  const board = useMemo(() => dailyLeaderboard(readers, date), [readers, date]);
+  const { board, dayPages } = useMemo(() => leaderboardOn(challenge, readers, date), [challenge, readers, date]);
+  const isToday = date === today;
+  const dayNote = (e: { participantId: string }) => {
+    const pages = dayPages.get(e.participantId) ?? 0;
+    return pages ? `+${n(pages)} ${isToday ? "today" : "that day"}` : null;
+  };
 
   if (diffDays(first, last) < 0) return null; // Hasn't started yet.
 
@@ -68,21 +82,23 @@ export function DailyTop({ view }: { view: ChallengeView }) {
         </Field>
       ) : null}
 
-      <div className="overflow-hidden rounded-[1.75rem] bg-ink text-white" aria-label="Top readers of the day">
+      <div className="overflow-hidden rounded-[1.75rem] bg-ink text-white" aria-label="Leaderboard on this day">
         <div className="px-4 pt-5 sm:px-6">
           <p className="text-sm font-medium text-white/50">
-            Top readers · Day {dayNumberOf(challenge, date)} of {challenge.durationDays}
+            Leaderboard · Day {dayNumberOf(challenge, date)} of {challenge.durationDays}
           </p>
           <p className="headline mt-1 text-[28px] leading-tight">{formatDateKey(date, { weekday: "long", month: "long", day: "numeric" })}</p>
           <p className="mt-0.5 truncate text-sm text-white/45">{challenge.name}</p>
         </div>
-        {board.length ? (
+        {board.some((e) => e.xp > 0) ? (
           // No "you" marker: this card is made to be shared.
-          <Podium entries={board} challengeId={challenge.id} myParticipantId={null} showRest={false} />
+          <Podium entries={board} challengeId={challenge.id} myParticipantId={null} showRest={false} note={dayNote} />
         ) : (
-          <p className="px-4 py-10 text-center text-white/60 sm:px-6">No check-ins on this day.</p>
+          <p className="px-4 py-10 text-center text-white/60 sm:px-6">No check-ins yet by this day.</p>
         )}
-        <p className="px-4 pb-4 pt-4 text-xs text-white/35 sm:px-6">Still Reading · XP from the pages read that day</p>
+        <p className="px-4 pb-4 pt-4 text-xs text-white/35 sm:px-6">
+          Still Reading · {isToday ? "Standings so far today" : "Standings at the end of the day"}
+        </p>
       </div>
     </section>
   );
