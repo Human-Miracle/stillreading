@@ -15,6 +15,7 @@ import { POST as handoffClaimPOST } from "@/app/api/handoff/claim/route";
 import { GET as bookSearchGET } from "@/app/api/books/search/route";
 import { GET as notificationsGET, PUT as notificationsPUT } from "@/app/api/challenges/[id]/notifications/route";
 import { GET as pushConfigGET } from "@/app/api/push/config/route";
+import { POST as notificationsTestPOST } from "@/app/api/challenges/[id]/notifications/test/route";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { newDeviceSecret, newId } from "@/lib/ids";
 
@@ -61,6 +62,7 @@ const routes: { method: string; pattern: RegExp; keys: string[]; handler: Handle
   { method: "GET", pattern: /^\/api\/challenges\/([^/]+)\/notifications$/, keys: ["id"], handler: notificationsGET as Handler },
   { method: "PUT", pattern: /^\/api\/challenges\/([^/]+)\/notifications$/, keys: ["id"], handler: notificationsPUT as Handler },
   { method: "GET", pattern: /^\/api\/push\/config$/, keys: [], handler: pushConfigGET as Handler },
+  { method: "POST", pattern: /^\/api\/challenges\/([^/]+)\/notifications\/test$/, keys: ["id"], handler: notificationsTestPOST as Handler },
 ];
 
 /** A `fetch` that dispatches straight into the Next.js route handlers. */

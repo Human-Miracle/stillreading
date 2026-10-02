@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import webpush from "web-push";
 import type { Database } from "@/db/client";
@@ -27,13 +28,21 @@ export function vapidConfig(): Vapid | null {
 
 const pending = new Set<Promise<void>>();
 
-/** Runs `task` without delaying the response. Failures are logged, never thrown. */
+/**
+ * Runs `task` without delaying the response. Failures are logged, never thrown. `waitUntil` must be
+ * called synchronously while the request is still running, or Vercel may freeze the function before
+ * the task finishes.
+ */
 export function afterResponse(name: string, task: () => Promise<void>) {
   const p = task()
     .catch((err) => log.error(`${name}_failed`, errorFields(err)))
     .finally(() => pending.delete(p));
   pending.add(p);
-  void import("@vercel/functions").then(({ waitUntil }) => waitUntil(p)).catch(() => undefined);
+  try {
+    waitUntil(p);
+  } catch {
+    // Outside a Vercel request (local dev, tests): the promise simply runs to completion.
+  }
 }
 
 /** Test hook: wait for every background task started so far. */
@@ -100,7 +109,7 @@ export async function notifyReply(db: Database, replyId: string): Promise<{ sent
       replyPayload({ replier: replier.displayName, body: reply.body, toOwner: person.id === session.ownerId, challengeId: reply.challengeId, sessionId: reply.readingSessionId }),
     );
     for (const sub of subs) {
-      const result = await deliver(sub, payload, reply.readingSessionId);
+      const { result } = await deliver(sub, payload, reply.readingSessionId);
       if (result === "sent") sent += 1;
       if (result === "gone") {
         await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint));
@@ -122,20 +131,52 @@ async function subscriptionsFor(db: Database, person: { deviceId: string; reader
   return db.select().from(pushSubscriptions).where(inArray(pushSubscriptions.deviceId, deviceIds));
 }
 
-async function deliver(sub: PushSubscriptionRow, payload: string, sessionId: string): Promise<"sent" | "gone" | "failed"> {
+export interface Delivery {
+  result: "sent" | "gone" | "failed";
+  host: string;
+  status: number | null;
+  /** The push service's explanation when it refused (e.g. Apple's "BadJwtToken"). */
+  detail: string | null;
+}
+
+async function deliver(sub: PushSubscriptionRow, payload: string, topic: string): Promise<Delivery> {
+  const host = new URL(sub.endpoint).hostname;
   try {
-    await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, {
+    const res = await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, {
       TTL: 60 * 60 * 24,
       urgency: "normal",
       // Push services keep only the newest pending message per topic: one per thread.
-      topic: sessionId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32),
+      topic: topic.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32),
     });
-    return "sent";
+    return { result: "sent", host, status: (res as { statusCode?: number } | undefined)?.statusCode ?? null, detail: null };
   } catch (err) {
-    const status = (err as { statusCode?: number }).statusCode;
+    const e = err as { statusCode?: number; body?: unknown; message?: string };
+    const status = e.statusCode ?? null;
+    const detail = (typeof e.body === "string" && e.body.trim() ? e.body.trim() : (e.message ?? "")).slice(0, 200) || null;
     // 404/410: the browser unsubscribed or the app was removed. Forget the address.
-    if (status === 404 || status === 410) return "gone";
-    log.warn("push_failed", { status: status ?? null, host: new URL(sub.endpoint).hostname });
-    return "failed";
+    if (status === 404 || status === 410) return { result: "gone", host, status, detail };
+    log.warn("push_failed", { status, host, detail });
+    return { result: "failed", host, status, detail };
   }
+}
+
+/** Sends a test notification to this member's devices right away and reports what each push service said. */
+export async function sendTestNotification(db: Database, person: { deviceId: string; readerId: string | null }, challengeId: string): Promise<Delivery[]> {
+  const vapid = vapidConfig();
+  if (!vapid) return [];
+  webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
+  const payload: PushPayload = {
+    title: "Still Reading",
+    body: "Notifications are working. You'll hear here when someone replies.",
+    url: `/c/${challengeId}/settings`,
+    tag: "test",
+  };
+  const deliveries: Delivery[] = [];
+  for (const sub of await subscriptionsFor(db, person)) {
+    const d = await deliver(sub, JSON.stringify(payload), "test");
+    if (d.result === "gone") await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint));
+    deliveries.push(d);
+  }
+  log.info("test_notification", { deliveries: deliveries.map((d) => `${d.host}:${d.result}:${d.status ?? "-"}`) });
+  return deliveries;
 }

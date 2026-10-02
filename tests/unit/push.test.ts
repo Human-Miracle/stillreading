@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isAllowedPushEndpoint } from "@/lib/validation/push";
+import { describeTest } from "@/local/notifications";
 import { replyPayload } from "@/server/notifications";
 
 describe("isAllowedPushEndpoint", () => {
@@ -38,5 +39,14 @@ describe("replyPayload", () => {
     expect(p.body.endsWith("…")).toBe(true);
     expect(p).toMatchObject({ url: "/c/ch_1/feed/rs_1", tag: "thread-rs_1" });
     expect(replyPayload({ replier: "Amaka", body: "Hi", toOwner: false, challengeId: "ch_1", sessionId: "rs_1" }).title).toBe("Amaka also replied");
+  });
+});
+
+describe("describeTest", () => {
+  it("explains each outcome in plain words", () => {
+    expect(describeTest([])).toMatchObject({ ok: false, message: expect.stringContaining("isn't registered") });
+    expect(describeTest([{ result: "sent", host: "web.push.apple.com", status: 201, detail: null }])).toMatchObject({ ok: true, message: expect.stringContaining("Sent") });
+    expect(describeTest([{ result: "gone", host: "fcm.googleapis.com", status: 410, detail: null }]).message).toContain("dropped");
+    expect(describeTest([{ result: "failed", host: "web.push.apple.com", status: 403, detail: "BadJwtToken" }]).message).toBe("Apple refused the notification (403: BadJwtToken).");
   });
 });

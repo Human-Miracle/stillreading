@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { dismissPrompt, promptDismissed, useReplyNotifications } from "@/local/notifications";
+import { dismissPrompt, promptDismissed, sendTest, useReplyNotifications } from "@/local/notifications";
 import { openInstallModal } from "../pwa/install-modal";
 import { Button } from "../ui/button";
 import { Card, Eyebrow } from "../ui/card";
@@ -9,6 +9,7 @@ import { Icon } from "../ui/icons";
 /** Settings card: turn reply notifications on or off for this challenge on this device. */
 export function ReplyNotificationsCard({ challengeId }: { challengeId: string }) {
   const { status, busy, error, enable, disable } = useReplyNotifications(challengeId);
+  const [test, setTest] = useState<{ ok: boolean; message: string } | "sending" | null>(null);
   if (status === "loading" || status === "unavailable") return null;
 
   let text: string;
@@ -55,6 +56,26 @@ export function ReplyNotificationsCard({ challengeId }: { challengeId: string })
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
+      {status === "on" ? (
+        <div className="space-y-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={test === "sending"}
+            onClick={async () => {
+              setTest("sending");
+              setTest(await sendTest(challengeId));
+            }}
+          >
+            {test === "sending" ? "Sending…" : "Send test notification"}
+          </Button>
+          {test && test !== "sending" ? (
+            <p className={test.ok ? "text-sm text-ink/70" : "text-sm text-[#c2321f]"} role="status">
+              {test.message}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {error ? (
         <p className="text-sm text-[#c2321f]" role="alert">
           {error}

@@ -125,3 +125,41 @@ export function dismissPrompt(challengeId: string) {
     // ignore
   }
 }
+
+export interface Delivery {
+  result: "sent" | "gone" | "failed";
+  host: string;
+  status: number | null;
+  detail: string | null;
+}
+
+const SERVICE: [string, string][] = [
+  ["apple.com", "Apple"],
+  ["googleapis.com", "Google"],
+  ["mozilla.com", "Mozilla"],
+  ["windows.com", "Microsoft"],
+];
+const serviceName = (host: string) => SERVICE.find(([h]) => host.endsWith(h))?.[1] ?? host;
+
+/** Plain-language summary of a test send. */
+export function describeTest(deliveries: Delivery[]): { ok: boolean; message: string } {
+  if (!deliveries.length) return { ok: false, message: "This device isn't registered for notifications. Turn them off and on again." };
+  if (deliveries.some((d) => d.result === "sent")) {
+    return {
+      ok: true,
+      message: "Sent. It should arrive within a few seconds. If it doesn't, check that notifications for Still Reading are allowed in your phone's settings and that Focus or Do Not Disturb is off.",
+    };
+  }
+  if (deliveries.every((d) => d.result === "gone")) return { ok: false, message: "Your phone dropped this registration. Turn notifications off and on again." };
+  const failed = deliveries.find((d) => d.result === "failed")!;
+  return { ok: false, message: `${serviceName(failed.host)} refused the notification (${[failed.status, failed.detail].filter(Boolean).join(": ") || "no details"}).` };
+}
+
+export async function sendTest(challengeId: string): Promise<{ ok: boolean; message: string }> {
+  try {
+    const { deliveries } = await apiRequest<{ deliveries: Delivery[] }>(`/api/challenges/${challengeId}/notifications/test`, { method: "POST" });
+    return describeTest(deliveries);
+  } catch (err) {
+    return { ok: false, message: err instanceof Error && err.message ? err.message : "Couldn't send a test. Check your connection and try again." };
+  }
+}
