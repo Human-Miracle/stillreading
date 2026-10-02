@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { cleanBookQuery, coverSrc, coverUrlFor, findCovers, openLibrarySearchUrl, parseOpenLibrarySearch } from "@/lib/book-search";
+import { mainTitle } from "@/server/open-library";
 import { coverUrl } from "@/lib/validation/fields";
 
 describe("parseOpenLibrarySearch", () => {
@@ -86,5 +87,15 @@ describe("coverSrc", () => {
 
   it("leaves anything else untouched", () => {
     expect(coverSrc("https://covers.openlibrary.org/b/isbn/123-M.jpg")).toBe("https://covers.openlibrary.org/b/isbn/123-M.jpg");
+  });
+});
+
+describe("mainTitle", () => {
+  it("drops subtitles and series notes, keeping hyphenated titles", () => {
+    expect(mainTitle("Atomic Habits: An Easy & Proven Way to Build Good Habits")).toBe("Atomic Habits");
+    expect(mainTitle("Dune (Dune Chronicles #1)")).toBe("Dune");
+    expect(mainTitle("Rich Dad Poor Dad - What the Rich Teach Their Kids")).toBe("Rich Dad Poor Dad");
+    expect(mainTitle("Spider-Man")).toBe("Spider-Man");
+    expect(mainTitle("The 48 Laws of Power")).toBe("The 48 Laws of Power");
   });
 });

@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { GoalPreset } from "@/lib/domain/goals";
 import { displayName as displayNameSchema } from "@/lib/validation/fields";
 import type { ProfileInput } from "@/local/repo";
-import { BookForm, bookDraftToInput, emptyBook, type BookDraft } from "../books/book-form";
+import { BookForm, bookDraftReady, bookDraftToInput, emptyBook, type BookDraft } from "../books/book-form";
 import { GoalSelector, isGoalValid } from "../goals/goal-selector";
 import { Button } from "../ui/button";
 import { Field, Input } from "../ui/field";
@@ -126,7 +126,7 @@ export function ProfileSteps({
       className="animate-rise"
       onSubmit={(e) => {
         e.preventDefault();
-        submit(true);
+        if (bookDraftReady(book)) submit(true);
       }}
     >
       <StepHeader step={stepOffset + 3} total={totalSteps} title="What are you reading?" subtitle="Optional. You can add or switch books any time." />
@@ -137,7 +137,7 @@ export function ProfileSteps({
         </Notice>
       ) : null}
       <div className="mt-8 space-y-3">
-        <Button type="submit" full size="lg" disabled={submitting || !book.title.trim()}>
+        <Button type="submit" full size="lg" disabled={submitting || !bookDraftReady(book)}>
           {submitting ? "One moment…" : submitLabel}
         </Button>
         <Button full variant="ghost" disabled={submitting} onClick={() => submit(false)}>

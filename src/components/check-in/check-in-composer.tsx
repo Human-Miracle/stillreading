@@ -45,6 +45,7 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
     .sort((a, b) => Number(a.status === "completed") - Number(b.status === "completed"));
   const [bookId, setBookId] = useState<string>(() => me.currentBook?.id ?? myBooks[0]?.id ?? NO_BOOK);
   const [newTitle, setNewTitle] = useState("");
+  const [newAuthor, setNewAuthor] = useState("");
   const [unit, setUnit] = useState<SessionUnit>(() => defaultSessionUnit(me.goal));
   const [amount, setAmount] = useState("");
   const [pages, setPages] = useState("");
@@ -71,7 +72,7 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
       return setError(`How many pages did those ${unit} cover? Pages are how everyone is compared on the leaderboard.`);
     }
     if (pageCount !== null && pageCount > 10_000) return setError("That's a lot of pages! Please enter 10,000 or less.");
-    if (bookId === NEW_BOOK && !newTitle.trim()) return setError("Add the book title, or choose “No book”.");
+    if (bookId === NEW_BOOK && (!newTitle.trim() || !newAuthor.trim())) return setError("Add the book’s title and author (they’re how we find its cover), or choose “No book”.");
     setError(null);
     setSaving(true);
     const wasMet = me.progress.today.goalMet;
@@ -79,7 +80,7 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
       let useBookId: string | null = bookId === NO_BOOK ? null : bookId;
       let title = selectedBook?.title ?? null;
       if (bookId === NEW_BOOK) {
-        const book = await addBook(view.challenge.id, { title: newTitle.trim() });
+        const book = await addBook(view.challenge.id, { title: newTitle.trim(), author: newAuthor.trim() });
         useBookId = book.id;
         title = book.title;
         track("book_added", { challengeId: view.challenge.id });
@@ -205,9 +206,12 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
           </Chip>
         </div>
         {bookId === NEW_BOOK ? (
-          <div className="mt-3">
+          <div className="mt-3 space-y-3">
             <Field label="Book title">
               {(p) => <Input {...p} autoFocus maxLength={200} value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="The Creative Act" />}
+            </Field>
+            <Field label="Author">
+              {(p) => <Input {...p} autoComplete="off" maxLength={120} value={newAuthor} onChange={(e) => setNewAuthor(e.target.value)} placeholder="Rick Rubin" />}
             </Field>
           </div>
         ) : null}

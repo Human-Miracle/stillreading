@@ -5,7 +5,7 @@ import { removeBook, updateBook } from "@/local/repo";
 import { Button } from "../ui/button";
 import { ProgressBar } from "../ui/progress";
 import { BookCover } from "./book-cover";
-import { BookForm, bookDraftToInput, bookToDraft, type BookDraft } from "./book-form";
+import { BookForm, bookDraftReady, bookDraftToInput, bookToDraft, type BookDraft } from "./book-form";
 
 export const STATUS_LABEL = { planned: "Up next", reading: "Reading", completed: "Finished", abandoned: "Set aside" } as const;
 
@@ -25,15 +25,15 @@ export function BookDetails({ book, editable, onDone }: { book: LocalBook; edita
         aria-label={`Edit ${book.title}`}
         onSubmit={async (e) => {
           e.preventDefault();
+          if (!bookDraftReady(draft)) return;
           const input = bookDraftToInput(draft);
-          if (!input.title) return;
           await updateBook(book.id, input);
           setDraft(null);
         }}
       >
         <BookForm value={draft} onChange={setDraft} autoFocus />
         <div className="flex gap-2">
-          <Button type="submit" disabled={!draft.title.trim()}>
+          <Button type="submit" disabled={!bookDraftReady(draft)}>
             Save changes
           </Button>
           <Button variant="ghost" onClick={() => setDraft(null)}>

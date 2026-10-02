@@ -4,7 +4,7 @@ import { books } from "@/db/schema";
 import { findCoverOnServer } from "./open-library";
 
 /** A title that found nothing is looked up again after this long (Open Library keeps growing). */
-export const MISSING_RETRY_MS = 7 * 24 * 60 * 60 * 1000;
+export const MISSING_RETRY_MS = 3 * 24 * 60 * 60 * 1000;
 /** Small batches keep each request well inside the serverless time limit; the client asks again for the rest. */
 const BATCH = 3;
 

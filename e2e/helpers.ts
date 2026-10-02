@@ -23,6 +23,7 @@ export async function createChallenge(page: Page, opts: { name: string; host: st
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Continue" }).click(); // default goal: 20 pages/day
   await page.getByLabel("Title").fill("Atomic Habits");
+  await page.getByLabel("Author", { exact: true }).fill("James Clear");
   await page.getByRole("button", { name: "Create challenge" }).click();
   await expect(page.getByRole("heading", { name: "Your challenge is ready" })).toBeVisible();
   const url = (await page.getByLabel("Invite link").textContent())!.trim();
@@ -31,7 +32,7 @@ export async function createChallenge(page: Page, opts: { name: string; host: st
   return { inviteUrl: url, challengeUrl: page.url() };
 }
 
-export async function join(page: Page, inviteUrl: string, name: string, opts: { book?: string; goal?: string } = {}) {
+export async function join(page: Page, inviteUrl: string, name: string, opts: { book?: string; author?: string; goal?: string } = {}) {
   await page.goto(new URL(inviteUrl).pathname);
   await page.getByRole("button", { name: "Join the challenge" }).click();
   await page.getByLabel("Your name").fill(name);
@@ -40,6 +41,8 @@ export async function join(page: Page, inviteUrl: string, name: string, opts: { 
   await page.getByRole("button", { name: "Continue" }).click();
   if (opts.book) {
     await page.getByLabel("Title").fill(opts.book);
+    await expect(page.getByRole("button", { name: "Join challenge" })).toBeDisabled(); // the author is required too
+    await page.getByLabel("Author", { exact: true }).fill(opts.author ?? "Someone");
     await page.getByRole("button", { name: "Join challenge" }).click();
   } else {
     await page.getByRole("button", { name: "Skip for now" }).click();

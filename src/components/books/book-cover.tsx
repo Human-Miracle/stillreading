@@ -22,14 +22,27 @@ function DoneBadge() {
   return <span className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded-full bg-white text-[10px] font-bold text-ink">✓</span>;
 }
 
+/** A cover that fails to load (archive.org slow, a dropped connection) gets this many more tries. */
+const COVER_RETRIES = 2;
+
 /** The book's real cover when it has one (from Open Library), otherwise a generated typographic cover. */
 export function BookCover({ book, className }: { book: CoverBook; className?: string }) {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  if (book.coverUrl && failedUrl !== book.coverUrl) {
+  const [failed, setFailed] = useState<{ url: string; tries: number } | null>(null);
+  const tries = failed && failed.url === book.coverUrl ? failed.tries : 0;
+  if (book.coverUrl && tries <= COVER_RETRIES) {
+    const url = book.coverUrl;
+    const src = coverSrc(url);
     return (
       <div className={cn("relative aspect-[2/3] overflow-hidden rounded-md bg-surface-2 shadow-[0_6px_16px_rgb(17_17_17/0.18)]", className)} aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed */}
-        <img src={coverSrc(book.coverUrl)} alt="" loading="lazy" className="size-full object-cover" onError={() => setFailedUrl(book.coverUrl ?? null)} />
+        <img
+          key={tries}
+          src={tries ? `${src}${src.includes("?") ? "&" : "?"}retry=${tries}` : src}
+          alt=""
+          loading="lazy"
+          className="size-full object-cover"
+          onError={() => setTimeout(() => setFailed({ url, tries: tries + 1 }), tries < COVER_RETRIES ? 1500 * (tries + 1) : 0)}
+        />
         {book.status === "completed" ? <DoneBadge /> : null}
       </div>
     );

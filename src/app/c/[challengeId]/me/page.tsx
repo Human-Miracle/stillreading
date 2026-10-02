@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { BookDetails } from "@/components/books/book-card";
-import { BookForm, bookDraftToInput, emptyBook } from "@/components/books/book-form";
+import { BookForm, bookDraftReady, bookDraftToInput, emptyBook } from "@/components/books/book-form";
 import { BookShelf } from "@/components/books/book-shelf";
 import { useChallenge } from "@/components/challenge/context";
 import { GoalProgress } from "@/components/challenge/goal-progress";
@@ -171,8 +171,8 @@ export default function MePage() {
           className="space-y-5"
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!bookDraftReady(draft)) return;
             const input = bookDraftToInput(draft);
-            if (!input.title) return;
             await addBook(view.challenge.id, input);
             track("book_added", { challengeId: view.challenge.id });
             setDraft(emptyBook);
@@ -180,7 +180,7 @@ export default function MePage() {
           }}
         >
           <BookForm value={draft} onChange={setDraft} autoFocus />
-          <Button type="submit" size="lg" full disabled={!draft.title.trim()}>
+          <Button type="submit" size="lg" full disabled={!bookDraftReady(draft)}>
             Add book
           </Button>
         </form>
