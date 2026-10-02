@@ -39,6 +39,7 @@ export const productEventBody = z.object({
     "streak_started",
     "streak_broken",
     "reaction_added",
+    "reply_added",
     "challenge_viewed",
     "invite_link_copied",
     "install_prompt_shown",

@@ -85,12 +85,26 @@ test("Flow C: multiple participants → feed → reactions → stats", async ({ 
     const jessicaPost = page.getByRole("listitem").filter({ hasText: "Identity chapter!" });
     await jessicaPost.getByRole("button", { name: /^Fire/ }).click();
     await expect(jessicaPost.getByRole("button", { name: /^Fire/ })).toHaveAttribute("aria-pressed", "true");
+    if (name === "David") {
+      await jessicaPost.getByRole("button", { name: /^Haha/ }).click();
+      // Replies open the check-in as a thread.
+      await jessicaPost.getByRole("link", { name: "Reply" }).click();
+      await expect(page.getByRole("heading", { name: "Thread on Jessica's check-in" })).toBeAttached();
+      await page.getByLabel("Reply to Jessica").fill("Which part of the identity chapter?");
+      await page.getByRole("button", { name: "Reply", exact: true }).click();
+      await expect(page.getByRole("region", { name: "Replies" })).toContainText("Which part of the identity chapter?");
+      await page.getByRole("link", { name: "Back to feed" }).click();
+    }
     await waitForSynced(page);
   }
 
   await host.goto(`${challengeUrl}/feed`);
   const post = host.getByRole("listitem").filter({ hasText: "Identity chapter!" });
   await expect(post.getByRole("button", { name: "Fire, 2" })).toBeVisible();
+  await expect(post.getByRole("button", { name: "Haha, 1" })).toBeVisible();
+  await post.getByRole("link", { name: /1 reply/ }).click();
+  await expect(host.getByRole("region", { name: "Replies" })).toContainText("David");
+  await expect(host.getByRole("region", { name: "Replies" })).toContainText("Which part of the identity chapter?");
 
   await host.goto(`${challengeUrl}/stats`);
   await expect(host.getByText("Participants").locator("..")).toContainText("3");

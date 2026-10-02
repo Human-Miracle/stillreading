@@ -75,8 +75,12 @@ count 0 pages.
 Append-oriented: sessions are created and (soft) deleted, not edited.
 
 ### reactions
-`id, participant_id, reading_session_id → reading_sessions, challenge_id, type (heart|fire|clap|book), …timestamps, deleted_at`
+`id, participant_id, reading_session_id → reading_sessions, challenge_id, type (heart|fire|clap|laugh|book), …timestamps, deleted_at`
 * `UNIQUE (participant_id, reading_session_id, type)` — toggling re-uses the row via `deleted_at`.
+
+### replies
+`id (rp_…), participant_id, reading_session_id → reading_sessions (ON DELETE CASCADE), challenge_id, body (1–500, cleaned), …timestamps, deleted_at`
+* A thread under a check-in, oldest first (`/c/:id/feed/:sessionId`). Any member can reply; only the author can delete (soft delete, tombstone synced).
 
 ### processed_operations
 `op_id pk, device_id, op_type, result jsonb, created_at` — idempotency ledger (see `STILL_READING_SYNC.md`).

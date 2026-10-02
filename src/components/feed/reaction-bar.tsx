@@ -5,8 +5,8 @@ import type { LocalReaction } from "@/local/db";
 import { setReaction } from "@/local/repo";
 import { cn } from "../ui/cn";
 
-export const REACTION_EMOJI: Record<ReactionType, string> = { heart: "❤️", fire: "🔥", clap: "👏", book: "📚" };
-const REACTION_LABEL: Record<ReactionType, string> = { heart: "Love", fire: "Fire", clap: "Applause", book: "Bookworm" };
+export const REACTION_EMOJI: Record<ReactionType, string> = { heart: "❤️", fire: "🔥", clap: "👏", laugh: "😂", book: "📚" };
+const REACTION_LABEL: Record<ReactionType, string> = { heart: "Love", fire: "Fire", clap: "Applause", laugh: "Haha", book: "Bookworm" };
 
 export function ReactionBar({ challengeId, sessionId, reactions, myParticipantId, disabled }: { challengeId: string; sessionId: string; reactions: LocalReaction[]; myParticipantId: string; disabled?: boolean }) {
   return (

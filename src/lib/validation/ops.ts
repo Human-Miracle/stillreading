@@ -4,8 +4,8 @@ import {
   bookAuthor,
   bookStatus,
   bookTitle,
-  coverUrl,
   challengeName,
+  coverUrl,
   dateKey,
   description,
   displayName,
@@ -14,6 +14,7 @@ import {
   pageCount,
   reactionType,
   reflection,
+  replyBody,
   sessionUnit,
 } from "./fields";
 import { goalPreset } from "./goal";
@@ -21,7 +22,7 @@ import { SEALED_NOTE_PATTERN } from "@/lib/pass";
 
 const sealedNote = z.string().max(4100).regex(SEALED_NOTE_PATTERN, "Invalid encrypted note");
 
-const reactionIdPattern = /^rx_[0-9A-Z]{26}\.[0-9A-Z]{26}\.(heart|fire|clap|book)$/;
+const reactionIdPattern = /^rx_[0-9A-Z]{26}\.[0-9A-Z]{26}\.(heart|fire|clap|laugh|book)$/;
 
 export const bookFields = z.object({
   id: id("bk"),
@@ -72,6 +73,8 @@ export const syncOp = z.discriminatedUnion("type", [
   z.object({ ...envelope, type: z.literal("session.create"), payload: sessionFields }),
   z.object({ ...envelope, type: z.literal("session.private"), payload: z.object({ id: id("rs"), privateReflection: sealedNote.nullable() }) }),
   z.object({ ...envelope, type: z.literal("session.delete"), payload: z.object({ id: id("rs"), updatedAt: isoTimestamp }) }),
+  z.object({ ...envelope, type: z.literal("reply.create"), payload: z.object({ id: id("rp"), sessionId: id("rs"), body: replyBody, createdAt: isoTimestamp }) }),
+  z.object({ ...envelope, type: z.literal("reply.delete"), payload: z.object({ id: id("rp"), updatedAt: isoTimestamp }) }),
   z.object({
     ...envelope,
     type: z.literal("reaction.set"),

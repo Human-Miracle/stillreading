@@ -4,13 +4,13 @@ import { diffDays, isWithinChallenge, todayInTimezone } from "@/lib/domain/dates
 import { reactionId } from "@/lib/ids";
 import { syncOp, type SyncOp } from "@/lib/validation/ops";
 import type { Database, Tx } from "@/db/client";
-import { books, challenges, participants, processedOperations, reactions, readingSessions, type ChallengeRow, type ParticipantRow } from "@/db/schema";
+import { books, challenges, participants, processedOperations, reactions, readingSessions, replies, type ChallengeRow, type ParticipantRow } from "@/db/schema";
 import { findMembership, membershipFailure } from "./auth";
 import { upsertBook } from "./books";
 import { challengePhase, goalDurationFor } from "./challenges";
 import { upsertGoal } from "./goals";
 import { errorFields, log } from "./log";
-import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, sessionDTO } from "./serialize";
+import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, replyDTO, sessionDTO } from "./serialize";
 
 type Outcome = Omit<PushResult, "opId">;
 
@@ -177,6 +177,35 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
       .where(and(eq(readingSessions.id, payload.id), eq(readingSessions.participantId, me.id)))
       .returning();
     return row ? ok("session", sessionDTO(row, me.id)) : ok();
+  },
+
+  async "reply.create"(tx, { payload }, { challenge, me }) {
+    const [existing] = await tx.select().from(replies).where(eq(replies.id, payload.id));
+    if (existing) {
+      if (existing.participantId !== me.id) return rejected("forbidden", "That reply belongs to someone else.");
+      return ok("reply", replyDTO(existing));
+    }
+    const [session] = await tx
+      .select({ challengeId: readingSessions.challengeId, deletedAt: readingSessions.deletedAt })
+      .from(readingSessions)
+      .where(eq(readingSessions.id, payload.sessionId));
+    if (!session || session.challengeId !== challenge.id || session.deletedAt) return rejected("not_found", "That check-in no longer exists.");
+    const createdAt = new Date(payload.createdAt);
+    const [row] = await tx
+      .insert(replies)
+      .values({ id: payload.id, challengeId: challenge.id, participantId: me.id, readingSessionId: payload.sessionId, body: payload.body, createdAt, updatedAt: createdAt })
+      .returning();
+    return ok("reply", replyDTO(row!));
+  },
+
+  async "reply.delete"(tx, { payload }, { me }) {
+    const at = new Date(payload.updatedAt);
+    const [row] = await tx
+      .update(replies)
+      .set({ deletedAt: at, updatedAt: at, serverUpdatedAt: now })
+      .where(and(eq(replies.id, payload.id), eq(replies.participantId, me.id)))
+      .returning();
+    return row ? ok("reply", replyDTO(row)) : ok();
   },
 
   async "reaction.set"(tx, { payload }, { challenge, me }) {

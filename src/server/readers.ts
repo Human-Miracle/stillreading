@@ -12,6 +12,7 @@ import {
   participants,
   reactions,
   readers,
+  replies,
   readingSessions,
   reinvites,
   type ParticipantRow,
@@ -110,12 +111,13 @@ async function activeChallengeIds(db: DbOrTx, readerId: string): Promise<string[
 
 /**
  * Folds a duplicate membership into the original (same challenge, same person on two devices):
- * check-ins, books and reactions move over; the duplicate is marked left.
+ * check-ins, books, reactions and replies move over; the duplicate is marked left.
  */
 export async function mergeParticipant(tx: DbOrTx, from: ParticipantRow, into: ParticipantRow) {
   const now = sql`now()`;
   await tx.update(readingSessions).set({ participantId: into.id, serverUpdatedAt: now }).where(eq(readingSessions.participantId, from.id));
   await tx.update(books).set({ participantId: into.id, serverUpdatedAt: now }).where(eq(books.participantId, from.id));
+  await tx.update(replies).set({ participantId: into.id, serverUpdatedAt: now }).where(eq(replies.participantId, from.id));
   // Reactions are unique per (participant, session, type) and their id is derived from those fields.
   await tx.execute(sql`
     delete from ${reactions} r

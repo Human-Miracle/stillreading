@@ -44,6 +44,11 @@ export const Icon = {
       <path d="M5 20c1-3.6 3.7-5.5 7-5.5s6 1.9 7 5.5" />
     </svg>
   ),
+  reply: (p: P) => (
+    <svg {...base(p)}>
+      <path d="M20 12a7.5 7.5 0 0 1-11.2 6.5L4 20l1.5-4.3A7.5 7.5 0 1 1 20 12z" />
+    </svg>
+  ),
   send: (p: P) => (
     <svg {...base(p)}>
       <path d="M20 4 10.5 13.5M20 4l-6 16-3.5-6.5L4 10z" />

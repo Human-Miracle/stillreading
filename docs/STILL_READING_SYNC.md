@@ -19,6 +19,8 @@
 | `session.create` / `session.delete` | self | session fields (shared reflection in plain text, private one sealed) / id |
 | `session.private` | self | id, sealed private reflection (backfill for notes written before the pass) |
 | `reaction.set` | self | sessionId, type, active |
+| `reply.create` | self | id, sessionId, body (check-in must be in this challenge and not deleted) |
+| `reply.delete` | self (author only) | id, updatedAt |
 | `challenge.update` | host | name, description |
 | `challenge.archive` | host | — |
 | `participant.remove` | host | participantId |
@@ -49,7 +51,7 @@ Status handling on the client:
 Backoff: `min(2s × 2^attempts, 5 min)` with ±20% jitter.
 
 ## Pull — `GET /api/challenges/:id/sync?since=<cursor>`
-Returns challenge, participants, goals, books, sessions, reactions with
+Returns challenge, participants, goals, books, sessions, reactions, replies with
 `server_updated_at > since − 30s` (overlap absorbs commit-order skew; merges are idempotent),
 including tombstones. Without `since` the full live dataset is returned. The response `cursor` is the
 server time at query start.

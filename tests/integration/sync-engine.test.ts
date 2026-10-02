@@ -220,6 +220,7 @@ describe("local-first sync engine", () => {
     expect(await friendDb.participants.count()).toBe(2);
     expect((await friendDb.sessions.get(session.id))?.reflection).toBe("So good");
     await repo.setReaction(snap.challenge.id, session.id, "fire", true);
+    await repo.addReply(snap.challenge.id, session.id, "Which chapter was that?");
     await engine().sync();
 
     // Back to the host.
@@ -229,6 +230,8 @@ describe("local-first sync engine", () => {
     const reactions = await hostDb.reactions.where("sessionId").equals(session.id).toArray();
     expect(reactions).toHaveLength(1);
     expect(reactions[0]).toMatchObject({ type: "fire", participantId: joined.me.participantId });
+    const replies = await hostDb.replies.where("sessionId").equals(session.id).toArray();
+    expect(replies).toEqual([expect.objectContaining({ body: "Which chapter was that?", participantId: joined.me.participantId, syncStatus: "synced" })]);
   });
 
   it("a removed participant loses access locally", async () => {

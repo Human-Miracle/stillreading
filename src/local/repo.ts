@@ -6,7 +6,7 @@ import { newId, reactionId } from "@/lib/ids";
 import type { CreateChallengeBody, JoinChallengeBody } from "@/lib/validation/api";
 import type { SyncOpInput, SyncOpType } from "@/lib/validation/ops";
 import { apiRequest } from "./api";
-import { getLocalDb, type LocalBook, type LocalSession, type SyncOpRecord } from "./db";
+import { getLocalDb, type LocalBook, type LocalReply, type LocalSession, type SyncOpRecord } from "./db";
 import { sealNote } from "./crypto";
 import { applySnapshot, markEntitySynced } from "./merge";
 
@@ -402,3 +402,40 @@ export async function discardFailed(opId: string) {
 }
 
 export type { SyncOpInput };
+
+export async function addReply(challengeId: string, sessionId: string, body: string): Promise<LocalReply | null> {
+  const text = body.trim();
+  if (!text) return null;
+  const db = getLocalDb();
+  const challenge = await requireChallenge(challengeId);
+  const t = nowIso();
+  const reply: LocalReply = {
+    id: newId("rp"),
+    challengeId,
+    participantId: challenge.myParticipantId,
+    sessionId,
+    body: text.slice(0, 500),
+    createdAt: t,
+    updatedAt: t,
+    deletedAt: null,
+    syncStatus: "pending",
+  };
+  await db.transaction("rw", [db.replies, db.syncQueue], async () => {
+    await db.replies.add(reply);
+    await db.syncQueue.add(opRecord(challengeId, "reply.create", { id: reply.id, sessionId, body: reply.body, createdAt: t }, "reply", reply.id));
+  });
+  notify();
+  return reply;
+}
+
+export async function deleteReply(replyId: string) {
+  const db = getLocalDb();
+  const reply = await db.replies.get(replyId);
+  if (!reply) return;
+  const t = nowIso();
+  await db.transaction("rw", [db.replies, db.syncQueue], async () => {
+    await db.replies.update(replyId, { deletedAt: t, updatedAt: t, syncStatus: "pending" });
+    await db.syncQueue.add(opRecord(reply.challengeId, "reply.delete", { id: replyId, updatedAt: t }, "reply", replyId));
+  });
+  notify();
+}

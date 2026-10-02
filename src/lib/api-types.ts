@@ -98,6 +98,17 @@ export interface ReactionDTO {
   deletedAt: string | null;
 }
 
+export interface ReplyDTO {
+  id: string;
+  challengeId: string;
+  participantId: string;
+  sessionId: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
 export interface ChallengeSnapshot {
   cursor: string;
   full: boolean;
@@ -108,6 +119,7 @@ export interface ChallengeSnapshot {
   books: BookDTO[];
   sessions: SessionDTO[];
   reactions: ReactionDTO[];
+  replies: ReplyDTO[];
 }
 
 export interface JoinPreview {
@@ -118,7 +130,7 @@ export interface JoinPreview {
   membership: { participantId: string; status: ParticipantDTO["status"] } | null;
 }
 
-export type EntityKind = "participant" | "goal" | "book" | "session" | "reaction" | "challenge";
+export type EntityKind = "participant" | "goal" | "book" | "session" | "reaction" | "reply" | "challenge";
 
 export type PushStatus = "ok" | "duplicate" | "stale" | "rejected" | "error";
 

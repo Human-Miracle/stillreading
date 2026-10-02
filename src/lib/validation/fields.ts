@@ -14,6 +14,7 @@ export const displayName = z.string().transform(clean(false)).pipe(z.string().mi
 export const challengeName = z.string().transform(clean(false)).pipe(z.string().min(1, "Give your challenge a name").max(80));
 export const description = z.string().transform(clean(true)).pipe(z.string().max(500));
 export const reflection = z.string().transform(clean(true)).pipe(z.string().max(500, "Keep it under 500 characters"));
+export const replyBody = z.string().transform(clean(true)).pipe(z.string().min(1, "Write a reply first").max(500, "Keep it under 500 characters"));
 export const bookTitle = z.string().transform(clean(false)).pipe(z.string().min(1, "Title is required").max(200));
 export const bookAuthor = z.string().transform(clean(false)).pipe(z.string().max(120));
 /** Cover images are shown to every reader in the challenge, so only Open Library cover URLs are accepted. */

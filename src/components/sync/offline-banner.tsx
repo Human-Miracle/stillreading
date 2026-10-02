@@ -11,6 +11,8 @@ const LABELS: Record<string, string> = {
   "goal.upsert": "Your goal change",
   "participant.update": "Your name change",
   "reaction.set": "A reaction",
+  "reply.create": "A reply",
+  "reply.delete": "Removing a reply",
 };
 
 /** Floating status toasts that sit just above the bottom navigation. */
