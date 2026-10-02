@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useChallenge } from "@/components/challenge/context";
 import { Hero } from "@/components/challenge/hero";
 import { ReadingFeedItem } from "@/components/feed/reading-feed";
+import { ReplyNotifyPrompt } from "@/components/notifications/reply-notifications";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PageSheet } from "@/components/ui/card";
@@ -22,6 +23,9 @@ export default function ThreadPage() {
   const replies = view.repliesBySession.get(sessionId) ?? [];
   const person = session ? view.participantsById.get(session.participantId) : undefined;
   const archived = view.challenge.status === "archived";
+  const me = view.challenge.myParticipantId;
+  // You follow a thread on your own check-in, or once you've replied in it.
+  const following = session?.participantId === me || replies.some((r) => r.participantId === me);
   const back = { href: `/c/${view.challenge.id}/feed`, label: "Back to feed" };
 
   if (!session) {
@@ -64,7 +68,10 @@ export default function ThreadPage() {
         {archived ? (
           <p className="mt-6 text-sm text-muted">This challenge is archived, so replies are closed.</p>
         ) : (
-          <ReplyBox challengeId={view.challenge.id} sessionId={session.id} replyingTo={person?.displayName ?? "them"} />
+          <>
+            {following ? <ReplyNotifyPrompt challengeId={view.challenge.id} className="mt-6" /> : null}
+            <ReplyBox challengeId={view.challenge.id} sessionId={session.id} replyingTo={person?.displayName ?? "them"} />
+          </>
         )}
       </PageSheet>
     </>

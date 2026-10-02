@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigserial,
+  boolean,
   check,
   date,
   index,
@@ -86,6 +87,8 @@ export const participants = pgTable(
     avatarUrl: text("avatar_url"),
     role: text("role", { enum: ["host", "participant"] }).notNull().default("participant"),
     status: text("status", { enum: ["active", "removed", "left"] }).notNull().default("active"),
+    /** Push a notification to this member's devices when someone replies to their check-ins or threads. */
+    notifyReplies: boolean("notify_replies").notNull().default(false),
     joinedAt: ts("joined_at").notNull().defaultNow(),
     ...syncColumns,
   },
@@ -209,6 +212,8 @@ export const replies = pgTable(
     participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
     readingSessionId: text("reading_session_id").notNull().references(() => readingSessions.id, { onDelete: "cascade" }),
     body: varchar("body", { length: 500 }).notNull(),
+    /** Set once notifications for this reply have been sent, so retries never notify twice. */
+    notifiedAt: ts("notified_at"),
     ...syncColumns,
     deletedAt: ts("deleted_at"),
   },
@@ -217,6 +222,25 @@ export const replies = pgTable(
     index("replies_participant_idx").on(t.participantId),
     index("replies_sync_idx").on(t.challengeId, t.serverUpdatedAt),
   ],
+);
+
+/**
+ * Web Push addresses, one per browser/app install. Notifications go to every subscription of the
+ * member's device, or of any device belonging to the same reader (Reading Pass).
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    endpoint: text("endpoint").primaryKey(),
+    deviceId: text("device_id")
+      .notNull()
+      .references(() => devices.id, { onDelete: "cascade" }),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("push_subscriptions_device_idx").on(t.deviceId)],
 );
 
 /** One-time links a host creates so a member who lost everything can reconnect. */
@@ -281,4 +305,5 @@ export type BookRow = typeof books.$inferSelect;
 export type SessionRow = typeof readingSessions.$inferSelect;
 export type ReactionRow = typeof reactions.$inferSelect;
 export type ReplyRow = typeof replies.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type ReaderRow = typeof readers.$inferSelect;

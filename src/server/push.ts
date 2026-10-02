@@ -10,6 +10,7 @@ import { upsertBook } from "./books";
 import { challengePhase, goalDurationFor } from "./challenges";
 import { upsertGoal } from "./goals";
 import { errorFields, log } from "./log";
+import { afterResponse, notifyReply } from "./notifications";
 import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, replyDTO, sessionDTO } from "./serialize";
 
 type Outcome = Omit<PushResult, "opId">;
@@ -30,7 +31,13 @@ export async function applyOps(db: Database, deviceId: string, rawOps: unknown[]
       continue;
     }
     try {
-      results.push({ opId, ...(await applyOne(db, deviceId, parsed.data)) });
+      const outcome = await applyOne(db, deviceId, parsed.data);
+      results.push({ opId, ...outcome });
+      // Committed: tell the thread's followers. notifyReply claims each reply once, so retries are no-ops.
+      if (parsed.data.type === "reply.create" && outcome.status === "ok") {
+        const replyId = parsed.data.payload.id;
+        afterResponse("reply_notify", async () => void (await notifyReply(db, replyId)));
+      }
     } catch (err) {
       log.error("sync_op_failed", { opId, type: parsed.data.type, ...errorFields(err) });
       results.push({ opId, status: "error", code: "server_error", message: "Could not apply operation" });

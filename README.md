@@ -37,7 +37,9 @@ After seeding, open `http://localhost:3000/join/DemoOctober30` to join the demo 
    (and gives every preview deployment its own database branch).
 3. Deploy. The `vercel-build` script runs migrations and then `next build`.
 
-Environment variables: `DATABASE_URL` only. No auth provider and no Blob token are needed in the MVP.
+Environment variables: `DATABASE_URL`, plus `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and optionally
+`VAPID_SUBJECT` for reply notifications (generate a pair with `npx web-push generate-vapid-keys`;
+without them the feature hides itself). No auth provider and no Blob token are needed.
 
 ## Docs
 

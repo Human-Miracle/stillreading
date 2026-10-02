@@ -78,6 +78,11 @@ Append-oriented: sessions are created and (soft) deleted, not edited.
 `id, participant_id, reading_session_id → reading_sessions, challenge_id, type (heart|fire|clap|laugh|book), …timestamps, deleted_at`
 * `UNIQUE (participant_id, reading_session_id, type)` — toggling re-uses the row via `deleted_at`.
 
+### push_subscriptions
+`endpoint (PK, push-service URL), device_id → devices (ON DELETE CASCADE), p256dh, auth, created_at, updated_at`
+* One per browser/app install. `challenge_participants.notify_replies` (default false) and
+  `replies.notified_at` drive reply notifications (see Sync → Reply notifications).
+
 ### replies
 `id (rp_…), participant_id, reading_session_id → reading_sessions (ON DELETE CASCADE), challenge_id, body (1–500, cleaned), …timestamps, deleted_at`
 * A thread under a check-in, oldest first (`/c/:id/feed/:sessionId`). Any member can reply; only the author can delete (soft delete, tombstone synced).

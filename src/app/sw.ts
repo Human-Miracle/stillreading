@@ -59,4 +59,56 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(caches.delete("stillreading-covers"));
 });
 
+// ---------------------------------------------------------------------------
+// Reply notifications (see server/notifications.ts for the payload)
+// ---------------------------------------------------------------------------
+
+interface ReplyPush {
+  title?: unknown;
+  body?: unknown;
+  url?: unknown;
+  tag?: unknown;
+}
+
+/** Only same-origin app paths are opened from a notification. */
+function safePath(url: unknown): string {
+  return typeof url === "string" && url.startsWith("/") && !url.startsWith("//") ? url : "/";
+}
+
+self.addEventListener("push", (event) => {
+  let data: ReplyPush = {};
+  try {
+    data = (event.data?.json() as ReplyPush | undefined) ?? {};
+  } catch {
+    data = { body: event.data?.text() };
+  }
+  const title = typeof data.title === "string" && data.title ? data.title : "Still Reading";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: typeof data.body === "string" ? data.body : "",
+      tag: typeof data.tag === "string" ? data.tag : undefined,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: safePath(data.url) },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(safePath((event.notification.data as { url?: unknown } | null)?.url), self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
+      if (open) {
+        await open.focus();
+        if (open.url !== target) await open.navigate(target).catch(() => self.clients.openWindow(target));
+        return;
+      }
+      await self.clients.openWindow(target);
+    })(),
+  );
+});
+
 serwist.addEventListeners();
