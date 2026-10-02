@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { getSyncEngine } from "@/local/sync/engine";
 import { getDevice } from "@/local/device";
 import { listenForInstallPrompt } from "./pwa/install-state";
+import { AppUpdater } from "./pwa/app-update";
 import { InstallModal } from "./pwa/install-modal";
 import { HandoffSheet, OpenInAppBar } from "./pwa/open-in-app";
 import { getLocalDb } from "@/local/db";
@@ -39,6 +40,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV === "development"} reloadOnOnline={false}>
       <SyncBoot />
+      <AppUpdater />
       <OpenInAppBar />
       {children}
       <InstallModal />

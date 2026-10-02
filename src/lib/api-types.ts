@@ -77,6 +77,8 @@ export interface SessionDTO {
   date: DateKey;
   amount: number;
   unit: SessionUnit;
+  /** Pages covered during a minutes or chapters check-in; null for pages check-ins and older rows. */
+  pages: number | null;
   reflection: string | null;
   /** End-to-end encrypted private reflection; only present for the viewer's own sessions. */
   privateReflection: string | null;

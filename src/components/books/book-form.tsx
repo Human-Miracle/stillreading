@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { findCovers, searchBooks, type BookSearchResult } from "@/lib/book-search";
+import { coverSrc, findCovers, searchBooks, type BookSearchResult } from "@/lib/book-search";
 import type { LocalBook } from "@/local/db";
 import { cn } from "../ui/cn";
 import { Field, Input } from "../ui/field";
@@ -71,7 +71,7 @@ function CoverChoices({ picker, current, onPick }: { picker: CoverPicker; curren
             className={cn("block overflow-hidden rounded-md ring-offset-2 ring-offset-surface transition", url === current ? "ring-2 ring-ink" : "opacity-90 hover:opacity-100")}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed */}
-            <img src={url} alt="" loading="lazy" className="h-24 w-16 bg-surface-2 object-cover" />
+            <img src={coverSrc(url)} alt="" loading="lazy" className="h-24 w-16 bg-surface-2 object-cover" />
           </button>
         </li>
       ))}
@@ -130,7 +130,7 @@ export function BookForm({ value, onChange, autoFocus }: { value: BookDraft; onC
               <button type="button" onClick={() => pick(r)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-surface-2">
                 {r.coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed
-                  <img src={r.coverUrl.replace("-M.jpg", "-S.jpg")} alt="" loading="lazy" className="h-12 w-8 shrink-0 rounded-sm bg-surface-2 object-cover" />
+                  <img src={coverSrc(r.coverUrl, "S")} alt="" loading="lazy" className="h-12 w-8 shrink-0 rounded-sm bg-surface-2 object-cover" />
                 ) : (
                   <span className="h-12 w-8 shrink-0 rounded-sm bg-surface-2" aria-hidden />
                 )}
@@ -148,7 +148,7 @@ export function BookForm({ value, onChange, autoFocus }: { value: BookDraft; onC
       <div className="flex items-center gap-3">
         {value.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed
-          <img src={value.coverUrl} alt="Selected cover" className="h-20 w-14 shrink-0 rounded-md bg-surface-2 object-cover shadow-soft" />
+          <img src={coverSrc(value.coverUrl)} alt="Selected cover" className="h-20 w-14 shrink-0 rounded-md bg-surface-2 object-cover shadow-soft" />
         ) : null}
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-muted">
           <button type="button" className="underline underline-offset-4 disabled:opacity-50" disabled={value.title.trim().length < 2} onClick={() => void lookUpCovers()}>

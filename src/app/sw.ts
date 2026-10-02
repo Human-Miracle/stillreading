@@ -37,12 +37,13 @@ const serwist = new Serwist({
         plugins: [new ExpirationPlugin({ maxEntries: 128, maxAgeSeconds: THIRTY_DAYS })],
       }),
     },
-    // Book covers never change for a given id: keep them so shelves look right offline.
+    // Book covers (served from our own /covers route) never change for a given id: keep them so
+    // shelves look right offline. Only real 200s are kept, so a failed load is retried next time.
     {
-      matcher: ({ url, request }) => url.hostname === "covers.openlibrary.org" && request.destination === "image",
+      matcher: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/covers/"),
       handler: new CacheFirst({
-        cacheName: "stillreading-covers",
-        plugins: [new CacheableResponsePlugin({ statuses: [0, 200] }), new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: THIRTY_DAYS })],
+        cacheName: "stillreading-cover-images",
+        plugins: [new CacheableResponsePlugin({ statuses: [200] }), new ExpirationPlugin({ maxEntries: 300, maxAgeSeconds: THIRTY_DAYS })],
       }),
     },
     ...defaultCache,
@@ -50,6 +51,12 @@ const serwist = new Serwist({
   fallbacks: {
     entries: [{ url: "/offline", matcher: ({ request }) => request.destination === "document" }],
   },
+});
+
+// The previous cover cache stored opaque cross-origin responses, which could pin a failed load for
+// weeks. Drop it; covers now come from the same-origin cache above.
+self.addEventListener("activate", (event) => {
+  event.waitUntil(caches.delete("stillreading-covers"));
 });
 
 serwist.addEventListeners();

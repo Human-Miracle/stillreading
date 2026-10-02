@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
   // Database drivers stay as runtime dependencies instead of being bundled.
   serverExternalPackages: ["@electric-sql/pglite", "pg"],
   poweredByHeader: false,
+  // Shown in settings so readers can tell which build their installed app is running.
+  env: { NEXT_PUBLIC_APP_VERSION: process.env.VERCEL_GIT_COMMIT_SHA ?? "" },
   async headers() {
     return [
       {

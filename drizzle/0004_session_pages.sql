@@ -1,0 +1,2 @@
+ALTER TABLE "reading_sessions" ADD COLUMN "pages" integer;--> statement-breakpoint
+ALTER TABLE "reading_sessions" ADD CONSTRAINT "sessions_pages" CHECK ("reading_sessions"."pages" is null or ("reading_sessions"."pages" > 0 and "reading_sessions"."unit" <> 'pages'));

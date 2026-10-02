@@ -49,10 +49,13 @@ export async function join(page: Page, inviteUrl: string, name: string, opts: { 
   await expect(page.getByRole("heading", { name: "Your reading crew" })).toBeVisible();
 }
 
-export async function logReading(page: Page, amount: number, reflection?: string) {
+/** `pages` fills the "how many pages" field that minutes and chapters check-ins ask for. */
+export async function logReading(page: Page, amount: number, reflection?: string, pages = 12) {
   await page.getByRole("button", { name: "Log reading", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Log reading" });
   await dialog.getByLabel("How much?").fill(String(amount));
+  const pagesField = dialog.getByLabel(/^How many pages did those/);
+  if (await pagesField.isVisible()) await pagesField.fill(String(pages));
   if (reflection) await dialog.getByLabel(/What stood out/).fill(reflection);
   await dialog.getByRole("button", { name: "Check in", exact: true }).click();
   await expect(dialog.getByRole("status")).toBeVisible();

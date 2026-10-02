@@ -4,10 +4,11 @@ import { Hero } from "@/components/challenge/hero";
 import { StreakBanner } from "@/components/challenge/streak-banner";
 import { Podium } from "@/components/leaderboard/podium";
 import { Card, Eyebrow, PageSheet } from "@/components/ui/card";
-import { PLACE_BONUS, XP_CATEGORIES, formatCategoryValue } from "@/lib/domain/leaderboard";
+import { PAGE_XP, XP_CATEGORIES, formatCategoryValue } from "@/lib/domain/leaderboard";
 import { n } from "@/lib/format";
 
-const ordinal = (r: number) => `${r}${r % 10 === 1 && r % 100 !== 11 ? "st" : r % 10 === 2 && r % 100 !== 12 ? "nd" : r % 10 === 3 && r % 100 !== 13 ? "rd" : "th"}`;
+const ADD_ONS = XP_CATEGORIES.filter((c) => !c.core);
+const capitalise = (s: string) => s[0]!.toUpperCase() + s.slice(1);
 
 export default function LeaderboardPage() {
   const { view } = useChallenge();
@@ -35,7 +36,7 @@ export default function LeaderboardPage() {
             </div>
           ) : null}
           <p className="headline mt-5 text-[24px] leading-[1.2] text-white/45">
-            XP grows with <span className="text-white">every page and minute</span> you read, plus <span className="text-white">showing up</span> and leading a stat.
+            XP comes from <span className="text-white">every page you read</span>, plus a little extra for <span className="text-white">showing up</span>.
           </p>
           <div className="mt-7">
             <Podium entries={view.leaderboard} challengeId={challenge.id} myParticipantId={challenge.myParticipantId} />
@@ -46,7 +47,10 @@ export default function LeaderboardPage() {
       <PageSheet className="space-y-4">
         {mine ? (
           <section>
-            <StreakBanner title={`You earned ${n(mine.xp)} XP`} sub="Your place in each stat" />
+            <StreakBanner
+              title={`You earned ${n(mine.xp)} XP`}
+              sub={`${n(mine.pageXp)} from ${n(mine.pages)} page${mine.pages === 1 ? "" : "s"}, ${n(mine.bonusXp)} from add-ons`}
+            />
             <ul className="mt-2">
               {XP_CATEGORIES.map((meta) => {
                 const c = mine.categories.find((x) => x.key === meta.key)!;
@@ -56,12 +60,11 @@ export default function LeaderboardPage() {
                       {meta.icon}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[15px] font-medium tracking-[-0.01em]">{meta.label}</p>
-                      <p className="truncate text-sm text-muted">
-                        {c.value === 0
-                          ? "Nothing yet"
-                          : `${formatCategoryValue(meta.key, c.value)}${c.bonus ? ` · ${ordinal(c.rank!)} +${c.bonus} bonus` : ""}`}
+                      <p className="text-[15px] font-medium tracking-[-0.01em]">
+                        {meta.label}
+                        {meta.core ? <span className="ml-2 rounded-pill bg-butter px-2 py-0.5 text-[11px] font-medium">Main score</span> : null}
                       </p>
+                      <p className="truncate text-sm text-muted">{c.value === 0 ? "Nothing yet" : formatCategoryValue(meta.key, c.value)}</p>
                     </div>
                     <span className="text-[17px] font-medium tracking-[-0.02em] tabular">+{c.xp}</span>
                   </li>
@@ -74,30 +77,27 @@ export default function LeaderboardPage() {
         <Card tone="muted">
           <Eyebrow>How XP works</Eyebrow>
           <p className="mt-2 text-ink/70">
-            Most XP comes from reading itself. Pages, chapters and minutes are compared by roughly how long they take to read, so more reading always
-            means more XP, whatever you track.
+            Pages read drive the leaderboard. Books and chapters come in every length (a chapter can be 9 pages or 50), so pages are the fairest
+            measure of how much you read.
           </p>
-          <ul className="mt-4 divide-y divide-line/70 text-sm">
-            {XP_CATEGORIES.map((c) => (
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-butter px-4 py-3">
+            <span className="font-medium">
+              <span aria-hidden>📖</span> Every page read
+            </span>
+            <span className="text-xl font-medium tracking-[-0.03em] tabular">+{PAGE_XP} XP</span>
+          </div>
+          <p className="mt-4 text-sm text-ink/70">Add-ons on top:</p>
+          <ul className="mt-1 divide-y divide-line/70 text-sm">
+            {ADD_ONS.map((c) => (
               <li key={c.key} className="flex items-center justify-between gap-3 py-2">
                 <span>
-                  <span aria-hidden>{c.icon}</span> {c.per[0]!.toUpperCase() + c.per.slice(1)}
+                  <span aria-hidden>{c.icon}</span> {capitalise(c.per)}
                 </span>
                 <span className="font-medium tabular">+{c.rate} XP</span>
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-sm text-ink/70">Leading a stat adds a bonus:</p>
-          <ul className="mt-2 grid grid-cols-3 gap-2 text-center">
-            {PLACE_BONUS.map((xp, i) => (
-              <li key={xp} className={`rounded-2xl px-2 py-3 ${["bg-butter", "bg-blush", "bg-sky"][i]}`}>
-                <span className="block text-sm font-medium">{ordinal(i + 1)}</span>
-                <span className="text-xl font-medium tracking-[-0.03em] tabular">+{xp}</span>
-                <span className="text-xs text-ink/60"> XP</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-sm text-muted">A page counts as about 1.5 minutes of reading and a chapter about 20. Ties share a place.</p>
+          <p className="mt-4 text-sm text-muted">Log pages when you check in to climb the board. Minutes and chapters still count, just a little. Equal XP shares a place.</p>
         </Card>
       </PageSheet>
     </>

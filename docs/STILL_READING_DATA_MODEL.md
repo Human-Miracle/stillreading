@@ -65,7 +65,12 @@ if the lookup fails, title-only when title + author finds nothing). A `book.upse
 A challenge does not belong to a book: participants can read several books in sequence.
 
 ### reading_sessions
-`id, participant_id, challenge_id, book_id (nullable, ON DELETE SET NULL), date (challenge-local), amount (CHECK > 0), unit (pages|chapters|minutes), reflection (≤500, shared only), …timestamps, deleted_at`
+`id, participant_id, challenge_id, book_id (nullable, ON DELETE SET NULL), date (challenge-local), amount (CHECK > 0), unit (pages|chapters|minutes), pages (nullable, CHECK > 0, only when unit ≠ pages), reflection (≤500, shared only), …timestamps, deleted_at`
+
+Minutes and chapters check-ins also ask how many pages they covered (`pages`). `pagesRead()` counts a
+session's pages (`amount` for pages check-ins, `pages` otherwise), and pages totals, pages goals,
+book progress and the leaderboard all use it. Rows from before the column have `pages = null` and
+count 0 pages.
 
 Append-oriented: sessions are created and (soft) deleted, not edited.
 

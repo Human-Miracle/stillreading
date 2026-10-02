@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { goalFromPreset } from "@/lib/domain/goals";
-import { leaderboard, placeBonus } from "@/lib/domain/leaderboard";
+import { leaderboard, PAGE_XP } from "@/lib/domain/leaderboard";
 import { participantProgress } from "@/lib/domain/progress";
 import type { BookLike, SessionLike } from "@/lib/domain/types";
 
@@ -8,29 +8,58 @@ const challenge = { startDate: "2026-10-01", endDate: "2026-10-30", durationDays
 const today = "2026-10-03";
 const sess = (participantId: string, date: string, amount: number, unit: SessionLike["unit"] = "pages"): SessionLike => ({ participantId, date, amount, unit });
 
-function row(id: string, name: string, kind: Parameters<typeof goalFromPreset>[0]["kind"], value: number, sessions: SessionLike[], books: BookLike[] = []) {
-  return { participantId: id, displayName: name, progress: participantProgress({ challenge, goal: goalFromPreset({ kind, value }, 30), sessions, books, today }) };
+function row(
+  id: string,
+  name: string,
+  kind: Parameters<typeof goalFromPreset>[0]["kind"],
+  value: number,
+  sessions: SessionLike[],
+  books: BookLike[] = [],
+  on = today,
+) {
+  return { participantId: id, displayName: name, progress: participantProgress({ challenge, goal: goalFromPreset({ kind, value }, 30), sessions, books, today: on }) };
 }
 
-describe("placeBonus", () => {
-  it("rewards the top three places only", () => {
-    expect([1, 2, 3, 4, null].map(placeBonus)).toEqual([30, 20, 10, 0, 0]);
-  });
-});
-
 describe("leaderboard XP", () => {
-  it("day one: more reading earns clearly more XP, whatever the unit (no three-way tie)", () => {
+  it("pages are the main score: 43 pages beats readers who only logged minutes or chapters", () => {
     const day1 = "2026-10-01";
     const board = leaderboard([
-      { participantId: "p", displayName: "Dominion", progress: participantProgress({ challenge, goal: goalFromPreset({ kind: "pages_per_day", value: 20 }, 30), sessions: [sess("p", day1, 180)], books: [], today: day1 }) },
-      { participantId: "m", displayName: "Jess", progress: participantProgress({ challenge, goal: goalFromPreset({ kind: "minutes_per_day", value: 30 }, 30), sessions: [sess("m", day1, 30, "minutes")], books: [], today: day1 }) },
-      { participantId: "c", displayName: "Seraya", progress: participantProgress({ challenge, goal: goalFromPreset({ kind: "chapters_per_day", value: 1 }, 30), sessions: [sess("c", day1, 2, "chapters")], books: [], today: day1 }) },
+      row("p", "You", "pages_per_day", 20, [sess("p", day1, 43)], [], day1),
+      row("m", "Jess", "minutes_per_day", 30, [sess("m", day1, 60, "minutes")], [], day1),
+      row("c", "Seraya", "chapters_per_day", 1, [sess("c", day1, 3, "chapters")], [], day1),
     ]);
-    // 180 pages ≈ 270 min of reading; 2 chapters ≈ 40 min; 30 minutes = 30 min.
+    // Everyone hit their goal, read, and is on a 1-day streak: +25 +10 +5 each.
     expect(board.map((e) => [e.displayName, e.xp, e.rank])).toEqual([
-      ["Dominion", 430, 1],
-      ["Seraya", 200, 2],
-      ["Jess", 190, 3],
+      ["You", 43 * PAGE_XP + 40, 1],
+      ["Jess", 60 + 40, 2],
+      ["Seraya", 3 * 5 + 40, 3],
+    ]);
+    expect(board[0]).toMatchObject({ pages: 43, pageXp: 430, bonusXp: 40 });
+  });
+
+  it("minutes and chapters readers earn page XP for the pages they enter", () => {
+    const day1 = "2026-10-01";
+    const board = leaderboard([
+      row("p", "Pages", "pages_per_day", 20, [sess("p", day1, 30)], [], day1),
+      row("m", "Minutes", "minutes_per_day", 30, [{ ...sess("m", day1, 60, "minutes"), pages: 40 }], [], day1),
+    ]);
+    // Minutes: 40 pages (400) + 60 minutes (60) + goal, reading day, streak (40).
+    expect(board.map((e) => [e.displayName, e.pages, e.xp])).toEqual([
+      ["Minutes", 40, 500],
+      ["Pages", 30, 340],
+    ]);
+  });
+
+  it("add-ons can't lift a reader past someone who read clearly more pages", () => {
+    const board = leaderboard([
+      // 50 pages in one sitting, goal hit once.
+      row("a", "Binge", "pages_per_day", 20, [sess("a", "2026-10-03", 50)]),
+      // 30 pages over three days, goal hit every day.
+      row("b", "Steady", "pages_per_day", 10, [sess("b", "2026-10-01", 10), sess("b", "2026-10-02", 10), sess("b", "2026-10-03", 10)]),
+    ]);
+    expect(board.map((e) => [e.displayName, e.xp])).toEqual([
+      ["Binge", 500 + 25 + 10 + 5],
+      ["Steady", 300 + 75 + 30 + 15],
     ]);
   });
 
@@ -46,29 +75,32 @@ describe("leaderboard XP", () => {
   const by = (name: string) => board.find((e) => e.displayName === name)!;
   const cat = (name: string, key: string) => by(name).categories.find((c) => c.key === key)!;
 
-  it("earns XP per unit read, plus a placement bonus per stat", () => {
-    expect(cat("Jessica", "pages")).toMatchObject({ value: 60, rank: 1, earned: 90, bonus: 30, xp: 120 });
-    expect(cat("David", "pages")).toMatchObject({ value: 55, rank: 2, earned: 83, bonus: 20, xp: 103 });
-    expect(cat("Amaka", "minutes")).toMatchObject({ value: 75, rank: 1, earned: 75, bonus: 30 });
-    expect(cat("Amaka", "books")).toMatchObject({ value: 1, earned: 50, bonus: 30 });
+  it("earns XP per unit: pages at full rate, everything else as small add-ons", () => {
+    expect(cat("Jessica", "pages")).toMatchObject({ value: 60, rank: 1, xp: 600 });
+    expect(cat("David", "pages")).toMatchObject({ value: 55, rank: 2, xp: 550 });
+    expect(cat("Amaka", "minutes")).toMatchObject({ value: 75, rank: 1, xp: 75 });
+    expect(cat("Amaka", "books")).toMatchObject({ value: 1, xp: 50 });
     expect(cat("Amaka", "pages")).toMatchObject({ value: 0, rank: null, xp: 0 });
-  });
-
-  it("tied readers share a place and its bonus", () => {
-    // Reading days: Jessica 3, David 2, Amaka 2 → David and Amaka share 2nd.
-    expect(cat("David", "readingDays")).toMatchObject({ rank: 2, bonus: 20 });
-    expect(cat("Amaka", "readingDays")).toMatchObject({ rank: 2, bonus: 20 });
+    expect(cat("Jessica", "goalDays")).toMatchObject({ value: 3, xp: 75 });
   });
 
   it("totals XP and sorts readers, with no-progress readers last on 0 XP", () => {
+    // Jessica: 600 + 3 goal days (75) + 3 reading days (30) + 3-day streak (15).
+    // David: 550 + 1 goal day (25) + 2 reading days (20), streak broken.
+    // Amaka: 75 minutes + 2 goal days (50) + 2 reading days (20) + 1-day streak (5) + a finished book (50).
     expect(board.map((e) => [e.displayName, e.xp])).toEqual([
-      ["Jessica", 330],
-      ["Amaka", 320],
-      ["David", 178],
+      ["Jessica", 720],
+      ["David", 595],
+      ["Amaka", 200],
       ["Zed", 0],
     ]);
     for (const e of board) expect(e.xp).toBe(e.categories.reduce((s, c) => s + c.xp, 0));
     expect(by("Zed")).toMatchObject({ xp: 0, rank: 4, best: null });
+  });
+
+  it("labels readers by pages when they have any, otherwise by their biggest add-on", () => {
+    expect(by("David").best).toMatchObject({ key: "pages", value: 55 });
+    expect(by("Amaka").best).toMatchObject({ key: "minutes", value: 75 });
   });
 
   it("identical reading still shares an overall rank", () => {
