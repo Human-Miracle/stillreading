@@ -137,6 +137,16 @@ test("Flow C: multiple participants → feed → reactions → stats", async ({ 
   await friend.goto(`${challengeUrl}/leaderboard`);
   await expect(friend.getByText("How XP works")).toBeVisible();
   await expect(friend.getByRole("region", { name: "Top 3 by day" })).toHaveCount(0);
+
+  // The host can step the feed's summary back through earlier days; on day 1 there's nowhere to go yet.
+  await host.goto(`${challengeUrl}/feed`);
+  const stepper = host.getByRole("group", { name: "Show another day" });
+  await expect(stepper.getByRole("button", { name: "Previous day" })).toBeDisabled();
+  await expect(stepper.getByRole("button", { name: "Next day" })).toBeDisabled();
+  await expect(stepper).toContainText("Today");
+  await friend.goto(`${challengeUrl}/feed`);
+  await expect(friend.getByText("have checked in")).toBeVisible();
+  await expect(friend.getByRole("group", { name: "Show another day" })).toHaveCount(0);
   for (const c of ctxs) await c.close();
   await hostCtx.close();
 });
