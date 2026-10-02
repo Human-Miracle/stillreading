@@ -13,6 +13,8 @@ import { POST as coversPOST } from "@/app/api/challenges/[id]/covers/route";
 import { POST as handoffPOST } from "@/app/api/handoff/route";
 import { POST as handoffClaimPOST } from "@/app/api/handoff/claim/route";
 import { GET as bookSearchGET } from "@/app/api/books/search/route";
+import { GET as notificationsGET, PUT as notificationsPUT } from "@/app/api/challenges/[id]/notifications/route";
+import { GET as pushConfigGET } from "@/app/api/push/config/route";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { newDeviceSecret, newId } from "@/lib/ids";
 
@@ -26,7 +28,7 @@ export async function freshDb(): Promise<Database> {
 
 export async function resetDb(db: Database) {
   await db.execute(
-    sql`truncate table handoffs, reinvites, readers, replies, reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
+    sql`truncate table handoffs, reinvites, readers, push_subscriptions, replies, reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
   );
 }
 
@@ -56,6 +58,9 @@ const routes: { method: string; pattern: RegExp; keys: string[]; handler: Handle
   { method: "POST", pattern: /^\/api\/handoff$/, keys: [], handler: handoffPOST as Handler },
   { method: "POST", pattern: /^\/api\/handoff\/claim$/, keys: [], handler: handoffClaimPOST as Handler },
   { method: "GET", pattern: /^\/api\/books\/search$/, keys: [], handler: bookSearchGET as Handler },
+  { method: "GET", pattern: /^\/api\/challenges\/([^/]+)\/notifications$/, keys: ["id"], handler: notificationsGET as Handler },
+  { method: "PUT", pattern: /^\/api\/challenges\/([^/]+)\/notifications$/, keys: ["id"], handler: notificationsPUT as Handler },
+  { method: "GET", pattern: /^\/api\/push\/config$/, keys: [], handler: pushConfigGET as Handler },
 ];
 
 /** A `fetch` that dispatches straight into the Next.js route handlers. */

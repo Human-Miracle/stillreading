@@ -54,3 +54,6 @@ obtains a copy of the database.
   some quota. Upstream protection (Vercel Firewall / WAF rules) is the next layer if needed.
 * If someone copies the whole database, cracking a single pass offline costs ~2⁵⁰ slow hashes; private
   reflections stay safe unless that happens.
+* Web Push: the server only sends to HTTPS endpoints on browser vendors' push services (no SSRF via
+  registered endpoints). Payloads are encrypted end to end to the device (RFC 8291); the VAPID
+  private key stays in server env. Subscriptions are deleted when the push service reports them gone.

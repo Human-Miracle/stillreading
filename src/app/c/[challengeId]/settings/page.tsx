@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useChallenge } from "@/components/challenge/context";
 import { InviteActions } from "@/components/challenge/invite-actions";
+import { ReplyNotificationsCard } from "@/components/notifications/reply-notifications";
 import { GoalSelector, isGoalValid } from "@/components/goals/goal-selector";
 import { Hero } from "@/components/challenge/hero";
 import { APP_VERSION, refreshApp } from "@/components/pwa/app-update";
@@ -236,6 +237,8 @@ export default function SettingsPage() {
           Install app
         </Button>
       </Card>
+
+      <ReplyNotificationsCard challengeId={challenge.id} />
 
       <Card className="flex items-center justify-between gap-4">
         <div>

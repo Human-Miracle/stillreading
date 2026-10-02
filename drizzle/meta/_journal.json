@@ -43,6 +43,13 @@
       "when": 1790943971692,
       "tag": "0005_replies_and_laugh",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790946356914,
+      "tag": "0006_push_notifications",
+      "breakpoints": true
     }
   ]
 }

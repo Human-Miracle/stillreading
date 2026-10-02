@@ -7,6 +7,7 @@ import type { SessionUnit } from "@/lib/domain/types";
 import type { ChallengeView } from "@/local/hooks";
 import { addBook, logReading, updateBook } from "@/local/repo";
 import { useSyncState } from "@/local/hooks";
+import { ReplyNotifyPrompt } from "../notifications/reply-notifications";
 import { Button } from "../ui/button";
 import { cn } from "../ui/cn";
 import { Field, Input, Textarea } from "../ui/field";
@@ -253,7 +254,7 @@ function Success({ view, logged, onClose }: { view: ChallengeView; logged: Logge
         </p>
       </div>
       <p className="text-ink-2">{message}</p>
-      {logged.offline ? <p className="text-sm text-muted">We&apos;ll sync when you&apos;re back online.</p> : null}
+      {logged.offline ? <p className="text-sm text-muted">We&apos;ll sync when you&apos;re back online.</p> : <ReplyNotifyPrompt challengeId={view.challenge.id} />}
       <Button full size="lg" onClick={onClose}>
         Done
       </Button>

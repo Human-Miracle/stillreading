@@ -37,6 +37,7 @@ Run everything with `npm run verify` (typecheck, lint, unit+integration, build) 
 * Flow A: create challenge → copy link → second browser context joins → goal → check-in.
 * Flow B: joined user goes offline → logs reading → reload (offline, served by SW) → reading still
   there → back online → synced; other member sees it once.
+* reply notifications: settings round-trip, push-service allowlist, owner + co-repliers notified (never the replier, only opted-in), no duplicate on retried ops, 410 removes the subscription, no VAPID → nothing sent.
 * Flow C: multiple participants check in → feed → reactions (incl. 😂) → reply in a thread → stats.
 * Flow D: ended challenge → completion screen + share card.
 * Flow E/F: install modal on every visit, skippable; iPhone Safari steps.

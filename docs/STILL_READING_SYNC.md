@@ -70,6 +70,27 @@ Merge rule: a pulled row never overwrites a local row whose `syncStatus` is `pen
 One device per participant is the MVP assumption. Sessions are immutable; books/goals/profile are
 last-write-wins by `updated_at`; reactions are idempotent `set(active)`. No CRDTs.
 
+## Reply notifications (Web Push)
+
+Readers opt in per challenge (Settings, or the prompt after a check-in / in a thread they follow).
+`PUT /api/challenges/:id/notifications { enabled, subscription? }` stores this device's push
+subscription (`push_subscriptions`, keyed by endpoint) and sets `challenge_participants.notify_replies`.
+`GET` returns `{ enabled, thisDevice }`; `GET /api/push/config` returns the public VAPID key or null.
+
+- Endpoints must be HTTPS on a browser vendor's push service (FCM, Mozilla, Apple, Windows), because
+  the server sends requests to them.
+- After a `reply.create` commits, `notifyReply` runs in the background (`waitUntil`). It claims the
+  reply once (`replies.notified_at`), so retried ops never notify twice. It then sends to the
+  check-in's owner and everyone who replied in the thread, minus the replier, limited to active
+  members with `notify_replies`. Sends go to every subscription on the member's device or any device
+  of the same reader. Payload: `{ title, body (≤140), url: /c/:id/feed/:sessionId, tag: thread-:sessionId }`,
+  TTL 24h, `Topic` = session id so a phone that's offline gets one message per thread.
+- 404/410 from the push service deletes the subscription. Without VAPID keys nothing is sent.
+- The service worker shows the notification (`tag` replaces older ones for the same thread) and on
+  tap focuses an open window and navigates it to `url`, or opens a new one. Only same-origin paths
+  are opened.
+- iPhone/iPad: only the Home Screen app (iOS 16.4+) can subscribe; Safari tabs get an install hint.
+
 ## Book covers
 
 Covers are filled in on the server so every member sees them, whoever added the book.
