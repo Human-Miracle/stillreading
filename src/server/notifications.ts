@@ -175,24 +175,3 @@ async function deliver(sub: PushSubscriptionRow, payload: string, topic: string)
     return { result: "failed", host, status, detail };
   }
 }
-
-/** Sends a test notification to this member's devices right away and reports what each push service said. */
-export async function sendTestNotification(db: Database, person: { deviceId: string; readerId: string | null }, challengeId: string): Promise<Delivery[]> {
-  const vapid = vapidConfig();
-  if (!vapid) return [];
-  webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
-  const payload: PushPayload = {
-    title: "Still Reading",
-    body: "Notifications are working. You'll hear here when someone replies.",
-    url: `/c/${challengeId}/settings`,
-    tag: "test",
-  };
-  const deliveries: Delivery[] = [];
-  for (const sub of await subscriptionsFor(db, person)) {
-    const d = await deliver(sub, JSON.stringify(payload), "test");
-    if (d.result === "gone") await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint));
-    deliveries.push(d);
-  }
-  log.info("test_notification", { deliveries: deliveries.map((d) => `${d.host}:${d.result}:${d.status ?? "-"}`) });
-  return deliveries;
-}

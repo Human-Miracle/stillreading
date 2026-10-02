@@ -30,6 +30,11 @@ After seeding, open `http://localhost:3000/join/DemoOctober30` to join the demo 
 | `npm run db:seed` | Demo data |
 | `npm run icons` | Re-render PWA icons |
 
+## Versioning
+
+Settings shows the app version from `package.json` (e.g. V1.0.2). Bump it with every release:
+`npm version patch --no-git-tag-version` (1.0.2 → 1.0.3).
+
 ## Deploying to Vercel
 
 1. Import the repo in Vercel.
