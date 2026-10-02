@@ -12,7 +12,7 @@ test("Flow A: create → copy link → join → goal → check-in", async ({ bro
   await friend.goto(new URL(inviteUrl).pathname);
   await expect(friend.getByRole("heading", { name: "Flow A Challenge" })).toBeVisible();
   await expect(friend.getByText("Started by")).toContainText("Jessica");
-  await join(friend, inviteUrl, "David", { goal: "Minutes", book: "Deep Work" });
+  await join(friend, inviteUrl, "David", { goal: "Minutes", book: "Deep Work", author: "Cal Newport" });
 
   await logReading(friend, 25, "Attention residue is real.");
   await expectToday(friend, 25, "of 30 minutes today");
@@ -255,7 +255,7 @@ test("Flow H: opening a challenge asks the server to find missing book covers", 
   const { inviteUrl } = await createChallenge(host, { name: "Flow H Challenge", host: "Victory" });
   const friendCtx = await newContext(browser);
   const friend = await friendCtx.newPage();
-  await join(friend, inviteUrl, "Temi", { book: "Red Rising" });
+  await join(friend, inviteUrl, "Temi", { book: "Red Rising", author: "Pierce Brown" });
   await waitForSynced(friend);
 
   const fill = host.waitForResponse((r) => /\/api\/challenges\/ch_[^/]+\/covers$/.test(r.url()) && r.request().method() === "POST");
@@ -264,6 +264,22 @@ test("Flow H: opening a challenge asks the server to find missing book covers", 
   expect(res.status()).toBe(200);
   // Open Library isn't reachable from the test sandbox, so lookups report as failed rather than erroring.
   expect(await res.json()).toMatchObject({ filled: expect.any(Number), checked: expect.any(Number), remaining: expect.any(Number), failed: expect.any(Array) });
+
+  // A new book from the check-in needs its author as well as its title (that's how its cover is found).
+  await host.getByRole("button", { name: "Log reading", exact: true }).click();
+  const dialog = host.getByRole("dialog", { name: "Log reading" });
+  await dialog.getByLabel("How much?").fill("15");
+  await dialog.getByRole("button", { name: "+ New book" }).click();
+  await dialog.getByLabel("Book title").fill("The Creative Act");
+  await dialog.getByRole("button", { name: "Check in", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("title and author");
+  await dialog.getByLabel("Author", { exact: true }).fill("Rick Rubin");
+  await dialog.getByRole("button", { name: "Check in", exact: true }).click();
+  await expect(dialog.getByRole("status")).toBeVisible();
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await host.getByRole("link", { name: "Me", exact: true }).click();
+  await host.getByRole("button", { name: "The Creative Act" }).click();
+  await expect(host.getByRole("dialog", { name: "Book" }).getByText("Rick Rubin")).toBeVisible();
   await hostCtx.close();
   await friendCtx.close();
 });

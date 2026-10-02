@@ -232,7 +232,7 @@ describe("local-first sync engine", () => {
     const reactions = await hostDb.reactions.where("sessionId").equals(session.id).toArray();
     expect(reactions).toHaveLength(1);
     expect(reactions[0]).toMatchObject({ type: "fire", participantId: joined.me.participantId });
-    const replies = (await hostDb.replies.where("sessionId").equals(session.id).toArray()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const replies = (await hostDb.replies.where("sessionId").equals(session.id).toArray()).sort((a, b) => Number(a.parentId !== null) - Number(b.parentId !== null)); // top-level first (both can share a millisecond)
     expect(replies).toEqual([
       expect.objectContaining({ body: "Which chapter was that?", parentId: null, participantId: joined.me.participantId, syncStatus: "synced" }),
       expect.objectContaining({ body: "@David chapter 4?", parentId: replies[0]!.id }),

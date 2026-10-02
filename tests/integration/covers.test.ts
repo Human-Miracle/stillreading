@@ -117,6 +117,28 @@ describe("POST /api/challenges/:id/covers", () => {
     expect((await fill(host)).body).toEqual({ filled: 1 });
   });
 
+  it("widens the search when the strict title + author search finds no cover", async () => {
+    // Open Library stub: the strict title search only finds coverless editions; a keyword search,
+    // or a search without the subtitle, finds the cover further down the results.
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input instanceof Request ? input.url : input));
+      calls.push(url);
+      const [q, title] = [url.searchParams.get("q"), url.searchParams.get("title")];
+      const coverless = Array.from({ length: 4 }, (_, i) => ({ key: `/works/OL${i}W`, title: title ?? q }));
+      if (q === "The Psychology of Money Morgan Housel") return Response.json({ docs: [...coverless, { key: "/works/OL9W", title: "The Psychology of Money", cover_i: 10521270 }] });
+      if (title === "Dune" && url.searchParams.get("author") === "Frank Herbert") return Response.json({ docs: [{ key: "/works/OL8W", title: "Dune", cover_i: 11481354 }] });
+      return Response.json({ docs: coverless });
+    }) as typeof fetch;
+    await push(friend, { ...bookInput("The Psychology of Money"), author: "Morgan Housel" });
+    await push(friend, { ...bookInput("Dune (Dune Chronicles #1)"), author: "Frank Herbert" });
+
+    await fill(host);
+    const byTitle = Object.fromEntries((await pull(friend)).books.map((b) => [b.title, b.coverUrl]));
+    expect(byTitle["The Psychology of Money"]).toBe(cover(10521270));
+    expect(byTitle["Dune (Dune Chronicles #1)"]).toBe(cover(11481354));
+    expect(calls.every((u) => u.searchParams.get("limit") === "10")).toBe(true);
+  });
+
   it("is only open to members", async () => {
     const res = await fill(newDevice());
     expect(res.status).toBe(404);

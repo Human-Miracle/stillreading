@@ -18,6 +18,11 @@ export function bookToDraft(book: Pick<LocalBook, "title" | "author" | "totalPag
   return { title: book.title, author: book.author ?? "", totalPages: book.totalPages ? String(book.totalPages) : "", coverUrl: book.coverUrl };
 }
 
+/** A book needs its title and author: together they're how its cover is found. */
+export function bookDraftReady(d: BookDraft): boolean {
+  return Boolean(d.title.trim() && d.author.trim());
+}
+
 export function bookDraftToInput(d: BookDraft) {
   const pages = Number.parseInt(d.totalPages, 10);
   return {
@@ -145,6 +150,9 @@ export function BookForm({ value, onChange, autoFocus }: { value: BookDraft; onC
           ))}
         </ul>
       ) : null}
+      <Field label="Author" hint="The title and author are how we find the book's cover.">
+        {(p) => <Input {...p} autoComplete="off" maxLength={120} placeholder="James Clear" value={value.author} onChange={(e) => onChange({ ...value, author: e.target.value })} />}
+      </Field>
       <div className="flex items-center gap-3">
         {value.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed
@@ -162,9 +170,6 @@ export function BookForm({ value, onChange, autoFocus }: { value: BookDraft; onC
         </div>
       </div>
       {picker ? <CoverChoices picker={picker} current={value.coverUrl} onPick={(url) => onChange({ ...value, coverUrl: url })} /> : null}
-      <Field label="Author (optional)">
-        {(p) => <Input {...p} maxLength={120} placeholder="James Clear" value={value.author} onChange={(e) => onChange({ ...value, author: e.target.value })} />}
-      </Field>
       <Field label="Total pages (optional)" hint="Helps track how far through the book you are.">
         {(p) => (
           <Input

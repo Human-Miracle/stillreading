@@ -22,12 +22,33 @@ export async function searchOpenLibrary(query: BookQuery, limit = 6): Promise<Bo
   return parseOpenLibrarySearch(await res.json());
 }
 
-/** Best Open Library cover for a known title (+ author), falling back to the title alone. */
+/** Drops a subtitle or series note: "Atomic Habits: An Easy Way…" → "Atomic Habits", "Dune (Dune #1)" → "Dune". */
+export function mainTitle(title: string): string {
+  return title
+    .replace(/\s*[([].*$/, "")
+    .replace(/\s*[:;–—]\s.*$|\s+-\s.*$|:.*$/, "")
+    .trim();
+}
+
+/**
+ * Best Open Library cover for a known title and author. Open Library's title search is strict and many
+ * of its top matches have no cover, so this widens step by step, stopping at the first cover found:
+ * title + author, then a looser keyword search, then the title without its subtitle, then the title
+ * alone (for a misspelt author).
+ */
 export async function findCoverOnServer(book: { title: string; author: string | null }): Promise<string | null> {
-  const first = (results: BookSearchResult[]) => results.find((r) => r.coverUrl)?.coverUrl ?? null;
-  if (book.author?.trim()) {
-    const both = first(await searchOpenLibrary({ title: book.title, author: book.author }, 3));
-    if (both) return both;
+  const title = book.title.trim();
+  const author = book.author?.trim() || null;
+  const short = mainTitle(title);
+  const queries: BookQuery[] = [];
+  if (author) queries.push({ title, author }, { q: `${title} ${author}` });
+  if (short.length >= 2 && short.toLowerCase() !== title.toLowerCase()) queries.push(author ? { title: short, author } : { title: short });
+  queries.push({ title });
+  if (!author) queries.push({ q: title });
+
+  for (const query of queries) {
+    const found = (await searchOpenLibrary(query, 10)).find((r) => r.coverUrl)?.coverUrl;
+    if (found) return found;
   }
-  return first(await searchOpenLibrary({ title: book.title }, 3));
+  return null;
 }

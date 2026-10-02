@@ -106,7 +106,12 @@ client calls it repeatedly, a batch at a time, when it sees books without covers
 - An explicit `coverUrl: null` over an existing cover marks it `removed`: never looked up again.
   Exception: a null written before the server found the cover (older clients that always send the
   field) is ignored.
-- Misses are retried after 7 days; correcting a coverless book's title or author retries at once.
+- The lookup widens step by step until a result has a cover (10 results each): title + author, a
+  keyword search of both, the title without its subtitle, then the title alone. The app asks for the
+  author whenever a book is added, since the title alone often matches the wrong edition.
+- Misses are retried after 3 days; correcting a coverless book's title or author retries at once.
+- A cover image that fails to load is retried twice (by the proxy and by the page) before the app
+  falls back to the generated cover.
 - Images are served from our own origin: a stored `https://covers.openlibrary.org/b/id/<id>-<size>.jpg`
   is rendered as `/covers/<id>-<size>.jpg` (`coverSrc`), a route that fetches the cover server-side
   (following Open Library's redirect to archive.org) and returns it with a one-year immutable cache.
