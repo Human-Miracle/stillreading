@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { goalFromPreset } from "@/lib/domain/goals";
-import { leaderboard, PAGE_XP } from "@/lib/domain/leaderboard";
+import { dailyLeaderboard, leaderboard, PAGE_XP } from "@/lib/domain/leaderboard";
 import { participantProgress } from "@/lib/domain/progress";
 import type { BookLike, SessionLike } from "@/lib/domain/types";
 
@@ -112,5 +112,35 @@ describe("leaderboard XP", () => {
       ["Ada", 1],
       ["Bea", 1],
     ]);
+  });
+});
+
+describe("daily leaderboard", () => {
+  const day1 = "2026-10-01";
+  const day2 = "2026-10-02";
+  const pages20 = goalFromPreset({ kind: "pages_per_day", value: 20 }, 30);
+  const minutes30 = goalFromPreset({ kind: "minutes_per_day", value: 30 }, 30);
+
+  it("ranks readers by the XP they earned that day alone", () => {
+    const readers = [
+      { participantId: "a", displayName: "Ada", goal: pages20, sessions: [sess("a", day1, 100), sess("a", day2, 10)] },
+      { participantId: "b", displayName: "Bola", goal: pages20, sessions: [sess("b", day1, 5), sess("b", day2, 15), sess("b", day2, 10)] },
+      { participantId: "c", displayName: "Chidi", goal: minutes30, sessions: [{ ...sess("c", day2, 45, "minutes"), pages: 22 }] },
+      { participantId: "d", displayName: "Dayo", goal: pages20, sessions: [sess("d", day1, 30)] },
+    ];
+    // Day 2: Chidi 22 pages + 45 minutes + goal + read; Bola 25 pages (two check-ins) + goal + read; Ada 10 pages + read.
+    expect(dailyLeaderboard(readers, day2).map((e) => [e.displayName, e.pages, e.xp, e.rank])).toEqual([
+      ["Chidi", 22, 220 + 45 + 25 + 10, 1],
+      ["Bola", 25, 250 + 25 + 10, 2],
+      ["Ada", 10, 100 + 10, 3],
+    ]);
+    // Day 1 is its own board: Dayo (no day-2 reading) is on it, Chidi isn't.
+    expect(dailyLeaderboard(readers, day1).map((e) => e.displayName)).toEqual(["Ada", "Dayo", "Bola"]);
+  });
+
+  it("ignores deleted check-ins and days nobody read", () => {
+    const readers = [{ participantId: "a", displayName: "Ada", goal: pages20, sessions: [{ ...sess("a", day1, 50), deletedAt: "2026-10-01T10:00:00Z" }] }];
+    expect(dailyLeaderboard(readers, day1)).toEqual([]);
+    expect(dailyLeaderboard(readers, "2026-10-05")).toEqual([]);
   });
 });
