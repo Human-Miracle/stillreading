@@ -2,7 +2,7 @@ import type { BookDTO, ChallengeSnapshot, EntityKind } from "@/lib/api-types";
 import { goalFromPreset, pagesRead, type GoalPreset } from "@/lib/domain/goals";
 import { joinedDateFor, participantDuration, todayInTimezone } from "@/lib/domain/dates";
 import type { BookStatus, ReactionType, SessionUnit } from "@/lib/domain/types";
-import { newId, reactionId } from "@/lib/ids";
+import { newId, reactionId, replyLikeId } from "@/lib/ids";
 import type { CreateChallengeBody, JoinChallengeBody } from "@/lib/validation/api";
 import type { SyncOpInput, SyncOpType } from "@/lib/validation/ops";
 import { apiRequest } from "./api";
@@ -403,7 +403,7 @@ export async function discardFailed(opId: string) {
 
 export type { SyncOpInput };
 
-export async function addReply(challengeId: string, sessionId: string, body: string): Promise<LocalReply | null> {
+export async function addReply(challengeId: string, sessionId: string, body: string, parentId: string | null = null): Promise<LocalReply | null> {
   const text = body.trim();
   if (!text) return null;
   const db = getLocalDb();
@@ -414,6 +414,7 @@ export async function addReply(challengeId: string, sessionId: string, body: str
     challengeId,
     participantId: challenge.myParticipantId,
     sessionId,
+    parentId,
     body: text.slice(0, 500),
     createdAt: t,
     updatedAt: t,
@@ -422,7 +423,7 @@ export async function addReply(challengeId: string, sessionId: string, body: str
   };
   await db.transaction("rw", [db.replies, db.syncQueue], async () => {
     await db.replies.add(reply);
-    await db.syncQueue.add(opRecord(challengeId, "reply.create", { id: reply.id, sessionId, body: reply.body, createdAt: t }, "reply", reply.id));
+    await db.syncQueue.add(opRecord(challengeId, "reply.create", { id: reply.id, sessionId, parentId, body: reply.body, createdAt: t }, "reply", reply.id));
   });
   notify();
   return reply;
@@ -436,6 +437,28 @@ export async function deleteReply(replyId: string) {
   await db.transaction("rw", [db.replies, db.syncQueue], async () => {
     await db.replies.update(replyId, { deletedAt: t, updatedAt: t, syncStatus: "pending" });
     await db.syncQueue.add(opRecord(reply.challengeId, "reply.delete", { id: replyId, updatedAt: t }, "reply", replyId));
+  });
+  notify();
+}
+
+export async function setReplyLike(challengeId: string, replyId: string, active: boolean) {
+  const db = getLocalDb();
+  const challenge = await requireChallenge(challengeId);
+  const t = nowIso();
+  const id = replyLikeId(replyId, challenge.myParticipantId);
+  await db.transaction("rw", [db.replyLikes, db.syncQueue], async () => {
+    const existing = await db.replyLikes.get(id);
+    await db.replyLikes.put({
+      id,
+      challengeId,
+      participantId: challenge.myParticipantId,
+      replyId,
+      createdAt: existing?.createdAt ?? t,
+      updatedAt: t,
+      deletedAt: active ? null : t,
+      syncStatus: "pending",
+    });
+    await db.syncQueue.add(opRecord(challengeId, "reply.like", { id, replyId, active, updatedAt: t }, "replyLike", id));
   });
   notify();
 }

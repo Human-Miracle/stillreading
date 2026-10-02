@@ -73,8 +73,17 @@ export const syncOp = z.discriminatedUnion("type", [
   z.object({ ...envelope, type: z.literal("session.create"), payload: sessionFields }),
   z.object({ ...envelope, type: z.literal("session.private"), payload: z.object({ id: id("rs"), privateReflection: sealedNote.nullable() }) }),
   z.object({ ...envelope, type: z.literal("session.delete"), payload: z.object({ id: id("rs"), updatedAt: isoTimestamp }) }),
-  z.object({ ...envelope, type: z.literal("reply.create"), payload: z.object({ id: id("rp"), sessionId: id("rs"), body: replyBody, createdAt: isoTimestamp }) }),
+  z.object({
+    ...envelope,
+    type: z.literal("reply.create"),
+    payload: z.object({ id: id("rp"), sessionId: id("rs"), parentId: id("rp").nullable().optional(), body: replyBody, createdAt: isoTimestamp }),
+  }),
   z.object({ ...envelope, type: z.literal("reply.delete"), payload: z.object({ id: id("rp"), updatedAt: isoTimestamp }) }),
+  z.object({
+    ...envelope,
+    type: z.literal("reply.like"),
+    payload: z.object({ id: z.string().regex(/^rl_[0-9A-Z]{26}\.[0-9A-Z]{26}$/), replyId: id("rp"), active: z.boolean(), updatedAt: isoTimestamp }),
+  }),
   z.object({
     ...envelope,
     type: z.literal("reaction.set"),

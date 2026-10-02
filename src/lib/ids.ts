@@ -45,6 +45,11 @@ export function newDeviceSecret(): string {
   return randomString(43, BASE62);
 }
 
+/** Likes are unique per (reply, participant), so their id is derived. */
+export function replyLikeId(replyId: string, participantId: string): string {
+  return `rl_${replyId.slice(3)}.${participantId.slice(3)}`;
+}
+
 /** Reactions are unique per (session, participant, type), so their id is derived. */
 export function reactionId(sessionId: string, participantId: string, type: string): string {
   return `rx_${sessionId.slice(3)}.${participantId.slice(3)}.${type}`;

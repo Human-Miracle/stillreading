@@ -103,7 +103,19 @@ export interface ReplyDTO {
   challengeId: string;
   participantId: string;
   sessionId: string;
+  /** Top-level reply this answers; null for replies to the check-in. */
+  parentId: string | null;
   body: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface ReplyLikeDTO {
+  id: string;
+  challengeId: string;
+  participantId: string;
+  replyId: string;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -120,6 +132,7 @@ export interface ChallengeSnapshot {
   sessions: SessionDTO[];
   reactions: ReactionDTO[];
   replies: ReplyDTO[];
+  replyLikes: ReplyLikeDTO[];
 }
 
 export interface JoinPreview {
@@ -130,7 +143,7 @@ export interface JoinPreview {
   membership: { participantId: string; status: ParticipantDTO["status"] } | null;
 }
 
-export type EntityKind = "participant" | "goal" | "book" | "session" | "reaction" | "reply" | "challenge";
+export type EntityKind = "participant" | "goal" | "book" | "session" | "reaction" | "reply" | "replyLike" | "challenge";
 
 export type PushStatus = "ok" | "duplicate" | "stale" | "rejected" | "error";
 

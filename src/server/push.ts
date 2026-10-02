@@ -1,17 +1,17 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { EntityKind, PushResult } from "@/lib/api-types";
 import { diffDays, isWithinChallenge, todayInTimezone } from "@/lib/domain/dates";
-import { reactionId } from "@/lib/ids";
+import { reactionId, replyLikeId } from "@/lib/ids";
 import { syncOp, type SyncOp } from "@/lib/validation/ops";
 import type { Database, Tx } from "@/db/client";
-import { books, challenges, participants, processedOperations, reactions, readingSessions, replies, type ChallengeRow, type ParticipantRow } from "@/db/schema";
+import { books, challenges, participants, processedOperations, reactions, readingSessions, replies, replyLikes, type ChallengeRow, type ParticipantRow } from "@/db/schema";
 import { findMembership, membershipFailure } from "./auth";
 import { upsertBook } from "./books";
 import { challengePhase, goalDurationFor } from "./challenges";
 import { upsertGoal } from "./goals";
 import { errorFields, log } from "./log";
 import { afterResponse, notifyReply } from "./notifications";
-import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, replyDTO, sessionDTO } from "./serialize";
+import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, replyDTO, replyLikeDTO, sessionDTO } from "./serialize";
 
 type Outcome = Omit<PushResult, "opId">;
 
@@ -197,10 +197,20 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
       .from(readingSessions)
       .where(eq(readingSessions.id, payload.sessionId));
     if (!session || session.challengeId !== challenge.id || session.deletedAt) return rejected("not_found", "That check-in no longer exists.");
+    // Threads are one level deep: a reply to a nested reply joins its top-level reply.
+    let parentId: string | null = null;
+    if (payload.parentId) {
+      const [parent] = await tx
+        .select({ id: replies.id, parentId: replies.parentId, sessionId: replies.readingSessionId, deletedAt: replies.deletedAt })
+        .from(replies)
+        .where(eq(replies.id, payload.parentId));
+      if (!parent || parent.sessionId !== payload.sessionId || parent.deletedAt) return rejected("not_found", "That reply no longer exists.");
+      parentId = parent.parentId ?? parent.id;
+    }
     const createdAt = new Date(payload.createdAt);
     const [row] = await tx
       .insert(replies)
-      .values({ id: payload.id, challengeId: challenge.id, participantId: me.id, readingSessionId: payload.sessionId, body: payload.body, createdAt, updatedAt: createdAt })
+      .values({ id: payload.id, challengeId: challenge.id, participantId: me.id, readingSessionId: payload.sessionId, parentId, body: payload.body, createdAt, updatedAt: createdAt })
       .returning();
     return ok("reply", replyDTO(row!));
   },
@@ -213,6 +223,25 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
       .where(and(eq(replies.id, payload.id), eq(replies.participantId, me.id)))
       .returning();
     return row ? ok("reply", replyDTO(row)) : ok();
+  },
+
+  async "reply.like"(tx, { payload }, { challenge, me }) {
+    if (payload.id !== replyLikeId(payload.replyId, me.id)) return rejected("forbidden", "Invalid like id.");
+    const [reply] = await tx.select({ challengeId: replies.challengeId }).from(replies).where(eq(replies.id, payload.replyId));
+    if (!reply || reply.challengeId !== challenge.id) return rejected("not_found", "That reply no longer exists.");
+    const updatedAt = new Date(payload.updatedAt);
+    const deletedAt = payload.active ? null : updatedAt;
+    const [existing] = await tx.select().from(replyLikes).where(eq(replyLikes.id, payload.id));
+    if (existing) {
+      if (existing.updatedAt > updatedAt) return stale("replyLike", replyLikeDTO(existing));
+      const [row] = await tx.update(replyLikes).set({ deletedAt, updatedAt, serverUpdatedAt: now }).where(eq(replyLikes.id, payload.id)).returning();
+      return ok("replyLike", replyLikeDTO(row!));
+    }
+    const [row] = await tx
+      .insert(replyLikes)
+      .values({ id: payload.id, challengeId: challenge.id, participantId: me.id, replyId: payload.replyId, createdAt: updatedAt, updatedAt, deletedAt })
+      .returning();
+    return ok("replyLike", replyLikeDTO(row!));
   },
 
   async "reaction.set"(tx, { payload }, { challenge, me }) {

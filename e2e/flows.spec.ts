@@ -105,6 +105,16 @@ test("Flow C: multiple participants → feed → reactions → stats", async ({ 
   await post.getByRole("link", { name: /1 reply/ }).click();
   await expect(host.getByRole("region", { name: "Replies" })).toContainText("David");
   await expect(host.getByRole("region", { name: "Replies" })).toContainText("Which part of the identity chapter?");
+  // Like David's reply and answer it in context (nested under his reply).
+  const replies = host.getByRole("region", { name: "Replies" });
+  await replies.getByRole("button", { name: /^Like David's reply/ }).click();
+  await expect(replies.getByRole("button", { name: "Like David's reply, 1" })).toHaveAttribute("aria-pressed", "true");
+  await replies.getByRole("button", { name: "Reply to David" }).click();
+  await expect(host.getByText("Replying to David")).toBeVisible();
+  await host.getByRole("textbox", { name: "Reply to David" }).fill("The part about identity votes!");
+  await host.getByRole("button", { name: "Reply", exact: true }).click();
+  await expect(replies.getByRole("listitem").filter({ hasText: "Which part of the identity chapter?" }).first()).toContainText("The part about identity votes!");
+  await expect(host.getByText("Replying to David")).toBeHidden();
 
   await host.goto(`${challengeUrl}/stats`);
   await expect(host.getByText("Participants").locator("..")).toContainText("3");

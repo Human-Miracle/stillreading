@@ -13,6 +13,7 @@ import {
   reactions,
   readers,
   replies,
+  replyLikes,
   readingSessions,
   reinvites,
   type ParticipantRow,
@@ -118,6 +119,13 @@ export async function mergeParticipant(tx: DbOrTx, from: ParticipantRow, into: P
   await tx.update(readingSessions).set({ participantId: into.id, serverUpdatedAt: now }).where(eq(readingSessions.participantId, from.id));
   await tx.update(books).set({ participantId: into.id, serverUpdatedAt: now }).where(eq(books.participantId, from.id));
   await tx.update(replies).set({ participantId: into.id, serverUpdatedAt: now }).where(eq(replies.participantId, from.id));
+  // Likes are unique per (participant, reply): drop the duplicate's where the original already liked.
+  await tx.execute(sql`
+    delete from ${replyLikes} l
+    where l.participant_id = ${from.id}
+      and exists (select 1 from ${replyLikes} l2 where l2.participant_id = ${into.id} and l2.reply_id = l.reply_id)
+  `);
+  await tx.update(replyLikes).set({ participantId: into.id, serverUpdatedAt: now }).where(eq(replyLikes.participantId, from.id));
   // Reactions are unique per (participant, session, type) and their id is derived from those fields.
   await tx.execute(sql`
     delete from ${reactions} r

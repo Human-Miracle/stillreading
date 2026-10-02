@@ -84,7 +84,14 @@ Append-oriented: sessions are created and (soft) deleted, not edited.
   `replies.notified_at` drive reply notifications (see Sync → Reply notifications).
 
 ### replies
-`id (rp_…), participant_id, reading_session_id → reading_sessions (ON DELETE CASCADE), challenge_id, body (1–500, cleaned), …timestamps, deleted_at`
+`id (rp_…), participant_id, reading_session_id → reading_sessions (ON DELETE CASCADE), challenge_id, parent_id (nullable, top-level reply), body (1–500, cleaned), notified_at, …timestamps, deleted_at`
+* Threads are one level deep, like Instagram: a reply to a nested reply is stored under the same
+  top-level reply (the server normalises `parent_id`); the client prefills `@name`. If a parent is
+  deleted its answers show as top-level replies.
+
+### reply_likes
+`id (rl_<reply>.<participant>, derived), participant_id, reply_id → replies (ON DELETE CASCADE), challenge_id, …timestamps, deleted_at`
+* `UNIQUE (participant_id, reply_id)`; ♥ toggles reuse the row via `deleted_at` (`reply.like` op, last write wins).
 * A thread under a check-in, oldest first (`/c/:id/feed/:sessionId`). Any member can reply; only the author can delete (soft delete, tombstone synced).
 
 ### processed_operations

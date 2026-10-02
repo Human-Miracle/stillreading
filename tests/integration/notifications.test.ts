@@ -146,6 +146,26 @@ describe("reply notifications", () => {
     expect(sendNotification).not.toHaveBeenCalled();
   });
 
+  it("tells the person you answered that you replied to them", async () => {
+    await settings(host, { enabled: true, subscription: sub(1) });
+    await settings(friend, { enabled: true, subscription: sub(2) });
+    const { id, op } = checkIn();
+    await push(host, [op]);
+    const top = replyOp(id, "Which chapter was that?");
+    await push(friend, [top]);
+    await settleBackgroundTasks();
+    sendNotification.mockClear();
+
+    // Amaka answers David's reply: David hears "replied to you", Jessica (owner) "replied to your check-in".
+    const answer = { ...replyOp(id, "@David chapter 4"), payload: { ...replyOp(id).payload, parentId: top.payload.id, body: "@David chapter 4" } };
+    await push(third, [answer]);
+    await settleBackgroundTasks();
+    expect(sentTo().map((n) => [n.endpoint, n.title])).toEqual([
+      [sub(1).endpoint, "Amaka replied to your check-in"],
+      [sub(2).endpoint, "Amaka replied to you"],
+    ]);
+  });
+
   it("never notifies twice for the same reply, even when the op is retried", async () => {
     await settings(host, { enabled: true, subscription: sub(1) });
     const { id, op } = checkIn();
