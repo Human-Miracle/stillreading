@@ -372,6 +372,12 @@ export async function removeParticipant(challengeId: string, participantId: stri
   await enqueueOnly(challengeId, "participant.remove", { participantId }, "participant", participantId);
 }
 
+/** Host: fold a member who joined twice into the copy being kept. The server moves their reading over. */
+export async function mergeParticipants(challengeId: string, fromId: string, intoId: string) {
+  await getLocalDb().participants.update(fromId, { status: "removed", syncStatus: "pending" });
+  await enqueueOnly(challengeId, "participant.merge", { fromId, intoId }, "participant", fromId);
+}
+
 export async function leaveChallenge(challengeId: string) {
   const db = getLocalDb();
   const challenge = await requireChallenge(challengeId);

@@ -25,6 +25,7 @@
 | `challenge.update` | host | name, description |
 | `challenge.archive` | host | — |
 | `participant.remove` | host | participantId |
+| `participant.merge` | host | fromId, intoId: moves fromId's check-ins, books, replies, reactions and likes to intoId, then removes fromId (never the host) |
 
 Envelope: `{ opId, challengeId, type, payload }`.
 

@@ -298,3 +298,37 @@ test("Flow H: opening a challenge asks the server to find missing book covers", 
   await hostCtx.close();
   await friendCtx.close();
 });
+
+test("Flow I: host merges a reader who joined twice", async ({ browser }) => {
+  const hostCtx = await newContext(browser);
+  const host = await hostCtx.newPage();
+  const { inviteUrl, challengeUrl } = await createChallenge(host, { name: "Flow I Challenge", host: "Jessica" });
+  const first = await newContext(browser);
+  const second = await newContext(browser);
+  const firstPage = await first.newPage();
+  const secondPage = await second.newPage();
+  await join(firstPage, inviteUrl, "Temi");
+  await join(secondPage, inviteUrl, "temi O"); // Same person, in another browser.
+  await logReading(secondPage, 25);
+  await waitForSynced(secondPage);
+  await logReading(firstPage, 10);
+  await waitForSynced(firstPage);
+
+  await host.goto(`${challengeUrl}/settings`);
+  const panel = host.getByRole("region", { name: "Duplicate members" });
+  const suggestion = panel.getByRole("list", { name: "Possible duplicates" }).getByRole("listitem").first();
+  await expect(suggestion).toContainText("Similar names: Temi / temi O");
+  // The copy with more reading is the one to keep.
+  await suggestion.getByRole("button", { name: "Merge Temi → temi O" }).click();
+  await expect(panel.getByRole("status").first()).toContainText("Moves 1 check-in (10 pages)");
+  await panel.getByRole("button", { name: "Merge", exact: true }).click();
+  await panel.getByRole("button", { name: "Yes, merge" }).click();
+  await expect(panel.getByText("Merged Temi into temi O.")).toBeVisible();
+  await waitForSynced(host);
+
+  await host.goto(`${challengeUrl}/leaderboard`);
+  const top = host.getByRole("list", { name: "Top readers" }).first();
+  await expect(top.getByRole("listitem").filter({ hasText: "temi O" })).toContainText("35 pages");
+  await expect(host.getByText("Temi", { exact: true })).toHaveCount(0);
+  for (const c of [first, second, hostCtx]) await c.close();
+});

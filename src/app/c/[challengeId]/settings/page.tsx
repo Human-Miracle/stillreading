@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useChallenge } from "@/components/challenge/context";
+import { DuplicateMembers } from "@/components/challenge/duplicate-members";
 import { InviteActions } from "@/components/challenge/invite-actions";
 import { ReplyNotificationsCard } from "@/components/notifications/reply-notifications";
 import { GoalSelector, isGoalValid } from "@/components/goals/goal-selector";
@@ -200,6 +201,8 @@ export default function SettingsPage() {
           </div>
         </Card>
       ) : null}
+
+      {view.isHost && !archived ? <DuplicateMembers view={view} /> : null}
 
       {!view.isHost && !archived ? (
         <Card className="space-y-3">

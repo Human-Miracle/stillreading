@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { nameKey, possibleDuplicates } from "@/lib/domain/duplicates";
 import { goalFromPreset } from "@/lib/domain/goals";
 import { participantProgress } from "@/lib/domain/progress";
 import { groupStats } from "@/lib/domain/stats";
@@ -34,5 +35,14 @@ describe("group stats", () => {
     expect(stats.leaders.currentStreak).toMatchObject({ displayName: "Jessica", value: 3 });
     expect(stats.leaders.mostConsistent).toMatchObject({ displayName: "Jessica", value: 100 });
     expect(stats.longestStreak).toBe(3);
+  });
+});
+
+describe("possibleDuplicates", () => {
+  const m = (id: string, displayName: string) => ({ id, displayName });
+  it("groups members whose first names match or one starts the other", () => {
+    const groups = possibleDuplicates([m("1", "Temi"), m("2", "David"), m("3", " témi O."), m("4", "Temitope"), m("5", "Jo"), m("6", "John"), m("7", "Dave")]);
+    expect(groups.map((g) => g.map((x) => x.id))).toEqual([["1", "3", "4"]]);
+    expect(nameKey("  Jess  A. ")).toBe("jess");
   });
 });
