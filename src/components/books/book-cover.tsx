@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { coverSrc } from "@/lib/book-search";
 import type { LocalBook } from "@/local/db";
 import { hash } from "../ui/avatar";
 import { cn } from "../ui/cn";
@@ -28,7 +29,7 @@ export function BookCover({ book, className }: { book: CoverBook; className?: st
     return (
       <div className={cn("relative aspect-[2/3] overflow-hidden rounded-md bg-surface-2 shadow-[0_6px_16px_rgb(17_17_17/0.18)]", className)} aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element -- remote cover, no image optimisation needed */}
-        <img src={book.coverUrl} alt="" loading="lazy" className="size-full object-cover" onError={() => setFailedUrl(book.coverUrl ?? null)} />
+        <img src={coverSrc(book.coverUrl)} alt="" loading="lazy" className="size-full object-cover" onError={() => setFailedUrl(book.coverUrl ?? null)} />
         {book.status === "completed" ? <DoneBadge /> : null}
       </div>
     );

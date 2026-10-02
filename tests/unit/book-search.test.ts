@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { cleanBookQuery, coverUrlFor, findCovers, openLibrarySearchUrl, parseOpenLibrarySearch } from "@/lib/book-search";
+import { cleanBookQuery, coverSrc, coverUrlFor, findCovers, openLibrarySearchUrl, parseOpenLibrarySearch } from "@/lib/book-search";
 import { coverUrl } from "@/lib/validation/fields";
 
 describe("parseOpenLibrarySearch", () => {
@@ -75,5 +75,16 @@ describe("findCovers", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("coverSrc", () => {
+  it("serves Open Library covers through our own route", () => {
+    expect(coverSrc(coverUrlFor(8259443))).toBe("/covers/8259443-M.jpg");
+    expect(coverSrc(coverUrlFor(8259443), "S")).toBe("/covers/8259443-S.jpg");
+  });
+
+  it("leaves anything else untouched", () => {
+    expect(coverSrc("https://covers.openlibrary.org/b/isbn/123-M.jpg")).toBe("https://covers.openlibrary.org/b/isbn/123-M.jpg");
   });
 });

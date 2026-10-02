@@ -82,6 +82,21 @@ client calls it repeatedly, a batch at a time, when it sees books without covers
   Exception: a null written before the server found the cover (older clients that always send the
   field) is ignored.
 - Misses are retried after 7 days; correcting a coverless book's title or author retries at once.
+- Images are served from our own origin: a stored `https://covers.openlibrary.org/b/id/<id>-<size>.jpg`
+  is rendered as `/covers/<id>-<size>.jpg` (`coverSrc`), a route that fetches the cover server-side
+  (following Open Library's redirect to archive.org) and returns it with a one-year immutable cache.
+  Phones never load Open Library directly, and the service worker caches only real 200 responses
+  (`stillreading-cover-images`). Its old cross-origin cover cache, which could pin opaque failed
+  loads, is deleted on activate.
+
+## App updates
+
+The service worker activates new versions immediately (`skipWaiting` + `clientsClaim`), but an
+installed app can stay suspended for days without the browser checking for one. `AppUpdater` calls
+`registration.update()` on launch and whenever the app returns to the foreground. When a new worker
+takes over it reloads at once if the app is in the background, otherwise shows a "new version"
+toast, and reloads on the next return to the foreground. Settings shows the build id and an
+"Update app" button that checks, waits for the new worker and reloads.
 
 ## Open in the app (browser → installed app)
 

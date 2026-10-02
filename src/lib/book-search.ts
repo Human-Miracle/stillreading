@@ -27,6 +27,17 @@ export function coverUrlFor(coverId: number, size: "S" | "M" | "L" = "M") {
   return `https://${COVER_HOST}/b/id/${coverId}-${size}.jpg`;
 }
 
+const COVER_URL_RE = /^https:\/\/covers\.openlibrary\.org\/b\/id\/(\d{1,12})-([SML])\.jpg$/;
+
+/**
+ * Where to load a stored cover from: Open Library cover URLs are served through our own `/covers/…`
+ * route (see app/covers), so phones never have to follow Open Library's redirect themselves.
+ */
+export function coverSrc(url: string, size?: "S" | "M" | "L"): string {
+  const m = COVER_URL_RE.exec(url);
+  return m ? `/covers/${m[1]}-${size ?? m[2]}.jpg` : url;
+}
+
 /** Normalises a query; null when there is nothing worth searching for. */
 export function cleanBookQuery(input: BookQuery): BookQuery | null {
   const q = input.q?.trim().slice(0, 200) ?? "";

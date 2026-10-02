@@ -5,6 +5,7 @@ import { useChallenge } from "@/components/challenge/context";
 import { InviteActions } from "@/components/challenge/invite-actions";
 import { GoalSelector, isGoalValid } from "@/components/goals/goal-selector";
 import { Hero } from "@/components/challenge/hero";
+import { APP_VERSION, refreshApp } from "@/components/pwa/app-update";
 import { openInstallModal } from "@/components/pwa/install-modal";
 import { PassSettings } from "@/components/pass/pass-settings";
 import { PasteFromBrowser } from "@/components/pwa/open-in-app";
@@ -35,6 +36,7 @@ export default function SettingsPage() {
   const archived = challenge.status === "archived";
 
   const [name, setName] = useState(me?.participant.displayName ?? "");
+  const [refreshing, setRefreshing] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [nameSaved, setNameSaved] = useState(false);
   const [goal, setGoalDraft] = useState<GoalPreset>(me?.goal ? presetFromGoal(me.goal) : { kind: "pages_per_day", value: 20 });
@@ -232,6 +234,26 @@ export default function SettingsPage() {
         </div>
         <Button variant="secondary" size="sm" onClick={openInstallModal}>
           Install app
+        </Button>
+      </Card>
+
+      <Card className="flex items-center justify-between gap-4">
+        <div>
+          <Eyebrow>Version</Eyebrow>
+          <p className="mt-1 text-ink/70">
+            Build <span className="tabular">{APP_VERSION}</span>. Not seeing something new?
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={refreshing}
+          onClick={() => {
+            setRefreshing(true);
+            void refreshApp();
+          }}
+        >
+          {refreshing ? "Updating…" : "Update app"}
         </Button>
       </Card>
 
