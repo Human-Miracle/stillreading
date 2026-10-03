@@ -63,16 +63,30 @@ describe("reading reminders", () => {
     ]);
   });
 
-  it("waits 7 hours between reminders and stays quiet at night", async () => {
+  it("waits 5 hours between reminders and stays quiet at night", async () => {
     await settings(friend, { enabled: true, subscription: sub(2) });
     await sendReadingReminders(db, at("08:30"));
     await sendReadingReminders(db, at("09:30")); // too soon
-    await sendReadingReminders(db, at("15:00")); // 6.5 hours: still too soon
+    await sendReadingReminders(db, at("13:00")); // 4.5 hours: still too soon
     expect(sendNotification).toHaveBeenCalledTimes(1);
-    await sendReadingReminders(db, at("15:30")); // 7 hours later
+    await sendReadingReminders(db, at("13:30")); // 5 hours later
     expect(sendNotification).toHaveBeenCalledTimes(2);
-    await sendReadingReminders(db, at("22:45")); // night: never
-    expect(sendNotification).toHaveBeenCalledTimes(2);
+    await sendReadingReminders(db, at("18:30")); // another 5 hours
+    expect(sendNotification).toHaveBeenCalledTimes(3);
+    await sendReadingReminders(db, at("23:45")); // night: never
+    expect(sendNotification).toHaveBeenCalledTimes(3);
+  });
+
+  it("records each delivery so the reader can see it in Settings, and Apple's reason when refused", async () => {
+    await settings(friend, { enabled: true, subscription: { ...sub(3), endpoint: "https://web.push.apple.com/QGuQyavXutnMH" } });
+    sendNotification.mockRejectedValueOnce(Object.assign(new Error("Received unexpected response code"), { statusCode: 403, body: '{"reason":"BadJwtToken"}' }));
+    await sendReadingReminders(db, at("10:00"));
+    const state = await api<{ lastDelivery: { result: string; status: number; detail: string } }>("GET", `/api/challenges/${snap.challenge.id}/notifications`, { device: friend });
+    expect(state.body.lastDelivery).toMatchObject({ result: "failed", status: 403, detail: '{"reason":"BadJwtToken"}' });
+
+    await sendReadingReminders(db, at("15:00"));
+    const after = await api<{ lastDelivery: { result: string } }>("GET", `/api/challenges/${snap.challenge.id}/notifications`, { device: friend });
+    expect(after.body.lastDelivery).toMatchObject({ result: "sent" });
   });
 
   it("respects reminders being turned off, notifications being off, and removed members", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isAllowedPushEndpoint } from "@/lib/validation/push";
-import { replyPayload } from "@/server/notifications";
+import { replyPayload, vapidSubject } from "@/server/notifications";
 
 describe("isAllowedPushEndpoint", () => {
   it("accepts the browser vendors' push services", () => {
@@ -38,5 +38,17 @@ describe("replyPayload", () => {
     expect(p.body.endsWith("…")).toBe(true);
     expect(p).toMatchObject({ url: "/c/ch_1/feed/rs_1", tag: "thread-rs_1" });
     expect(replyPayload({ replier: "Amaka", body: "Hi", to: "thread", challengeId: "ch_1", sessionId: "rs_1" }).title).toBe("Amaka also replied");
+  });
+});
+
+describe("vapidSubject", () => {
+  it("accepts what Apple accepts and repairs common mistakes", () => {
+    expect(vapidSubject("mailto:jess@example.com")).toBe("mailto:jess@example.com");
+    expect(vapidSubject("mailto: jess@example.com")).toBe("mailto:jess@example.com");
+    expect(vapidSubject("jess@example.com")).toBe("mailto:jess@example.com");
+    expect(vapidSubject("https://stillreading.app")).toBe("https://stillreading.app");
+    for (const bad of [undefined, "", "jess", "http://stillreading.app", "https://localhost", "mailto:"]) {
+      expect(vapidSubject(bad)).toBe("https://github.com/pwadeveloper/stillreading");
+    }
   });
 });

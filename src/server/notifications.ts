@@ -19,7 +19,25 @@ export function vapidConfig(): Vapid | null {
   const publicKey = process.env.VAPID_PUBLIC_KEY?.trim();
   const privateKey = process.env.VAPID_PRIVATE_KEY?.trim();
   if (!publicKey || !privateKey) return null;
-  return { publicKey, privateKey, subject: process.env.VAPID_SUBJECT?.trim() || DEFAULT_SUBJECT };
+  return { publicKey, privateKey, subject: vapidSubject(process.env.VAPID_SUBJECT) };
+}
+
+/**
+ * The contact the push services see. Apple refuses every notification (403 BadJwtToken) unless it is
+ * a `mailto:` address or an `https:` URL, so anything else falls back to the project's URL.
+ */
+export function vapidSubject(raw: string | undefined): string {
+  const value = raw?.trim().replace(/^mailto:\s+/i, "mailto:") ?? "";
+  if (/^mailto:[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(value)) return value;
+  if (/^[^\s@:]+@[^\s@]+\.[^\s@]+$/.test(value)) return `mailto:${value}`; // a bare email address
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:" && url.hostname !== "localhost") return value;
+  } catch {
+    // not a URL
+  }
+  if (value) log.warn("vapid_subject_invalid", {});
+  return DEFAULT_SUBJECT;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,7 +132,6 @@ export async function notifyReply(db: Database, replyId: string): Promise<{ sent
   let sent = 0;
   let removed = 0;
   for (const person of recipients) {
-    const subs = await subscriptionsFor(db, person);
     const payload = JSON.stringify(
       replyPayload({
         replier: replier.displayName,
@@ -124,14 +141,9 @@ export async function notifyReply(db: Database, replyId: string): Promise<{ sent
         sessionId: reply.readingSessionId,
       }),
     );
-    for (const sub of subs) {
-      const { result } = await deliver(sub, payload, reply.readingSessionId);
-      if (result === "sent") sent += 1;
-      if (result === "gone") {
-        await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint));
-        removed += 1;
-      }
-    }
+    const result = await sendToSubscriptions(db, await subscriptionsFor(db, person), payload, reply.readingSessionId);
+    sent += result.sent;
+    removed += result.removed;
   }
   log.info("reply_notified", { recipients: recipients.length, sent, removed });
   return { sent, removed };
@@ -145,6 +157,29 @@ export async function subscriptionsFor(db: Database, person: { deviceId: string;
     deviceIds.push(...siblings.map((d) => d.id));
   }
   return db.select().from(pushSubscriptions).where(inArray(pushSubscriptions.deviceId, deviceIds));
+}
+
+/**
+ * Sends one payload to each subscription, remembering every outcome on the subscription (shown to the
+ * reader in Settings) and forgetting addresses the push service says are gone.
+ */
+export async function sendToSubscriptions(db: Database, subs: readonly PushSubscriptionRow[], payload: string, topic: string): Promise<{ sent: number; removed: number }> {
+  let sent = 0;
+  let removed = 0;
+  for (const sub of subs) {
+    const delivery = await deliver(sub, payload, topic);
+    if (delivery.result === "gone") {
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint));
+      removed += 1;
+      continue;
+    }
+    if (delivery.result === "sent") sent += 1;
+    await db
+      .update(pushSubscriptions)
+      .set({ lastResult: delivery.result, lastStatus: delivery.status, lastDetail: delivery.detail, lastSentAt: new Date() })
+      .where(eq(pushSubscriptions.endpoint, sub.endpoint));
+  }
+  return { sent, removed };
 }
 
 export interface Delivery {

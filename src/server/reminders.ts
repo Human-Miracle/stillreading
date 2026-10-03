@@ -1,14 +1,14 @@
 import { and, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import webpush from "web-push";
 import type { Database } from "@/db/client";
-import { challenges, participants, pushSubscriptions, readingSessions } from "@/db/schema";
+import { challenges, participants, readingSessions } from "@/db/schema";
 import { todayInTimezone } from "@/lib/domain/dates";
 import type { PushPayload } from "@/lib/validation/push";
 import { log } from "./log";
-import { deliver, subscriptionsFor, vapidConfig } from "./notifications";
+import { sendToSubscriptions, subscriptionsFor, vapidConfig } from "./notifications";
 
 /** At most one reminder per reader per challenge in this window, so it never feels like spam. */
-export const REMINDER_GAP_MS = 7 * 60 * 60 * 1000;
+export const REMINDER_GAP_MS = 5 * 60 * 60 * 1000;
 /** Reminders only go out during the day in the challenge's timezone (8:00 to 21:59). */
 export const REMINDER_HOURS = { from: 8, to: 21 } as const;
 
@@ -96,14 +96,9 @@ export async function sendReadingReminders(db: Database, now: Date = new Date())
         .returning({ id: participants.id });
       if (!claimed) continue;
       due += 1;
-      for (const sub of subs) {
-        const { result } = await deliver(sub, payload, `reminder-${challenge.id}`);
-        if (result === "sent") sent += 1;
-        if (result === "gone") {
-          await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint));
-          removed += 1;
-        }
-      }
+      const result = await sendToSubscriptions(db, subs, payload, `reminder-${challenge.id}`);
+      sent += result.sent;
+      removed += result.removed;
     }
   }
   log.info("reading_reminders", { challenges: running.length, due, sent, removed });

@@ -1,7 +1,7 @@
 name: Reading reminders
 
 # Every hour, ask the app to nudge readers who haven't logged today. The app decides who is due:
-# at most one reminder per reader every 7 hours, daytime only, only if they turned notifications on.
+# at most one reminder per reader every 5 hours, daytime only, only if they turned notifications on.
 on:
   schedule:
     - cron: "7 * * * *"
