@@ -138,7 +138,7 @@ export async function notifyReply(db: Database, replyId: string): Promise<{ sent
 }
 
 /** Subscriptions on the member's own device, plus any other device signed in with the same Reading Pass. */
-async function subscriptionsFor(db: Database, person: { deviceId: string; readerId: string | null }): Promise<PushSubscriptionRow[]> {
+export async function subscriptionsFor(db: Database, person: { deviceId: string; readerId: string | null }): Promise<PushSubscriptionRow[]> {
   const deviceIds = [person.deviceId];
   if (person.readerId) {
     const siblings = await db.select({ id: devices.id }).from(devices).where(and(eq(devices.readerId, person.readerId), ne(devices.id, person.deviceId)));
@@ -155,7 +155,7 @@ export interface Delivery {
   detail: string | null;
 }
 
-async function deliver(sub: PushSubscriptionRow, payload: string, topic: string): Promise<Delivery> {
+export async function deliver(sub: PushSubscriptionRow, payload: string, topic: string): Promise<Delivery> {
   const host = new URL(sub.endpoint).hostname;
   try {
     const res = await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, {

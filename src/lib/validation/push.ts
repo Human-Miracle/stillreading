@@ -34,10 +34,14 @@ export const pushSubscriptionInput = z.object({
   keys: z.object({ p256dh: base64Url.max(200), auth: base64Url.max(100) }),
 });
 
-export const notificationSettingsBody = z.object({
-  enabled: z.boolean(),
-  subscription: pushSubscriptionInput.optional(),
-});
+/** `enabled`: notifications on this challenge (replies, and reminders unless turned off); `reminders`: the daily nudge. */
+export const notificationSettingsBody = z
+  .object({
+    enabled: z.boolean().optional(),
+    reminders: z.boolean().optional(),
+    subscription: pushSubscriptionInput.optional(),
+  })
+  .refine((b) => b.enabled !== undefined || b.reminders !== undefined, { message: "Nothing to change" });
 
 /** What the service worker receives in a push message. */
 export interface PushPayload {

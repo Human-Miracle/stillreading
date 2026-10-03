@@ -46,6 +46,18 @@ Environment variables: `DATABASE_URL`, plus `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_K
 `VAPID_SUBJECT` for reply notifications (generate a pair with `npx web-push generate-vapid-keys`;
 without them the feature hides itself). No auth provider and no Blob token are needed.
 
+### Reading reminders
+
+Readers with notifications on get a nudge if they haven't logged today: at most once every 7 hours per
+challenge, 8:00–21:59 in the challenge's timezone, and they can switch it off in Settings. The hourly
+trigger is a GitHub Actions workflow (`.github/workflows/reading-reminders.yml`) that calls
+`POST /api/cron/reminders`. Set it up once in the GitHub repo:
+
+1. **Settings → Secrets and variables → Actions → Variables → New repository variable**:
+   `APP_URL` = the app's address (e.g. `https://your-app.vercel.app`).
+2. Optional but recommended: a random `CRON_SECRET`, added both as an Actions **secret** and as a
+   Vercel environment variable. The endpoint then only accepts calls carrying it.
+
 ## Docs
 
 - [Architecture](docs/STILL_READING_ARCHITECTURE.md)

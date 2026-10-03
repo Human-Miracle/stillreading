@@ -89,6 +89,9 @@ export const participants = pgTable(
     status: text("status", { enum: ["active", "removed", "left"] }).notNull().default("active"),
     /** Push a notification to this member's devices when someone replies to their check-ins or threads. */
     notifyReplies: boolean("notify_replies").notNull().default(false),
+    /** Push a nudge to log today's reading (only when notifications are on; see server/reminders). */
+    notifyReminders: boolean("notify_reminders").notNull().default(true),
+    lastRemindedAt: ts("last_reminded_at"),
     joinedAt: ts("joined_at").notNull().defaultNow(),
     ...syncColumns,
   },
