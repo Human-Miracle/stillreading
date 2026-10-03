@@ -263,6 +263,11 @@ export const pushSubscriptions = pgTable(
     auth: text("auth").notNull(),
     createdAt: ts("created_at").notNull().defaultNow(),
     updatedAt: ts("updated_at").notNull().defaultNow(),
+    /** Outcome of the last notification sent here (sent / failed), with the push service's reason. */
+    lastResult: text("last_result"),
+    lastStatus: integer("last_status"),
+    lastDetail: text("last_detail"),
+    lastSentAt: ts("last_sent_at"),
   },
   (t) => [index("push_subscriptions_device_idx").on(t.deviceId)],
 );

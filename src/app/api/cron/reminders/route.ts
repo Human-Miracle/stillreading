@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 function authorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();
-  // Without a secret the run is still safe: each reader gets at most one reminder every 7 hours.
+  // Without a secret the run is still safe: each reader gets at most one reminder every 5 hours.
   if (!secret) return true;
   const given = Buffer.from(req.headers.get("authorization") ?? "");
   const expected = Buffer.from(`Bearer ${secret}`);

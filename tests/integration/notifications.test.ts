@@ -58,15 +58,15 @@ describe("notification settings", () => {
   it("exposes the public key and stores this device's subscription", async () => {
     expect((await api("GET", "/api/push/config")).body).toEqual({ publicKey: "BTestPublicKey" });
     let state = await api("GET", `/api/challenges/${snap.challenge.id}/notifications`, { device: host });
-    expect(state.body).toEqual({ enabled: false, reminders: true, thisDevice: false });
+    expect(state.body).toEqual({ enabled: false, reminders: true, thisDevice: false, lastDelivery: null });
 
     expect((await settings(host, { enabled: true, subscription: sub(1) })).body).toEqual({ enabled: true, reminders: true });
     state = await api("GET", `/api/challenges/${snap.challenge.id}/notifications`, { device: host });
-    expect(state.body).toEqual({ enabled: true, reminders: true, thisDevice: true });
+    expect(state.body).toEqual({ enabled: true, reminders: true, thisDevice: true, lastDelivery: null });
 
     await settings(host, { enabled: false });
     state = await api("GET", `/api/challenges/${snap.challenge.id}/notifications`, { device: host });
-    expect(state.body).toEqual({ enabled: false, reminders: true, thisDevice: true });
+    expect(state.body).toEqual({ enabled: false, reminders: true, thisDevice: true, lastDelivery: null });
   });
 
   it("only accepts push services run by browser vendors", async () => {

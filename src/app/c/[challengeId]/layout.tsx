@@ -10,6 +10,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { PageSkeleton, Wordmark } from "@/components/ui/misc";
 import { track } from "@/lib/analytics";
 import { useChallengeView } from "@/local/hooks";
+import { syncPushSubscription } from "@/local/notifications";
 import { getSyncEngine } from "@/local/sync/engine";
 
 function FullPageMessage({ title, body }: { title: string; body: string }) {
@@ -34,6 +35,7 @@ export default function ChallengeLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     track("challenge_viewed", { challengeId });
     void getSyncEngine().sync();
+    void syncPushSubscription(challengeId);
   }, [challengeId]);
 
   if (view === undefined) {
