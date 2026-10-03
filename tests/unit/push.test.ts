@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isAllowedPushEndpoint } from "@/lib/validation/push";
-import { replyPayload, vapidSubject } from "@/server/notifications";
+import { pushOptions, replyPayload, vapidSubject } from "@/server/notifications";
 
 describe("isAllowedPushEndpoint", () => {
   it("accepts the browser vendors' push services", () => {
@@ -50,5 +50,14 @@ describe("vapidSubject", () => {
     for (const bad of [undefined, "", "jess", "http://stillreading.app", "https://localhost", "mailto:"]) {
       expect(vapidSubject(bad)).toBe("https://github.com/pwadeveloper/stillreading");
     }
+  });
+});
+
+describe("pushOptions", () => {
+  it("sends no topic to Apple (it refuses ours) and an alphanumeric one elsewhere", () => {
+    for (const host of ["web.push.apple.com", "api.push.apple.com"]) {
+      expect(pushOptions(host, "thread-rs_01ABC")).toEqual({ TTL: 86400, urgency: "normal" });
+    }
+    expect(pushOptions("fcm.googleapis.com", "reminder-ch_01M412W7SEESM9K0ZDJBYKYYJJ")).toEqual({ TTL: 86400, urgency: "normal", topic: "reminderch01M412W7SEESM9K0ZDJBYK" });
   });
 });

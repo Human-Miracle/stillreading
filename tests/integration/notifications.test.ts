@@ -143,6 +143,16 @@ describe("reply notifications", () => {
     ]);
   });
 
+  it("sends to iPhones without the topic header Apple refuses", async () => {
+    await settings(host, { enabled: true, subscription: { ...sub(1), endpoint: "https://web.push.apple.com/QGuQyavXutnMH" } });
+    const { id, op } = checkIn();
+    await push(host, [op]);
+    await push(friend, [replyOp(id)]);
+    await settleBackgroundTasks();
+    expect(sendNotification).toHaveBeenCalledTimes(1);
+    expect(sendNotification.mock.calls[0]![2]).not.toHaveProperty("topic");
+  });
+
   it("never notifies twice for the same reply, even when the op is retried", async () => {
     await settings(host, { enabled: true, subscription: sub(1) });
     const { id, op } = checkIn();
