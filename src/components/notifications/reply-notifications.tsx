@@ -82,15 +82,29 @@ export function ReplyNotificationsCard({ challengeId }: { challengeId: string })
   );
 }
 
+/** The push service's reason, e.g. `{"reason":"BadJwtToken"}` → "BadJwtToken". */
+function reasonOf(detail: string | null): string | null {
+  if (!detail) return null;
+  try {
+    const parsed = JSON.parse(detail) as { reason?: unknown };
+    if (typeof parsed.reason === "string") return parsed.reason;
+  } catch {
+    // plain text
+  }
+  return detail;
+}
+
 /** Whether the last notification sent to this phone arrived at the push service, in plain words. */
 function DeliveryLine({ delivery }: { delivery: LastDelivery }) {
   const when = timeAgo(delivery.at);
   if (delivery.result === "sent") return <p className="text-sm text-muted">Last notification sent to this phone {when}.</p>;
-  const apple = delivery.detail && /apple|BadJwt|BadDevice|Topic|Unregistered/i.test(delivery.detail);
+  const reason = reasonOf(delivery.detail);
+  // Problems with this phone's push address can be fixed from the phone; anything else is on our side.
+  const phoneSide = /BadDeviceToken|Unregistered|ExpiredSubscription|DeviceTokenNotForTopic/i.test(reason ?? "");
   return (
     <p className="text-sm text-[#c2321f]">
-      The last notification ({when}) couldn&apos;t be delivered{delivery.detail ? `: ${delivery.detail}` : ""}. Turn notifications off and on again
-      {apple ? " in the Home Screen app" : ""} to fix it.
+      The last notification ({when}) couldn&apos;t be delivered{reason ? ` (${reason})` : ""}.{" "}
+      {phoneSide ? "Turn notifications off and on again to fix it." : "That's a problem on our side, not your phone, and it's being fixed."}
     </p>
   );
 }

@@ -190,15 +190,27 @@ export interface Delivery {
   detail: string | null;
 }
 
+/** Apple's push service: Safari and iPhone/iPad Home Screen apps. */
+export function isApplePush(host: string): boolean {
+  return host === "web.push.apple.com" || host.endsWith(".push.apple.com");
+}
+
+/**
+ * Delivery options. Other push services keep only the newest pending message per topic (one per
+ * thread). Apple refuses messages with our topics (400 BadWebPushTopic), so it gets none: the
+ * notification's own tag already makes a newer one replace the older on the phone.
+ */
+export function pushOptions(host: string, topic: string): { TTL: number; urgency: "normal"; topic?: string } {
+  const base = { TTL: 60 * 60 * 24, urgency: "normal" as const };
+  if (isApplePush(host)) return base;
+  const clean = topic.replace(/[^A-Za-z0-9]/g, "").slice(0, 32);
+  return clean ? { ...base, topic: clean } : base;
+}
+
 export async function deliver(sub: PushSubscriptionRow, payload: string, topic: string): Promise<Delivery> {
   const host = new URL(sub.endpoint).hostname;
   try {
-    const res = await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, {
-      TTL: 60 * 60 * 24,
-      urgency: "normal",
-      // Push services keep only the newest pending message per topic: one per thread.
-      topic: topic.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32),
-    });
+    const res = await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, pushOptions(host, topic));
     return { result: "sent", host, status: (res as { statusCode?: number } | undefined)?.statusCode ?? null, detail: null };
   } catch (err) {
     const e = err as { statusCode?: number; body?: unknown; message?: string };
