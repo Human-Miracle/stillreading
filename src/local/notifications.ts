@@ -41,28 +41,34 @@ async function currentSubscription(): Promise<PushSubscription | null> {
   return (await reg?.pushManager.getSubscription()) ?? null;
 }
 
-async function readStatus(challengeId: string): Promise<NotifyStatus> {
+async function readStatus(challengeId: string): Promise<{ status: NotifyStatus; reminders: boolean }> {
   const key = await publicKey();
-  if (!key) return "unavailable";
-  if (!pushSupported()) return isIos() && !isStandalone() ? "needs-install" : "unsupported";
-  if (Notification.permission === "denied") return "denied";
+  if (!key) return { status: "unavailable", reminders: true };
+  if (!pushSupported()) return { status: isIos() && !isStandalone() ? "needs-install" : "unsupported", reminders: true };
+  if (Notification.permission === "denied") return { status: "denied", reminders: true };
   const [server, sub] = await Promise.all([
-    apiRequest<{ enabled: boolean; thisDevice: boolean }>(`/api/challenges/${challengeId}/notifications`),
+    apiRequest<{ enabled: boolean; reminders?: boolean; thisDevice: boolean }>(`/api/challenges/${challengeId}/notifications`),
     currentSubscription(),
   ]);
-  return server.enabled && server.thisDevice && sub && Notification.permission === "granted" ? "on" : "off";
+  const on = server.enabled && server.thisDevice && sub && Notification.permission === "granted";
+  return { status: on ? "on" : "off", reminders: server.reminders ?? true };
 }
 
 /** Reply notifications for one challenge on this device. `enable` must run from a tap. */
 export function useReplyNotifications(challengeId: string) {
   const [status, setStatus] = useState<NotifyStatus>("loading");
+  const [reminders, setRemindersState] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
     readStatus(challengeId)
-      .then((s) => live && setStatus(s))
+      .then((s) => {
+        if (!live) return;
+        setStatus(s.status);
+        setRemindersState(s.reminders);
+      })
       .catch(() => live && setStatus("unavailable"));
     return () => {
       live = false;
@@ -105,7 +111,21 @@ export function useReplyNotifications(challengeId: string) {
     }
   }, [challengeId]);
 
-  return { status, busy, error, enable, disable };
+  const setReminders = useCallback(
+    async (on: boolean) => {
+      setError(null);
+      setRemindersState(on);
+      try {
+        await apiRequest(`/api/challenges/${challengeId}/notifications`, { method: "PUT", body: { reminders: on } });
+      } catch {
+        setRemindersState(!on);
+        setError("Couldn't change reminders. Check your connection and try again.");
+      }
+    },
+    [challengeId],
+  );
+
+  return { status, busy, error, enable, disable, reminders, setReminders };
 }
 
 const promptKey = (challengeId: string) => `sr-notify-prompt-dismissed:${challengeId}`;

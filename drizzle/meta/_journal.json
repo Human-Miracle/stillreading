@@ -71,6 +71,13 @@
       "when": 1790960687430,
       "tag": "0009_recheck_found_covers",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791037305810,
+      "tag": "0010_reading_reminders",
+      "breakpoints": true
     }
   ]
 }

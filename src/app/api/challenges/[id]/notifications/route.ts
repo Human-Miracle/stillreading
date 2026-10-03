@@ -21,7 +21,7 @@ async function member(req: Request, ctx: Ctx) {
   return { db, deviceId, me: me! };
 }
 
-/** Whether reply notifications are on for me in this challenge, and whether this device can receive them. */
+/** Whether notifications (and reading reminders) are on for me in this challenge, and whether this device can receive them. */
 export const GET = route("GET /api/challenges/:id/notifications", async (req, ctx: Ctx) => {
   const { db, deviceId, me } = await member(req, ctx);
   const devicesOfMe = me.readerId
@@ -29,10 +29,10 @@ export const GET = route("GET /api/challenges/:id/notifications", async (req, ct
     : db.select({ id: devices.id }).from(devices).where(eq(devices.id, deviceId));
   const ids = (await devicesOfMe).map((d) => d.id);
   const subs = ids.length ? await db.select({ deviceId: pushSubscriptions.deviceId }).from(pushSubscriptions).where(inArray(pushSubscriptions.deviceId, ids)) : [];
-  return json({ enabled: me.notifyReplies, thisDevice: subs.some((s) => s.deviceId === deviceId) });
+  return json({ enabled: me.notifyReplies, reminders: me.notifyReminders, thisDevice: subs.some((s) => s.deviceId === deviceId) });
 });
 
-/** Turn reply notifications on or off for me in this challenge, saving this device's push address when given. */
+/** Turn notifications or reading reminders on or off for me in this challenge, saving this device's push address when given. */
 export const PUT = route("PUT /api/challenges/:id/notifications", async (req, ctx: Ctx) => {
   const { db, deviceId, me } = await member(req, ctx);
   await rateLimit(db, LIMITS.notifications, deviceId);
@@ -44,6 +44,13 @@ export const PUT = route("PUT /api/challenges/:id/notifications", async (req, ct
       .values({ endpoint, deviceId, p256dh: keys.p256dh, auth: keys.auth })
       .onConflictDoUpdate({ target: pushSubscriptions.endpoint, set: { deviceId, p256dh: keys.p256dh, auth: keys.auth, updatedAt: new Date() } });
   }
-  await db.update(participants).set({ notifyReplies: body.enabled }).where(and(eq(participants.id, me.id), eq(participants.challengeId, me.challengeId)));
-  return json({ enabled: body.enabled });
+  const [row] = await db
+    .update(participants)
+    .set({
+      ...(body.enabled !== undefined ? { notifyReplies: body.enabled } : {}),
+      ...(body.reminders !== undefined ? { notifyReminders: body.reminders } : {}),
+    })
+    .where(and(eq(participants.id, me.id), eq(participants.challengeId, me.challengeId)))
+    .returning();
+  return json({ enabled: row!.notifyReplies, reminders: row!.notifyReminders });
 });

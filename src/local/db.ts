@@ -87,6 +87,25 @@ export function getLocalDb(): StillReadingDB {
   return instance;
 }
 
+/**
+ * Whether this browser lets the app keep its data. In-app browsers (Instagram, WhatsApp…) and some
+ * private modes block IndexedDB, or leave it hanging; without it nothing can be saved, so joining
+ * explains that instead of failing silently.
+ */
+export async function localStorageWorks(timeoutMs = 4000): Promise<boolean> {
+  if (typeof indexedDB === "undefined") return false;
+  try {
+    return await Promise.race([
+      getLocalDb()
+        .kv.get("storage-check")
+        .then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), timeoutMs)),
+    ]);
+  } catch {
+    return false;
+  }
+}
+
 /** Test hook. */
 export function setLocalDb(db: StillReadingDB | null) {
   instance = db;

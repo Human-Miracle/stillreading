@@ -51,7 +51,7 @@ export function Hero({
         <SyncIndicator dark={dark} />
         {settingsHref ? (
           <IconLink href={settingsHref} label="Challenge settings" variant={dark ? "dark" : "glass"}>
-            <Icon.more />
+            <Icon.settings />
           </IconLink>
         ) : null}
       </div>

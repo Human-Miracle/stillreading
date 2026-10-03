@@ -12,7 +12,7 @@ import type { JoinPreview } from "@/lib/api-types";
 import { participantDuration, todayInTimezone } from "@/lib/domain/dates";
 import { formatDateKey } from "@/lib/format";
 import { ApiClientError, apiRequest } from "@/local/api";
-import { getLocalDb } from "@/local/db";
+import { getLocalDb, localStorageWorks } from "@/local/db";
 import { joinChallenge, type ProfileInput } from "@/local/repo";
 import { ensureReadingPass } from "@/local/reader";
 import { PassOnboarding } from "@/components/pass/pass-prompt";
@@ -26,12 +26,19 @@ const ERROR_COPY: Record<string, { title: string; body: string }> = {
   removed: { title: "You no longer have access to this challenge.", body: "If you think this is a mistake, talk to the host." },
   full: { title: "This challenge is full.", body: "Ask the host to start another one." },
   offline: { title: "You're offline.", body: "Joining needs a connection. Try again when you're back online." },
+  storage: {
+    title: "This browser can't save your reading.",
+    body: "It looks like the link opened inside another app (like Instagram or WhatsApp) or in private browsing. Copy the link and open it in Chrome or Safari instead.",
+  },
 };
 
 export function JoinFlow({ code, initialPreview }: { code: string; initialPreview: JoinPreview | null }) {
   const router = useRouter();
   const [preview, setPreview] = useState<JoinPreview | null>(initialPreview);
-  const [localChallengeId, setLocalChallengeId] = useState<string | null | undefined>(undefined);
+  // Null until this device turns out to have the challenge already. Never blocks joining: some
+  // browsers can't open local storage at all, and the page must still respond.
+  const [localChallengeId, setLocalChallengeId] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>("preview");
   const [submitting, setSubmitting] = useState(false);
@@ -40,11 +47,19 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
 
   useEffect(() => {
     void (async () => {
-      const local = await getLocalDb().challenges.where("joinCode").equals(code).first();
-      setLocalChallengeId(local && local.access === "ok" ? local.id : null);
+      const canStore = await localStorageWorks(2500);
+      if (canStore) {
+        const local = await getLocalDb()
+          .challenges.where("joinCode")
+          .equals(code)
+          .first()
+          .catch(() => undefined);
+        if (local && local.access === "ok") setLocalChallengeId(local.id);
+      }
       try {
-        setPreview(await apiRequest<JoinPreview>(`/api/join/${encodeURIComponent(code)}`));
-        setErrorCode(null);
+        // Without storage there's no device identity: fetch the invite anonymously so the page still loads.
+        setPreview(await apiRequest<JoinPreview>(`/api/join/${encodeURIComponent(code)}`, { auth: canStore }));
+        setErrorCode((prev) => (prev === "storage" ? prev : null));
       } catch (err) {
         if (err instanceof ApiClientError) {
           if (err.status === 0) setErrorCode((prev) => prev ?? (initialPreview ? null : "offline"));
@@ -102,7 +117,7 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
       <section className="animate-rise space-y-5 pt-10">
         <h1 className="display text-[48px]">{copy.title}</h1>
         <p className="text-[17px] text-ink/60">{copy.body}</p>
-        <ButtonLink href="/">Back to Still Reading</ButtonLink>
+        {errorCode === "storage" ? <CopyLinkButton /> : <ButtonLink href="/">Back to Still Reading</ButtonLink>}
       </section>,
     );
   }
@@ -172,8 +187,19 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
         ) : preview.phase === "ended" || preview.phase === "archived" ? (
           <Notice>{ERROR_COPY[preview.phase]!.title} You can&apos;t join anymore.</Notice>
         ) : (
-          <Button size="lg" full onClick={() => setStage("profile")} disabled={localChallengeId === undefined}>
-            Join the challenge
+          <Button
+            size="lg"
+            full
+            disabled={checking}
+            onClick={async () => {
+              setChecking(true);
+              const ok = await localStorageWorks();
+              setChecking(false);
+              if (ok) setStage("profile");
+              else setErrorCode("storage");
+            }}
+          >
+            {checking ? "One moment…" : "Join the challenge"}
           </Button>
         )}
         {!localChallengeId && !memberOnServer ? (
@@ -183,5 +209,25 @@ export function JoinFlow({ code, initialPreview }: { code: string; initialPrevie
         ) : null}
       </div>
     </section>,
+  );
+}
+
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      size="lg"
+      full
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          setCopied(true);
+        } catch {
+          window.prompt("Copy this link", window.location.href);
+        }
+      }}
+    >
+      {copied ? "Link copied ✓" : "Copy invite link"}
+    </Button>
   );
 }

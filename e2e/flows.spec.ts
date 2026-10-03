@@ -241,8 +241,9 @@ test("Flow G: Reading Pass carries a reader and their private reflections to a n
   await dialog.getByRole("button", { name: "Done" }).click();
   await waitForSynced(phoneA);
 
-  // Skipping the home reminder keeps the pass in Settings.
-  await phoneA.getByRole("button", { name: "Skip", exact: true }).click();
+  // Closing the home notice keeps the pass in Settings.
+  await phoneA.getByRole("region", { name: "Your Reading Pass" }).getByRole("button", { name: "Close" }).click();
+  await expect(phoneA.getByRole("region", { name: "Your Reading Pass" })).toHaveCount(0);
   await phoneA.getByRole("link", { name: "Challenge settings" }).click();
   await phoneA.getByRole("button", { name: "Show pass" }).click();
   const label = await phoneA.getByLabel(/^Reading Pass: /).getAttribute("aria-label");
@@ -341,4 +342,23 @@ test("Flow I: host merges a reader who joined twice", async ({ browser }) => {
   await expect(top.getByRole("listitem").filter({ hasText: "temi O" })).toContainText("35 pages");
   await expect(host.getByText("Temi", { exact: true })).toHaveCount(0);
   for (const c of [first, second, hostCtx]) await c.close();
+});
+
+test("Flow J: a browser that blocks storage gets told how to join instead of a dead button", async ({ browser }) => {
+  const hostCtx = await newContext(browser);
+  const host = await hostCtx.newPage();
+  const { inviteUrl } = await createChallenge(host, { name: "Flow J Challenge", host: "Jessica" });
+
+  // Like some in-app browsers: no IndexedDB.
+  const blocked = await newContext(browser);
+  await blocked.addInitScript(() => Object.defineProperty(window, "indexedDB", { get: () => undefined }));
+  const page = await blocked.newPage();
+  await page.goto(new URL(inviteUrl).pathname);
+  const joinButton = page.getByRole("button", { name: "Join the challenge" });
+  await expect(joinButton).toBeEnabled();
+  await joinButton.click();
+  await expect(page.getByRole("heading", { name: "This browser can't save your reading." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy invite link" })).toBeVisible();
+  await blocked.close();
+  await hostCtx.close();
 });

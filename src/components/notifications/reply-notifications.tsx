@@ -6,9 +6,9 @@ import { Button } from "../ui/button";
 import { Card, Eyebrow } from "../ui/card";
 import { Icon } from "../ui/icons";
 
-/** Settings card: turn reply notifications on or off for this challenge on this device. */
+/** Settings card: notifications for this challenge on this device (replies), plus the reading reminder switch. */
 export function ReplyNotificationsCard({ challengeId }: { challengeId: string }) {
-  const { status, busy, error, enable, disable } = useReplyNotifications(challengeId);
+  const { status, busy, error, enable, disable, reminders, setReminders } = useReplyNotifications(challengeId);
   if (status === "loading" || status === "unavailable") return null;
 
   let text: string;
@@ -23,7 +23,7 @@ export function ReplyNotificationsCard({ challengeId }: { challengeId: string })
       );
       break;
     case "off":
-      text = "Get a notification when someone replies to your check-ins or a thread you're in.";
+      text = "Get a notification when someone replies to your check-ins, and a gentle reminder if you haven't logged your reading.";
       action = (
         <Button size="sm" disabled={busy} onClick={() => void enable()}>
           {busy ? "One moment…" : "Turn on"}
@@ -50,11 +50,27 @@ export function ReplyNotificationsCard({ challengeId }: { challengeId: string })
     <Card className="space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Eyebrow>Reply notifications</Eyebrow>
+          <Eyebrow>Notifications</Eyebrow>
           <p className="mt-1 text-ink/70">{text}</p>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
+      {status === "on" ? (
+        <label className="flex items-start justify-between gap-4 border-t border-line pt-3">
+          <span>
+            <span className="block font-medium">Reading reminders</span>
+            <span className="block text-sm text-muted">A nudge if you haven&apos;t logged today. Daytime only, at most once every 7 hours.</span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            className="mt-1 size-5 shrink-0 accent-ink"
+            checked={reminders}
+            onChange={(e) => void setReminders(e.target.checked)}
+            aria-label="Reading reminders"
+          />
+        </label>
+      ) : null}
       {error ? (
         <p className="text-sm text-[#c2321f]" role="alert">
           {error}
@@ -75,7 +91,7 @@ export function ReplyNotifyPrompt({ challengeId, className }: { challengeId: str
         <Icon.reply className="mt-0.5 size-5 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">Know when friends reply</p>
-          <p className="text-sm text-ink/70">Get a notification when someone replies to your reading.</p>
+          <p className="text-sm text-ink/70">Get a notification when someone replies, and a gentle reminder to read.</p>
           {error ? (
             <p className="mt-1 text-sm text-[#c2321f]" role="alert">
               {error}
