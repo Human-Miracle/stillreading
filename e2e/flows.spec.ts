@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createChallenge, expectToday, join, logReading, newContext, waitForSynced } from "./helpers";
+import { createChallenge, daytimeZone, expectToday, join, logReading, newContext, seedPastCheckIns, waitForSynced } from "./helpers";
 
 test("Flow A: create → copy link → join → goal → check-in", async ({ browser }) => {
   const hostCtx = await newContext(browser);
@@ -405,5 +405,51 @@ test("Flow K: earning badges pops a celebration with share and save, and they st
   const grid = page.getByRole("list", { name: "Your badges" });
   await expect(grid.getByRole("button", { name: "First Page: Earned" })).toBeVisible();
   await expect(grid.getByRole("button", { name: "Week Warrior: 1/7" })).toBeVisible();
+  await ctx.close();
+});
+
+test("Flow L: a Time Stone, earned by a week of reading, brings back a missed yesterday", async ({ browser }) => {
+  const timezoneId = daytimeZone();
+  const ctx = await browser.newContext({ timezoneId });
+  await ctx.addInitScript(() => {
+    sessionStorage.setItem("sr-install-dismissed", "1");
+    localStorage.setItem("sr-badge-popups", "off");
+  });
+  const page = await ctx.newPage();
+  // A challenge that started 10 days ago; read 7…2 days ago, missed yesterday.
+  await page.clock.install({ time: new Date(Date.now() - 10 * 86_400_000) });
+  const { challengeUrl } = await createChallenge(page, { name: "Flow L Challenge", host: "Ada" });
+  await page.clock.setSystemTime(new Date());
+  const challengeId = challengeUrl.split("/c/")[1]!.split(/[/?#]/)[0]!;
+  await seedPastCheckIns(page, challengeId, timezoneId, [7, 6, 5, 4, 3, 2]);
+  await page.reload();
+  await expect(page.getByText("You missed yesterday. That's okay.")).toBeVisible();
+
+  // Six reading days: no stone yet, so yesterday can't be logged.
+  await page.getByRole("button", { name: "Log reading", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Log reading" });
+  await expect(dialog.getByText(/You'll earn one in 1 more reading day/)).toBeVisible();
+  await expect(dialog.getByRole("radio", { name: /Yesterday/ })).toHaveCount(0);
+  // Reading today is the seventh day: a stone, and a nudge to use it.
+  await dialog.getByLabel("How much?").fill("20");
+  await dialog.getByRole("button", { name: "Check in", exact: true }).click();
+  await dialog.getByRole("button", { name: "Done" }).click();
+  const stones = page.getByRole("region", { name: "Time Stones" });
+  await expect(stones.getByText("1 of 2")).toBeVisible();
+
+  await stones.getByRole("button", { name: "Use a Time Stone" }).click();
+  await expect(dialog.getByRole("radio", { name: /Yesterday/ })).toBeChecked();
+  await expect(dialog.getByText("This uses a Time Stone")).toBeVisible();
+  await dialog.getByLabel("How much?").fill("22");
+  await dialog.getByRole("button", { name: "Check in", exact: true }).click();
+  await expect(dialog.getByText(/Time Stone used/)).toBeVisible();
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await waitForSynced(page);
+
+  // Spent, yesterday is back in the streak, and the crew can see how.
+  await expect(stones.getByText("0 of 2")).toBeVisible();
+  await expect(page.getByText("You missed yesterday")).toHaveCount(0);
+  await page.goto(`${challengeUrl}/feed`);
+  await expect(page.getByText("Logged with a Time Stone")).toBeVisible();
   await ctx.close();
 });

@@ -1,7 +1,8 @@
 "use client";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { joinedDateFor, todayInTimezone } from "@/lib/domain/dates";
+import { addDays, isWithinChallenge, joinedDateFor, todayInTimezone } from "@/lib/domain/dates";
+import { backfillCost, timeStoneWallet, type BackfillCost, type TimeStoneWallet } from "@/lib/domain/time-stones";
 import { isLive } from "@/lib/domain/goals";
 import { participantProgress, type ParticipantProgress } from "@/lib/domain/progress";
 import { leaderboard, type LeaderboardEntry } from "@/lib/domain/leaderboard";
@@ -78,6 +79,28 @@ export interface ChallengeView {
   repliesBySession: Map<string, LocalReply[]>;
   /** Live likes from active members, per reply. */
   likesByReply: Map<string, LocalReplyLike[]>;
+  /** My Time Stones (null when I'm not a member). */
+  timeStones: TimeStoneState | null;
+}
+
+export interface TimeStoneState {
+  wallet: TimeStoneWallet;
+  /** Yesterday, when I can still log for it at all (the challenge is on and it was one of my days). */
+  yesterday: string | null;
+  /** What logging yesterday costs right now. */
+  yesterdayCost: BackfillCost | null;
+  /** Yesterday has no check-in, it needs a stone and I have one: worth a nudge. */
+  canRestore: boolean;
+}
+
+function timeStoneState(data: ChallengeData, me: MemberView, today: string, now: Date): TimeStoneState {
+  const { challenge } = data;
+  const mine = data.sessions.filter((s) => s.participantId === me.participant.id);
+  const wallet = timeStoneWallet(mine);
+  const day = addDays(today, -1);
+  const open = me.progress.clock.phase === "active" && isWithinChallenge(challenge!, day) && day >= me.progress.effectiveStart;
+  const yesterdayCost = open ? backfillCost(mine, day, challenge!.timezone, now) : null;
+  return { wallet, yesterday: open ? day : null, yesterdayCost, canRestore: yesterdayCost === "stone" && wallet.held > 0 };
 }
 
 function pickCurrentBook(books: LocalBook[], sessions: LocalSession[]): LocalBook | null {
@@ -158,6 +181,7 @@ export function buildChallengeView(data: ChallengeData, now: Date): ChallengeVie
     reactionsBySession,
     repliesBySession,
     likesByReply,
+    timeStones: me ? timeStoneState(data, me, today, now) : null,
   };
 }
 

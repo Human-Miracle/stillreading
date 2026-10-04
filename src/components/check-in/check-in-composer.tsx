@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { track } from "@/lib/analytics";
-import { addDays, isWithinChallenge } from "@/lib/domain/dates";
+import { addDays } from "@/lib/domain/dates";
 import { defaultSessionUnit, formatAmount, formatSession, unitLabel } from "@/lib/domain/goals";
 import type { SessionUnit } from "@/lib/domain/types";
 import type { ChallengeView } from "@/local/hooks";
@@ -25,19 +25,22 @@ interface Logged {
   pages: number | null;
   bookTitle: string | null;
   offline: boolean;
+  timeStone: boolean;
 }
 
-export function CheckInComposer({ view, open, onClose }: { view: ChallengeView; open: boolean; onClose: () => void }) {
+export type CheckInDay = "today" | "yesterday";
+
+export function CheckInComposer({ view, open, day = "today", onClose }: { view: ChallengeView; open: boolean; day?: CheckInDay; onClose: () => void }) {
   if (!view.me) return null;
   return (
     <Sheet open={open} onClose={onClose} title="Log reading">
       {/* Mounted only while open, so every check-in starts from a fresh form. */}
-      {open ? <ComposerBody view={view} onClose={onClose} /> : null}
+      {open ? <ComposerBody view={view} initialDay={day} onClose={onClose} /> : null}
     </Sheet>
   );
 }
 
-function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => void }) {
+function ComposerBody({ view, initialDay, onClose }: { view: ChallengeView; initialDay: CheckInDay; onClose: () => void }) {
   const me = view.me!;
   const sync = useSyncState();
   const myBooks = me.books
@@ -52,13 +55,18 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
   const [reflection, setReflection] = useState("");
   const [shared, setShared] = useState(true);
   const [finished, setFinished] = useState(false);
-  const [day, setDay] = useState<"today" | "yesterday">("today");
+  const stones = view.timeStones;
+  // Yesterday is offered while it's free (just after midnight, or it already has a check-in), or
+  // when a Time Stone can bring it back.
+  const yesterdayCost = stones?.yesterdayCost ?? null;
+  const canYesterday = yesterdayCost === "free" || (yesterdayCost === "stone" && (stones?.wallet.held ?? 0) > 0);
+  const [day, setDay] = useState<CheckInDay>(initialDay === "yesterday" && canYesterday ? "yesterday" : "today");
+  const spendsStone = day === "yesterday" && yesterdayCost === "stone";
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [logged, setLogged] = useState<Logged | null>(null);
 
-  const yesterday = addDays(view.today, -1);
-  const canYesterday = me.progress.clock.phase === "active" && isWithinChallenge(view.challenge, yesterday) && yesterday >= me.progress.effectiveStart;
+  const yesterday = stones?.yesterday ?? addDays(view.today, -1);
   const remaining = me.progress.today.target !== null && me.goal?.targetUnit === unit ? me.progress.today.remaining : 0;
   const quick = Array.from(new Set([...(remaining > 0 ? [remaining] : []), ...QUICK[unit]])).slice(0, 4);
   const selectedBook = myBooks.find((b) => b.id === bookId);
@@ -94,11 +102,12 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
         reflection,
         reflectionShared: shared,
         date: day === "yesterday" ? yesterday : view.today,
+        timeStone: spendsStone,
       });
       if (finished && useBookId) await updateBook(useBookId, { status: "completed" });
-      track("reading_logged", { challengeId: view.challenge.id, props: { unit, hasReflection: Boolean(reflection.trim()) } });
+      track("reading_logged", { challengeId: view.challenge.id, props: { unit, hasReflection: Boolean(reflection.trim()), timeStone: spendsStone } });
       if (!wasMet && day === "today") track("reading_goal_completed", { challengeId: view.challenge.id });
-      setLogged({ amount: value, unit, pages: pageCount, bookTitle: title, offline: !sync.online });
+      setLogged({ amount: value, unit, pages: pageCount, bookTitle: title, offline: !sync.online, timeStone: spendsStone });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save. Please try again.");
     } finally {
@@ -123,9 +132,24 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
           onChange={setDay}
           options={[
             { value: "today", label: "Today" },
-            { value: "yesterday", label: "Yesterday" },
+            { value: "yesterday", label: yesterdayCost === "stone" ? "Yesterday ⏳" : "Yesterday" },
           ]}
         />
+      ) : null}
+      {spendsStone && stones ? (
+        <div className="flex gap-3 rounded-[1.25rem] bg-lavender/60 px-4 py-3 text-left" role="note">
+          <span className="text-xl leading-none" aria-hidden>
+            ⏳
+          </span>
+          <p className="text-sm leading-snug">
+            <span className="font-semibold">This uses a Time Stone</span> (you have {stones.wallet.held}). Yesterday will count for your streak, goal and XP.
+          </p>
+        </div>
+      ) : null}
+      {yesterdayCost === "stone" && !canYesterday && stones ? (
+        <p className="text-sm text-muted" role="note">
+          ⏳ Missed yesterday? A Time Stone brings back a missed day. You&apos;ll earn one in {stones.wallet.toNext} more reading day{stones.wallet.toNext === 1 ? "" : "s"}.
+        </p>
       ) : null}
 
       <div className="rounded-[1.75rem] bg-surface-2 px-4 pb-4 pt-5 text-center">
@@ -241,7 +265,8 @@ function Success({ view, logged, onClose }: { view: ChallengeView; logged: Logge
   const p = view.me?.progress;
   const goal = view.me?.goal;
   let message = "Every page counts. See you tomorrow.";
-  if (p && goal) {
+  if (logged.timeStone) message = "Time Stone used ⏳ Yesterday is back in your streak.";
+  else if (p && goal) {
     if (p.today.goalMet) message = p.streak.current > 1 ? `Today's goal is done. ${p.streak.current} days without a break.` : "Today's goal is done. Nice work.";
     else if (p.today.target !== null && p.today.remaining > 0) message = `You're ${formatAmount(p.today.remaining, goal.targetUnit)} away from today's goal.`;
   }

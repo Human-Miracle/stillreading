@@ -173,6 +173,8 @@ export const readingSessions = pgTable(
     reflection: varchar("reflection", { length: 500 }),
     /** End-to-end encrypted private reflection ("v1.<iv>.<ciphertext>"); only ever sent to its owner. */
     privateReflection: text("private_reflection"),
+    /** Logged for a missed day by spending a Time Stone (see domain/time-stones). */
+    timeStone: boolean("time_stone").notNull().default(false),
     ...syncColumns,
     deletedAt: ts("deleted_at"),
   },

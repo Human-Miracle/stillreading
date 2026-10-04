@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { BadgeSummary } from "@/components/badges/badge-summary";
 import { useChallenge } from "@/components/challenge/context";
 import { DayRing } from "@/components/challenge/day-ring";
+import { TimeStoneCard } from "@/components/challenge/time-stone-card";
 import { Hero } from "@/components/challenge/hero";
 import { InviteActions } from "@/components/challenge/invite-actions";
 import { StreakBanner } from "@/components/challenge/streak-banner";
@@ -135,7 +136,9 @@ export default function ChallengeHome() {
   const p = me.progress;
   const phase = challenge.status === "archived" ? "archived" : p.clock.phase;
   const crewStreaks = view.members.filter((m) => m !== me).map((m) => m.progress.streak.current);
-  const banner = streakBanner(p, crewStreaks, view.challenge.durationDays);
+  const banner = view.timeStones?.canRestore
+    ? { title: "You missed yesterday", sub: "Use a Time Stone before midnight to keep your streak" }
+    : streakBanner(p, crewStreaks, view.challenge.durationDays);
   const crew = [...view.members].sort((a, b) => {
     if (a === me) return -1;
     if (b === me) return 1;
@@ -152,6 +155,13 @@ export default function ChallengeHome() {
     },
     ...(coach ? [{ key: "coach", label: coach.label, render: (className: string) => <CoachCard coach={coach} className={className} /> }] : []),
   ];
+  const stones = view.timeStones;
+  if (stones && phase === "active") {
+    const card = { key: "stones", label: "Time Stones", render: (className: string) => <TimeStoneCard stones={stones} onUse={() => openCheckIn("yesterday")} className={className} /> };
+    // A missed yesterday can only be brought back today, so that nudge comes first.
+    if (stones.canRestore) cards.unshift(card);
+    else cards.push(card);
+  }
 
   let big: string;
   let caption: string;
@@ -196,7 +206,7 @@ export default function ChallengeHome() {
         </div>
         <div className="flex items-center justify-center gap-2.5 px-5 pb-2 pt-5">
           {phase === "active" ? (
-            <Button onClick={openCheckIn}>Log reading</Button>
+            <Button onClick={() => openCheckIn()}>Log reading</Button>
           ) : phase === "ended" ? (
             <ButtonLink href={`/c/${challenge.id}/complete`}>Your recap</ButtonLink>
           ) : null}
@@ -224,7 +234,8 @@ export default function ChallengeHome() {
 
       <div className="space-y-3 px-5 pt-5">
         <PassPrompt />
-        <HomeCards cards={cards} />
+        {/* Keyed by the order, so a card moving to the front (a Time Stone to use) starts in view. */}
+        <HomeCards key={cards.map((c) => c.key).join()} cards={cards} />
         {view.members.length <= 1 && phase !== "ended" && phase !== "archived" ? (
           <Card className="space-y-4">
             <div>

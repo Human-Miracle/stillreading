@@ -1,12 +1,14 @@
 "use client";
 import { createContext, useContext } from "react";
+import type { CheckInDay } from "@/components/check-in/check-in-composer";
 import type { ChallengeBadges } from "@/local/badges";
 import type { ChallengeView } from "@/local/hooks";
 
 export interface ChallengeContextValue {
   view: ChallengeView;
   badges: ChallengeBadges;
-  openCheckIn: () => void;
+  /** Opens the check-in; "yesterday" starts it on yesterday (e.g. to spend a Time Stone). */
+  openCheckIn: (day?: CheckInDay) => void;
 }
 
 export const ChallengeContext = createContext<ChallengeContextValue | null>(null);

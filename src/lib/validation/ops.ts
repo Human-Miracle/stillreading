@@ -58,6 +58,8 @@ export const sessionFields = z
     pages: amount.nullable().optional(),
     reflection: reflection.nullable().optional(),
     privateReflection: sealedNote.nullable().optional(),
+    /** The reader agreed to spend a Time Stone on a missed day. */
+    timeStone: z.boolean().optional(),
     createdAt: isoTimestamp,
   })
   .refine((s) => s.unit !== "pages" || s.pages == null, { message: "Pages check-ins record pages as the amount", path: ["pages"] });

@@ -1,0 +1,1 @@
+ALTER TABLE "reading_sessions" ADD COLUMN "time_stone" boolean DEFAULT false NOT NULL;

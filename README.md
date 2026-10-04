@@ -68,6 +68,16 @@ drawn by `/b/[id]/image` (story, square and link-preview sizes, Geist bundled in
 SIL OFL). The server checks a badge before sharing it; sharing a link makes `/b/[id]` public, saving
 the image doesn't.
 
+### Time Stones
+
+A reader earns a Time Stone for every 7 days they read in a challenge and can hold 2. One stone logs
+reading for a missed day, on the day right after it only (miss Monday, use it on Tuesday), and that
+day then counts for the streak, goal, XP and badges (not the time-of-day ones). Logging yesterday is
+free until 3am in the challenge's timezone, and adding to a day that already has a check-in is always
+free. A spent stone stays spent even if that check-in is deleted. The rules live in
+`src/lib/domain/time-stones.ts`; the server re-checks every stone (`session.create` in
+`src/server/push.ts`), and stone check-ins carry a label in the crew feed.
+
 ## Docs
 
 - [Architecture](docs/STILL_READING_ARCHITECTURE.md)
