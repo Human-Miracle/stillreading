@@ -1,0 +1,1 @@
+ALTER TABLE "challenge_participants" ADD COLUMN "stone_reminded_for" date;

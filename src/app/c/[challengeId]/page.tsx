@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 import { BadgeSummary } from "@/components/badges/badge-summary";
 import { useChallenge } from "@/components/challenge/context";
 import { DayRing } from "@/components/challenge/day-ring";
@@ -130,6 +131,18 @@ function HomeCards({ cards }: { cards: { key: string; label: string; render: (cl
 
 export default function ChallengeHome() {
   const { view, badges, openCheckIn } = useChallenge();
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  // The Time Stone notification opens /c/<id>?log=yesterday: start the check-in on yesterday.
+  const logYesterday = params.get("log") === "yesterday";
+  useEffect(() => {
+    if (!logYesterday) return;
+    router.replace(pathname, { scroll: false });
+    if (view.timeStones?.yesterdayCost) openCheckIn("yesterday");
+    // Once per visit with the link: view and openCheckIn change on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logYesterday]);
   const { me, challenge, stats } = view;
   const [shared, setShared] = useState(false);
   if (!me) return null;

@@ -3,7 +3,8 @@ import { eq } from "drizzle-orm";
 import type { ChallengeSnapshot } from "@/lib/api-types";
 import { newId } from "@/lib/ids";
 import type { Database } from "@/db/client";
-import { participants } from "@/db/schema";
+import { participants, readingSessions } from "@/db/schema";
+import { addDays } from "@/lib/domain/dates";
 import { GET as cronGET } from "@/app/api/cron/reminders/route";
 import { sendReadingReminders } from "@/server/reminders";
 import { api, createBody, freshDb, joinBody, newDevice, nowIso, resetDb, type TestDevice } from "../helpers/server";
@@ -122,9 +123,75 @@ describe("reading reminders", () => {
       expect((await cronGET(new Request("http://x/api/cron/reminders", { headers: { authorization: "Bearer wrong!" } }), {} as never)).status).toBe(401);
       const ok = await cronGET(new Request("http://x/api/cron/reminders", { headers: { authorization: "Bearer s3cret" } }), {} as never);
       expect(ok.status).toBe(200);
-      expect(await ok.json()).toEqual({ due: expect.any(Number), sent: expect.any(Number), removed: expect.any(Number) });
+      expect(await ok.json()).toEqual({ due: expect.any(Number), stones: expect.any(Number), sent: expect.any(Number), removed: expect.any(Number) });
     } finally {
       delete process.env.CRON_SECRET;
     }
+  });
+});
+
+describe("Time Stone reminders", () => {
+  let reader: TestDevice;
+  let older: ChallengeSnapshot;
+
+  // A challenge that started 10 days ago (UTC), so a missed yesterday and a week of reading fit in it.
+  beforeEach(async () => {
+    reader = newDevice();
+    older = (await api<ChallengeSnapshot>("POST", "/api/challenges", { device: reader, body: createBody({ timezone: "UTC", startDate: addDays(today(), -10) }) })).body;
+    await api("PUT", `/api/challenges/${older.challenge.id}/notifications`, { device: reader, body: { enabled: true, subscription: sub(7) } });
+  });
+
+  /** Check-ins `daysAgo` (0 = today), each made at noon on its own day. */
+  async function readOn(daysAgo: number[]) {
+    for (const n of daysAgo) {
+      const date = addDays(today(), -n);
+      const createdAt = new Date(`${date}T${n === 0 ? "07:00" : "12:00"}:00Z`);
+      await db.insert(readingSessions).values({ id: newId("rs"), challengeId: older.challenge.id, participantId: older.me.participantId, date, amount: 20, unit: "pages", createdAt, updatedAt: createdAt });
+    }
+  }
+  const mine = () => reminded().filter((r) => r.endpoint === sub(7).endpoint);
+
+  it("nudges a reader who missed yesterday and holds a stone, once, and opens the check-in on yesterday", async () => {
+    await readOn([9, 8, 7, 6, 5, 4, 3]); // a week of reading: one stone; missed 2 days ago and yesterday
+    const run = await sendReadingReminders(db, at("09:00"));
+    expect(run).toMatchObject({ stones: 1 });
+    expect(mine()).toEqual([
+      {
+        endpoint: sub(7).endpoint,
+        title: "Use your Time Stone ⏳",
+        body: `You missed yesterday in ${older.challenge.name}. Log it before midnight to keep your streak.`,
+        url: `/c/${older.challenge.id}?log=yesterday`,
+        tag: `reminder-${older.challenge.id}`,
+      },
+    ]);
+    // Later the same day: an ordinary reminder (still nothing logged today), not the stone again.
+    await sendReadingReminders(db, at("15:00"));
+    expect(mine().map((r) => r.title)).toEqual(["Use your Time Stone ⏳", "Time for today's reading 📖"]);
+  });
+
+  it("still nudges when they've already read today, since yesterday is the one to save", async () => {
+    await readOn([9, 8, 7, 6, 5, 4, 0]); // the 7th reading day (today) earns the stone
+    await sendReadingReminders(db, at("09:00"));
+    expect(mine().map((r) => r.title)).toEqual(["Use your Time Stone ⏳"]);
+  });
+
+  it("sends the ordinary reminder instead when there's no stone, or yesterday is logged", async () => {
+    await readOn([6, 5, 4, 3, 2]); // five reading days: no stone
+    await sendReadingReminders(db, at("09:00"));
+    expect(mine().map((r) => r.title)).toEqual(["Time for today's reading 📖"]);
+
+    sendNotification.mockClear();
+    await readOn([8, 1]); // now seven days, yesterday included: nothing to bring back
+    await sendReadingReminders(db, at("15:00"));
+    expect(mine().map((r) => r.title)).toEqual(["Time for today's reading 📖"]);
+  });
+
+  it("not once the stone has been spent on yesterday", async () => {
+    await readOn([9, 8, 7, 6, 5, 4, 3]);
+    const date = addDays(today(), -1);
+    const createdAt = new Date(`${today()}T07:30:00Z`);
+    await db.insert(readingSessions).values({ id: newId("rs"), challengeId: older.challenge.id, participantId: older.me.participantId, date, amount: 20, unit: "pages", timeStone: true, createdAt, updatedAt: createdAt });
+    await sendReadingReminders(db, at("09:00"));
+    expect(mine().map((r) => r.title)).toEqual(["Time for today's reading 📖"]);
   });
 });

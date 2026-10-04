@@ -437,6 +437,12 @@ test("Flow L: a Time Stone, earned by a week of reading, brings back a missed ye
   const stones = page.getByRole("region", { name: "Time Stones" });
   await expect(stones.getByText("1 of 2")).toBeVisible();
 
+  // The "Use your Time Stone" notification's link opens the check-in on yesterday.
+  await page.goto(`${challengeUrl}?log=yesterday`);
+  await expect(dialog.getByRole("radio", { name: /Yesterday/ })).toBeChecked();
+  await expect(page).toHaveURL(challengeUrl);
+  await dialog.getByRole("button", { name: "Close" }).click();
+
   await stones.getByRole("button", { name: "Use a Time Stone" }).click();
   await expect(dialog.getByRole("radio", { name: /Yesterday/ })).toBeChecked();
   await expect(dialog.getByText("This uses a Time Stone")).toBeVisible();

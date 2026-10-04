@@ -99,6 +99,13 @@
       "when": 1791155141558,
       "tag": "0013_time_stones",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791156233381,
+      "tag": "0014_time_stone_reminders",
+      "breakpoints": true
     }
   ]
 }
