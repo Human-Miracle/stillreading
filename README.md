@@ -49,7 +49,9 @@ without them the feature hides itself). No auth provider and no Blob token are n
 ### Reading reminders
 
 Readers with notifications on get a nudge if they haven't logged today: at most once every 5 hours per
-challenge, 8:00–21:59 in the challenge's timezone, and they can switch it off in Settings. The hourly
+challenge, 8:00–21:59 in the challenge's timezone, and they can switch it off in Settings. A reader
+who missed yesterday and holds a Time Stone gets "Use your Time Stone" instead (once per missed day,
+even if they've read today); tapping it opens the check-in on yesterday. The hourly
 trigger is a GitHub Actions workflow (`.github/workflows/reading-reminders.yml`) that calls
 `POST /api/cron/reminders`. Set it up once in the GitHub repo:
 

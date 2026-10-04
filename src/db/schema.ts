@@ -92,6 +92,8 @@ export const participants = pgTable(
     /** Push a nudge to log today's reading (only when notifications are on; see server/reminders). */
     notifyReminders: boolean("notify_reminders").notNull().default(true),
     lastRemindedAt: ts("last_reminded_at"),
+    /** The missed day this reader was last nudged to bring back with a Time Stone (once per day). */
+    stoneRemindedFor: date("stone_reminded_for", { mode: "string" }),
     joinedAt: ts("joined_at").notNull().defaultNow(),
     ...syncColumns,
   },

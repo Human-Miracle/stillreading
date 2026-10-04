@@ -61,7 +61,7 @@ export function ReplyNotificationsCard({ challengeId }: { challengeId: string })
         <label className="flex items-start justify-between gap-4 border-t border-line pt-3">
           <span>
             <span className="block font-medium">Reading reminders</span>
-            <span className="block text-sm text-muted">A nudge if you haven&apos;t logged today. Daytime only, at most once every 5 hours.</span>
+            <span className="block text-sm text-muted">A nudge if you haven&apos;t logged today, or if you missed yesterday and have a Time Stone to bring it back. Daytime only, at most once every 5 hours.</span>
           </span>
           <input
             type="checkbox"
