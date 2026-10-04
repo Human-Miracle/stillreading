@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { EntityKind, PushResult } from "@/lib/api-types";
 import { diffDays, isWithinChallenge, todayInTimezone } from "@/lib/domain/dates";
+import { backfillCost, timeStoneWallet } from "@/lib/domain/time-stones";
 import { reactionId, replyLikeId } from "@/lib/ids";
 import { syncOp, type SyncOp } from "@/lib/validation/ops";
 import type { Database, Tx } from "@/db/client";
@@ -19,6 +20,29 @@ type Outcome = Omit<PushResult, "opId">;
 const ok = (kind?: EntityKind, record?: unknown): Outcome => (kind ? { status: "ok", entity: { kind, record } } : { status: "ok" });
 const stale = (kind: EntityKind, record: unknown): Outcome => ({ status: "stale", entity: { kind, record } });
 const rejected = (code: string, message: string): Outcome => ({ status: "rejected", code, message });
+
+/** How far back a device's own clock is trusted for when a check-in was made (it may have been offline). */
+const OFFLINE_TRUST_MS = 7 * 86_400_000;
+
+/**
+ * Whether this check-in spends a Time Stone (a missed yesterday, past the grace hours), or why it
+ * can't be logged: only the day it was made or the day before can be. Timed by the device's clock,
+ * within reason, since it may have been logged offline and synced later.
+ */
+async function spendsTimeStone(tx: Tx, challenge: ChallengeRow, me: ParticipantRow, date: string, createdAt: Date, agreed: boolean): Promise<boolean | Outcome> {
+  const now = Date.now();
+  const loggedAt = new Date(Math.min(now, Math.max(now - OFFLINE_TRUST_MS, createdAt.getTime() || now)));
+  if (diffDays(date, todayInTimezone(challenge.timezone, loggedAt)) > 1) return rejected("date_out_of_range", "Only today or yesterday can be logged.");
+  const rows = await tx
+    .select({ date: readingSessions.date, createdAt: readingSessions.createdAt, deletedAt: readingSessions.deletedAt, timeStone: readingSessions.timeStone })
+    .from(readingSessions)
+    .where(and(eq(readingSessions.challengeId, challenge.id), eq(readingSessions.participantId, me.id)));
+  const mine = rows.map((r) => ({ date: r.date, createdAt: r.createdAt.toISOString(), deletedAt: r.deletedAt?.toISOString() ?? null, timeStone: r.timeStone }));
+  if (backfillCost(mine, date, challenge.timezone, loggedAt) === "free") return false;
+  if (!agreed) return rejected("time_stone_needed", "Logging a missed day takes a Time Stone.");
+  if (timeStoneWallet(mine).held < 1) return rejected("no_time_stone", "You don't have a Time Stone to log that day.");
+  return true;
+}
 
 /** Applies a batch of client operations in order. Each op is its own transaction and idempotent by op id. */
 export async function applyOps(db: Database, deviceId: string, rawOps: unknown[]): Promise<PushResult[]> {
@@ -143,12 +167,14 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
     if (!isWithinChallenge(challenge, payload.date) || diffDays(today, payload.date) > 1) {
       return rejected("date_out_of_range", "That date isn't part of this challenge.");
     }
+    const createdAt = new Date(payload.createdAt);
+    const timeStone = await spendsTimeStone(tx, challenge, me, payload.date, createdAt, payload.timeStone === true);
+    if (typeof timeStone === "object") return timeStone;
     let bookId = payload.bookId ?? null;
     if (bookId) {
       const [book] = await tx.select({ participantId: books.participantId }).from(books).where(eq(books.id, bookId));
       if (!book || book.participantId !== me.id) bookId = null;
     }
-    const createdAt = new Date(payload.createdAt);
     const [row] = await tx
       .insert(readingSessions)
       .values({
@@ -162,6 +188,7 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
         pages: payload.unit === "pages" ? null : (payload.pages ?? null),
         reflection: payload.reflection || null,
         privateReflection: payload.privateReflection ?? null,
+        timeStone,
         createdAt,
         updatedAt: createdAt,
       })

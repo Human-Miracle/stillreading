@@ -132,6 +132,8 @@ export interface LogReadingInput {
   reflectionShared?: boolean;
   /** Defaults to today in the challenge timezone. */
   date?: string;
+  /** Spend a Time Stone on a missed yesterday (see domain/time-stones). */
+  timeStone?: boolean;
 }
 
 export async function logReading(input: LogReadingInput): Promise<LocalSession> {
@@ -156,6 +158,7 @@ export async function logReading(input: LogReadingInput): Promise<LocalSession> 
     reflectionShared: shared,
     privateReflection: sealed,
     privateSynced: Boolean(sealed),
+    timeStone: input.timeStone === true,
     createdAt: t,
     updatedAt: t,
     deletedAt: null,
@@ -170,6 +173,7 @@ export async function logReading(input: LogReadingInput): Promise<LocalSession> 
     pages: session.pages,
     reflection: shared ? reflection : null,
     privateReflection: sealed,
+    ...(input.timeStone ? { timeStone: true } : {}),
     createdAt: t,
   };
 

@@ -85,6 +85,7 @@ export function sessionDTO(r: SessionRow, viewerParticipantId: string | null = n
     pages: r.pages,
     reflection: r.reflection,
     privateReflection: viewerParticipantId && r.participantId === viewerParticipantId ? r.privateReflection : null,
+    timeStone: r.timeStone,
     createdAt: iso(r.createdAt),
     updatedAt: iso(r.updatedAt),
     deletedAt: isoOrNull(r.deletedAt),

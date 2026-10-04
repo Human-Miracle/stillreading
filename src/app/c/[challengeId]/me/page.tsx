@@ -157,7 +157,7 @@ export default function MePage() {
           ) : (
             <EmptyState title="No check-ins yet">
               {p.clock.phase === "active" ? (
-                <Button className="mt-4" onClick={openCheckIn}>
+                <Button className="mt-4" onClick={() => openCheckIn()}>
                   Log your first reading
                 </Button>
               ) : null}

@@ -77,3 +77,50 @@ export async function expectToday(page: Page, amount: number, caption: string) {
   await expect(page.getByTestId("ring-figure")).toHaveText(String(amount));
   await expect(page.getByText(caption)).toBeVisible();
 }
+
+/** A timezone where it's currently daytime (8am–8pm), so day boundaries and night hours can't interfere. */
+export function daytimeZone(): string {
+  const h = new Date().getUTCHours();
+  return [
+    ["Pacific/Honolulu", -10],
+    ["Africa/Abidjan", 0],
+    ["Asia/Tokyo", 9],
+  ].find(([, offset]) => {
+    const local = (h + (offset as number) + 24) % 24;
+    return local >= 8 && local <= 20;
+  })![0] as string;
+}
+
+/**
+ * Check-ins for past days (`daysAgo`, e.g. [3, 2]), each made on its own day as a phone that was
+ * offline would sync them: straight to the server with this device's credentials.
+ */
+export async function seedPastCheckIns(page: Page, challengeId: string, timezone: string, daysAgo: number[]) {
+  const results = await page.evaluate(
+    async ({ challengeId, timezone, daysAgo }) => {
+      const device = await new Promise<{ deviceId: string; deviceSecret: string }>((resolve, reject) => {
+        const open = indexedDB.open("read30");
+        open.onerror = reject;
+        open.onsuccess = () => {
+          const get = open.result.transaction("kv").objectStore("kv").get("device");
+          get.onerror = reject;
+          get.onsuccess = () => resolve(get.result.value);
+        };
+      });
+      const ulid = () => Array.from({ length: 26 }, () => "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[Math.floor(Math.random() * 32)]).join("");
+      const ops = daysAgo.map((n) => {
+        const at = new Date(Date.now() - n * 86_400_000);
+        const date = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(at);
+        return { opId: `op_${ulid()}`, challengeId, type: "session.create", payload: { id: `rs_${ulid()}`, date, amount: 25, unit: "pages", createdAt: at.toISOString() } };
+      });
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-stillreading-device": device.deviceId, "x-stillreading-secret": device.deviceSecret },
+        body: JSON.stringify({ ops }),
+      });
+      return ((await res.json()) as { results: { status: string }[] }).results.map((r) => r.status);
+    },
+    { challengeId, timezone, daysAgo },
+  );
+  expect(results.every((s) => s === "ok")).toBe(true);
+}

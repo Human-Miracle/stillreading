@@ -51,6 +51,11 @@ export function ReadingFeedItem({ view, session, inThread = false }: { view: Cha
           <ThreadLink href={inThread ? null : href}>
             <p className="display mt-1.5 text-[34px] tabular">{formatAmount(session.amount, session.unit)}</p>
             {session.unit !== "pages" && session.pages ? <p className="text-sm tabular text-muted">{formatAmount(session.pages, "pages")}</p> : null}
+            {session.timeStone ? (
+              <p className="mt-1.5">
+                <span className="inline-flex items-center gap-1 rounded-pill bg-sky px-2.5 py-0.5 text-xs font-medium text-ink/75">⏳ Logged with a Time Stone</span>
+              </p>
+            ) : null}
             {isMine && session.syncStatus !== "synced" ? (
               <p className="mt-1 text-xs font-medium text-warn">{session.syncStatus === "failed" ? "Not synced" : "Saved on device"}</p>
             ) : null}

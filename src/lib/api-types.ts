@@ -82,6 +82,8 @@ export interface SessionDTO {
   reflection: string | null;
   /** End-to-end encrypted private reflection; only present for the viewer's own sessions. */
   privateReflection: string | null;
+  /** Logged for a missed day with a Time Stone. Optional: older servers don't send it. */
+  timeStone?: boolean;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
