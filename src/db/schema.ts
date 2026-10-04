@@ -337,3 +337,39 @@ export type ReplyRow = typeof replies.$inferSelect;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type ReplyLikeRow = typeof replyLikes.$inferSelect;
 export type ReaderRow = typeof readers.$inferSelect;
+
+/**
+ * A badge a reader chose to save or share. The snapshot keeps the card's details as they were when
+ * it was earned. Only `public` shares get a page anyone can open (and link previews); the id is
+ * unguessable, so the card image itself can be fetched with just the id.
+ */
+export const badgeShares = pgTable(
+  "badge_shares",
+  {
+    id: text("id").primaryKey(),
+    challengeId: text("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
+    participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
+    badgeId: text("badge_id").notNull(),
+    level: integer("level").notNull(),
+    public: boolean("public").notNull().default(false),
+    snapshot: jsonb("snapshot").$type<BadgeSnapshot>().notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("badge_shares_participant_badge_uq").on(t.participantId, t.badgeId, t.level)],
+);
+
+export interface BadgeSnapshot {
+  name: string;
+  displayName: string;
+  challengeName: string;
+  stat: string | null;
+  earnedOn: string | null;
+  dayNumber: number | null;
+  durationDays: number;
+  count: number;
+  holders: number;
+  readers: number;
+}
+
+export type BadgeShareRow = typeof badgeShares.$inferSelect;

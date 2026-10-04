@@ -85,6 +85,13 @@
       "when": 1791058311475,
       "tag": "0011_push_delivery_status",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791147227640,
+      "tag": "0012_badge_shares",
+      "breakpoints": true
     }
   ]
 }

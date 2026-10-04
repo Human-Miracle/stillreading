@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { BookDetails } from "@/components/books/book-card";
+import { BadgeGrid } from "@/components/badges/badge-grid";
 import { BookForm, bookDraftReady, bookDraftToInput, emptyBook } from "@/components/books/book-form";
 import { BookShelf } from "@/components/books/book-shelf";
 import { useChallenge } from "@/components/challenge/context";
@@ -20,10 +21,10 @@ import { relativeDayLabel } from "@/lib/format";
 import type { LocalBook } from "@/local/db";
 import { addBook, deleteSession } from "@/local/repo";
 
-type Tab = "overview" | "checkins" | "books";
+type Tab = "overview" | "checkins" | "books" | "badges";
 
 export default function MePage() {
-  const { view, openCheckIn } = useChallenge();
+  const { view, badges, openCheckIn } = useChallenge();
   const me = view.me;
   const [tab, setTab] = useState<Tab>("overview");
   const [adding, setAdding] = useState(false);
@@ -66,6 +67,7 @@ export default function MePage() {
                 { value: "overview", label: "Overview", count: p.readingDays },
                 { value: "checkins", label: "Check-ins", count: mySessions.length },
                 { value: "books", label: "Books", count: books.length },
+                { value: "badges", label: "Badges", count: badges.mine.filter((b) => b.level > 0).length },
               ]}
             />
           </div>
@@ -150,6 +152,8 @@ export default function MePage() {
             </EmptyState>
           )
         ) : null}
+
+        {tab === "badges" ? <BadgeGrid view={view} badges={badges} participantId={view.challenge.myParticipantId} /> : null}
 
         {tab === "books" ? (
           books.length ? (

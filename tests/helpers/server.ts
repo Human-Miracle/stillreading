@@ -15,6 +15,7 @@ import { POST as handoffClaimPOST } from "@/app/api/handoff/claim/route";
 import { GET as bookSearchGET } from "@/app/api/books/search/route";
 import { GET as notificationsGET, PUT as notificationsPUT } from "@/app/api/challenges/[id]/notifications/route";
 import { GET as pushConfigGET } from "@/app/api/push/config/route";
+import { POST as badgeSharePOST } from "@/app/api/challenges/[id]/badges/share/route";
 import { DEVICE_HEADER, SECRET_HEADER } from "@/lib/api-types";
 import { newDeviceSecret, newId } from "@/lib/ids";
 
@@ -28,7 +29,7 @@ export async function freshDb(): Promise<Database> {
 
 export async function resetDb(db: Database) {
   await db.execute(
-    sql`truncate table handoffs, reinvites, readers, push_subscriptions, reply_likes, replies, reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
+    sql`truncate table badge_shares, handoffs, reinvites, readers, push_subscriptions, reply_likes, replies, reactions, reading_sessions, books, goals, challenge_participants, challenges, devices, processed_operations, rate_limits, product_events cascade`,
   );
 }
 
@@ -61,6 +62,7 @@ const routes: { method: string; pattern: RegExp; keys: string[]; handler: Handle
   { method: "GET", pattern: /^\/api\/challenges\/([^/]+)\/notifications$/, keys: ["id"], handler: notificationsGET as Handler },
   { method: "PUT", pattern: /^\/api\/challenges\/([^/]+)\/notifications$/, keys: ["id"], handler: notificationsPUT as Handler },
   { method: "GET", pattern: /^\/api\/push\/config$/, keys: [], handler: pushConfigGET as Handler },
+  { method: "POST", pattern: /^\/api\/challenges\/([^/]+)\/badges\/share$/, keys: ["id"], handler: badgeSharePOST as Handler },
 ];
 
 /** A `fetch` that dispatches straight into the Next.js route handlers. */

@@ -58,6 +58,16 @@ trigger is a GitHub Actions workflow (`.github/workflows/reading-reminders.yml`)
 2. Optional but recommended: a random `CRON_SECRET`, added both as an Actions **secret** and as a
    Vercel environment variable. The endpoint then only accepts calls carrying it.
 
+### Badges
+
+20 badges per challenge (streaks, Efiko for reading every day, time of day, pages, books, the
+leaderboard, cheering others on), worked out from the challenge's data by `src/lib/domain/badges.ts`,
+the same rules on every phone and on the server. New badges pop up once per device with **Share** and
+**Save image**; all of them live on the Me page (Badges tab) and on each member's profile. Cards are
+drawn by `/b/[id]/image` (story, square and link-preview sizes, Geist bundled in `src/assets/fonts`,
+SIL OFL). The server checks a badge before sharing it; sharing a link makes `/b/[id]` public, saving
+the image doesn't.
+
 ## Docs
 
 - [Architecture](docs/STILL_READING_ARCHITECTURE.md)

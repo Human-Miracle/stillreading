@@ -6,6 +6,7 @@ export async function newContext(browser: Browser) {
   await ctx.addInitScript(() => {
     try {
       sessionStorage.setItem("sr-install-dismissed", "1");
+      if (!localStorage.getItem("sr-badge-popups")) localStorage.setItem("sr-badge-popups", "off");
     } catch {
       // ignore
     }
