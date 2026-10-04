@@ -25,6 +25,13 @@ function lockedText(r: BadgeResult): string {
   return "Not earned yet";
 }
 
+/** The bottom line on a locked badge: progress, or that it's out of reach. */
+export function lockedFooter(r: BadgeResult): { label: string; value: string } {
+  if (r.closed) return { label: "LOCKED", value: "Out of reach" };
+  if (r.progress) return { label: "PROGRESS", value: `${r.progress.current.toLocaleString("en-US")} of ${r.progress.target.toLocaleString("en-US")}` };
+  return { label: "LOCKED", value: "Not yet" };
+}
+
 /** A badge's art, what it's for and how far along you are. */
 export function BadgeDetail({
   result,
@@ -49,7 +56,7 @@ export function BadgeDetail({
   return (
     <div className="flex flex-col items-center text-center">
       <div className={earned ? "animate-pop" : undefined}>
-        <BadgeArt id={result.id} level={level} count={result.count} locked={!earned} size={168} />
+        <BadgeArt id={result.id} level={level} count={result.count} locked={!earned} size={190} earnedOn={result.earnedOn} footer={earned ? undefined : lockedFooter(result)} />
       </div>
       <p className="mt-5 text-sm text-muted">{earned ? (owner === "you" ? "You earned" : `${owner} earned`) : "Locked"}</p>
       <h3 className="display mt-1 text-[40px] leading-none">{badgeName(result.id, level)}</h3>

@@ -57,13 +57,13 @@ export default async function BadgePage({ params }: Props) {
           <Wordmark className="text-[19px]" />
         </Link>
       </nav>
-      <section className="mt-6 flex flex-col items-center rounded-sheet bg-ink px-6 pb-8 pt-10 text-center text-paper">
-        <BadgeArt id={share.badgeId} level={share.level} count={s.count} size={200} />
-        <p className="mt-6 text-sm text-white/55">{s.displayName} earned</p>
-        <h1 className="display mt-1 text-[52px] leading-none text-white">{s.name}</h1>
-        {s.stat ? <p className="mt-3 text-[17px] text-white/80">{s.stat}</p> : null}
-        {rarity ? <p className="mt-5 rounded-pill bg-butter px-4 py-2 text-sm font-medium text-ink">{rarity}</p> : null}
-        <p className="mt-5 text-sm text-white/55">
+      <section className="mt-6 flex flex-col items-center rounded-sheet bg-[#efede9] px-6 pb-8 pt-10 text-center">
+        <BadgeArt id={share.badgeId} level={share.level} count={s.count} size={230} earnedOn={s.earnedOn} />
+        <p className="mt-6 text-sm text-ink/55">{s.displayName} earned</p>
+        <h1 className="display mt-1 text-[48px] leading-none">{s.name}</h1>
+        {s.stat ? <p className="mt-3 text-[17px] text-ink/75">{s.stat}</p> : null}
+        {rarity ? <p className="mt-5 rounded-pill bg-ink px-4 py-2 text-sm font-medium text-paper">{rarity}</p> : null}
+        <p className="mt-5 text-sm text-ink/55">
           {s.challengeName}
           {s.dayNumber ? ` · Day ${s.dayNumber} of ${s.durationDays}` : ""}
         </p>

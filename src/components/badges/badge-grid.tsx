@@ -5,7 +5,7 @@ import type { ChallengeBadges } from "@/local/badges";
 import type { ChallengeView } from "@/local/hooks";
 import { Sheet } from "../ui/sheet";
 import { BadgeArt } from "./badge-art";
-import { BadgeDetail, BadgeShareActions } from "./badge-detail";
+import { BadgeDetail, BadgeShareActions, lockedFooter } from "./badge-detail";
 
 function caption(r: BadgeResult): string {
   if (r.level > 0) return r.count > 1 ? `${r.count}×` : "Earned";
@@ -35,7 +35,7 @@ export function BadgeGrid({ view, badges, participantId }: { view: ChallengeView
         {shown.map((r) => (
           <li key={r.id}>
             <button type="button" onClick={() => setOpen(r)} className="flex w-full flex-col items-center gap-1.5" aria-label={`${badgeName(r.id, Math.max(1, r.level))}: ${caption(r)}`}>
-              <BadgeArt id={r.id} level={Math.max(1, r.level)} count={r.count} locked={r.level === 0} size={88} />
+              <BadgeArt id={r.id} level={Math.max(1, r.level)} count={r.count} locked={r.level === 0} size={104} earnedOn={r.earnedOn} footer={r.level === 0 ? lockedFooter(r) : undefined} />
               <span className="line-clamp-1 text-[13px] font-medium tracking-[-0.01em]">{badgeName(r.id, Math.max(1, r.level))}</span>
               <span className="-mt-1 text-xs text-muted">{caption(r)}</span>
             </button>
