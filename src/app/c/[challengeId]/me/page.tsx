@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { BookDetails } from "@/components/books/book-card";
 import { BadgeGrid } from "@/components/badges/badge-grid";
 import { BookForm, bookDraftReady, bookDraftToInput, emptyBook } from "@/components/books/book-form";
@@ -26,12 +27,22 @@ type Tab = "overview" | "checkins" | "books" | "badges";
 export default function MePage() {
   const { view, badges, openCheckIn } = useChallenge();
   const me = view.me;
-  // The home page's badges card links here with ?tab=badges.
-  const [tab, setTab] = useState<Tab>(() => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "badges" ? "badges" : "overview"));
+  // The home page's badges card links here with ?tab=badges. (Not window.location: on an in-app
+  // navigation the address bar only changes after this page has rendered.)
+  const params = useSearchParams();
+  const [tab, setTab] = useState<Tab>(params.get("tab") === "badges" ? "badges" : "overview");
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const jumped = useRef(false);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyBook);
   const [openBook, setOpenBook] = useState<LocalBook | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Arriving from the badges card: bring the badges up, they're below the fold.
+  useEffect(() => {
+    if (jumped.current || !tabsRef.current || params.get("tab") !== "badges") return;
+    jumped.current = true;
+    tabsRef.current.scrollIntoView({ block: "start" });
+  });
   if (!me) return null;
   const p = me.progress;
   const editable = view.challenge.status !== "archived";
@@ -59,7 +70,7 @@ export default function MePage() {
           <div className="mt-3">
             <BookShelf books={books} onOpen={setOpenBook} onAdd={editable ? () => setAdding(true) : undefined} />
           </div>
-          <div className="mt-6">
+          <div ref={tabsRef} className="mt-6 scroll-mt-20">
             <CountTabs
               label="Your progress"
               value={tab}

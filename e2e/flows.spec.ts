@@ -368,7 +368,7 @@ test("Flow K: earning badges pops a celebration with share and save, and they st
   await ctx.addInitScript(() => localStorage.setItem("sr-badge-popups", "on"));
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
   const page = await ctx.newPage();
-  const { challengeUrl } = await createChallenge(page, { name: "Flow K Challenge", host: "Jessica" });
+  await createChallenge(page, { name: "Flow K Challenge", host: "Jessica" });
   await logReading(page, 30);
 
   const dialog = page.getByRole("dialog", { name: /^New badge/ });
@@ -398,9 +398,10 @@ test("Flow K: earning badges pops a celebration with share and save, and they st
   await page.waitForTimeout(1500);
   await expect(page.getByRole("dialog", { name: /^New badge/ })).toHaveCount(0);
 
-  // On the profile: earned in colour, the rest locked with progress.
-  await page.goto(`${challengeUrl}/me`);
-  await page.getByRole("tab", { name: /Badges/ }).click();
+  // The home page's badges card opens the profile on the Badges tab: earned in colour, the rest
+  // locked with progress.
+  await page.getByRole("link", { name: /^Badges/ }).click();
+  await expect(page.getByRole("tab", { name: /Badges/ })).toHaveAttribute("aria-selected", "true");
   const grid = page.getByRole("list", { name: "Your badges" });
   await expect(grid.getByRole("button", { name: "First Page: Earned" })).toBeVisible();
   await expect(grid.getByRole("button", { name: "Week Warrior: 1/7" })).toBeVisible();
