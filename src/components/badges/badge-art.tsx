@@ -438,6 +438,24 @@ export function badgeDate(dateKey: string): string {
   return `${d} ${MONTHS[(m ?? 1) - 1]} · ${y}`;
 }
 
+/**
+ * Fits the earner's name, after an optional `prefix`, in `width` (viewBox units): shrinks it from
+ * `size` down to `min`, then tries the first name alone, then cuts it short. Widths are estimates
+ * (`perChar` em per letter) because generated images can't measure text.
+ */
+export function fitOwner(name: string, width: number, size: number, min: number, perChar = 0.6, prefix = ""): { text: string; size: number } {
+  const full = name.trim().replace(/\s+/g, " ");
+  const first = full.split(" ")[0] ?? full;
+  const len = (t: string) => [...prefix, ...t].length * perChar;
+  for (const t of [full, first]) {
+    const s = Math.min(size, width / len(t));
+    if (s >= min) return { text: prefix + t, size: s };
+  }
+  const room = Math.max(1, Math.floor(width / (min * perChar)) - [...prefix].length - 1);
+  const letters = [...first];
+  return { text: prefix + (letters.length > room ? `${letters.slice(0, room).join("")}…` : first), size: min };
+}
+
 // ---------------------------------------------------------------------------
 
 export interface BadgeArtProps {
@@ -454,9 +472,11 @@ export interface BadgeArtProps {
   earnedOn?: string | null;
   /** Overrides the bottom label and value, e.g. progress on a locked badge. */
   footer?: { label: string; value: string };
+  /** The reader who earned it; printed on the badge. */
+  owner?: string | null;
 }
 
-export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontFamily = "inherit", earnedOn = null, footer }: BadgeArtProps) {
+export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontFamily = "inherit", earnedOn = null, footer, owner = null }: BadgeArtProps) {
   const def = BADGES.find((b) => b.id === id)!;
   const base = id === "efiko" ? THEMES.efiko : THEMES[def.category];
   const theme: Theme = locked ? { ...LOCKED, frame: base.frame } : base;
@@ -472,6 +492,7 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
   const bottomLabel = footer?.label ?? (locked ? "LOCKED" : earnedOn ? "EARNED" : "STILL READING");
   const bottomValue = footer?.value ?? (earnedOn ? badgeDate(earnedOn) : locked ? "Not yet" : name);
   const year = (earnedOn ?? "").slice(0, 4) || String(new Date().getFullYear());
+  const holder = !locked && !footer && owner?.trim() ? owner : null;
 
   const defs = (
     <defs>
@@ -589,6 +610,9 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
 
   // --- Certification seal (stadium), after the Wix badge ---
   if (theme.frame === "stadium") {
+    // The earner's name on a white nameplate over the court lines.
+    const fit = holder ? fitOwner(holder.toUpperCase(), 100, 8.4, 6, 0.7) : null;
+    const plate = fit ? { ...fit, w: Math.min(116, Math.max(56, [...fit.text].length * fit.size * 0.7 + 20)) } : null;
     return (
       <div style={{ position: "relative", display: "flex", width: size, height: size * (H / W) }}>
         {svg(
@@ -601,6 +625,7 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
             </g>
             <rect x={89} y={74} width={22} height={22} fill={locked ? "#ffffff" : "#ffffff"} filter={`url(#lift-${uid})`} />
             <circle cx={100} cy={85} r={6.5} fill={locked ? theme.deep : `url(#base-${uid})`} />
+            {plate ? <rect x={100 - plate.w / 2} y={199} width={plate.w} height={18} rx={9} fill="#ffffff" filter={`url(#lift-${uid})`} /> : null}
           </g>,
         )}
         {arcText("STILL READING CERTIFIED", 100, 104, 66, 8.2, 2.1, "top", o, 600)}
@@ -631,6 +656,7 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
           {name.toUpperCase()}
         </div>
         {arcText(tagline, 100, 152, 82, 7.4, 1.9, "bottom", o, 600)}
+        {plate ? centred(plate.text, 208 - plate.size * 0.5, plate.size, { k, fontFamily, color: theme.deep }, { fontWeight: 800, letterSpacing: 0.6 * k }) : null}
         {countChip}
       </div>
     );
@@ -639,6 +665,7 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
   // --- Rounded card with a framed label, after the Apple badge ---
   if (theme.frame === "card") {
     const label = CARD_LABELS[id] ?? "BADGE";
+    const fit = holder ? fitOwner(holder.toUpperCase(), 136, 6.2, 4.6, 0.72, "AWARDED TO ") : null;
     return (
       <div style={{ position: "relative", display: "flex", width: size, height: size * (H / W) }}>
         {svg(
@@ -649,7 +676,8 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
             <rect x={48} y={190} width={104} height={30} rx={3} fill="#ffffff" fillOpacity={locked ? 0.3 : 0.35} stroke="#ffffff" strokeOpacity={0.95} strokeWidth={1.6} />
           </g>,
         )}
-        {centred(name, 160, 12.5, o, { fontWeight: 600, letterSpacing: -0.2 * k })}
+        {centred(name, 158, 12.5, o, { fontWeight: 600, letterSpacing: -0.2 * k })}
+        {fit ? centred(fit.text, 175, fit.size, o, { fontWeight: 600, letterSpacing: 0.8 * k, opacity: 0.75 }) : null}
         {centred(label, 198, 13.5, o, { fontWeight: 600, letterSpacing: 3 * k })}
         {countChip}
       </div>
@@ -663,6 +691,7 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
       <circle cx={100} cy={24} r={17} fill="none" stroke={id === "efiko" && !locked ? "#f6dd8b" : theme.deep} strokeOpacity={locked ? 0.3 : 0.35} strokeWidth={0.8} />
     </g>
   );
+  const ownerFit = holder ? fitOwner(holder, 138, 13, 8.5) : null;
   const sealColor = locked ? theme.text : id === "efiko" ? "#f6dd8b" : theme.deep;
   const so: TextOpts = { k, fontFamily, color: sealColor };
   return (
@@ -683,8 +712,18 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
       {numeral
         ? centred(numeral, (id === "day_one" ? 154 : id === "the_end" ? 150 : 160) - (numeral.length > 1 ? 10 : 12), numeral.length > 1 ? 20 : 24, { k, fontFamily, color: theme.deep }, { fontWeight: 800, letterSpacing: -1 * k })
         : null}
-      {centred(`· ${bottomLabel} ·`, 206, 5, o, { fontWeight: 700, letterSpacing: 1.4 * k, opacity: 0.85 })}
-      {centred(bottomValue, 215, 13, o, { fontWeight: 800, letterSpacing: -0.2 * k })}
+      {ownerFit ? (
+        <>
+          {centred("· AWARDED TO ·", 198, 5, o, { fontWeight: 700, letterSpacing: 1.4 * k, opacity: 0.85 })}
+          {centred(ownerFit.text, 213.5 - ownerFit.size / 2, ownerFit.size, o, { fontWeight: 800, letterSpacing: -0.2 * k })}
+          {earnedOn ? centred(badgeDate(earnedOn).toUpperCase(), 225, 5, o, { fontWeight: 700, letterSpacing: 1.2 * k, opacity: 0.85 }) : null}
+        </>
+      ) : (
+        <>
+          {centred(`· ${bottomLabel} ·`, 206, 5, o, { fontWeight: 700, letterSpacing: 1.4 * k, opacity: 0.85 })}
+          {centred(bottomValue, 215, 13, o, { fontWeight: 800, letterSpacing: -0.2 * k })}
+        </>
+      )}
     </div>
   );
 }

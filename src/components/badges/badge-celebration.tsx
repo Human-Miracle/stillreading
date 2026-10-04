@@ -57,7 +57,7 @@ export function BadgeCelebration({ view, badges, paused }: { view: ChallengeView
   return (
     <Sheet open onClose={close} title={queue.length > 1 ? `New badge · ${index + 1} of ${queue.length}` : "New badge"}>
       <div className="space-y-6 pb-2">
-        <BadgeDetail result={current} rarity={badges.rarity(current.id, current.level)} durationDays={view.challenge.durationDays} startDate={view.challenge.startDate} owner="you" />
+        <BadgeDetail result={current} rarity={badges.rarity(current.id, current.level)} durationDays={view.challenge.durationDays} startDate={view.challenge.startDate} owner="you" ownerName={view.me?.participant.displayName} />
         <BadgeShareActions key={badgeKey(current)} challengeId={challengeId} result={current} />
         <Button full variant="ghost" onClick={() => (last ? close() : setIndex(index + 1))}>
           {last ? "Done" : "Next badge"}
