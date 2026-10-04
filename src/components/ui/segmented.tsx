@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef } from "react";
 import { cn } from "./cn";
 
 /** Pill segmented control (reference: "Trainings · Statistic · Challenges"). */
@@ -51,8 +52,18 @@ export function CountTabs<T extends string>({
   tabs: { value: T; label: string; count: number }[];
   onChange: (value: T) => void;
 }) {
+  const list = useRef<HTMLDivElement>(null);
+  // Keep the selected tab in view when it's off the edge (e.g. opened straight on the last tab).
+  useEffect(() => {
+    const el = list.current;
+    const tab = el?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!el || !tab) return;
+    const pad = 20;
+    if (tab.offsetLeft + tab.offsetWidth > el.scrollLeft + el.clientWidth - pad) el.scrollTo({ left: tab.offsetLeft + tab.offsetWidth - el.clientWidth + pad });
+    else if (tab.offsetLeft < el.scrollLeft + pad) el.scrollTo({ left: Math.max(0, tab.offsetLeft - pad) });
+  }, [value]);
   return (
-    <div role="tablist" aria-label={label} className="no-scrollbar -mx-5 flex gap-6 overflow-x-auto px-5">
+    <div ref={list} role="tablist" aria-label={label} className="no-scrollbar relative -mx-5 flex gap-6 overflow-x-auto px-5">
       {tabs.map((t) => {
         const active = t.value === value;
         return (

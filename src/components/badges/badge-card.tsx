@@ -25,7 +25,7 @@ export function rarityLine(s: Pick<BadgeSnapshot, "holders" | "readers">): strin
   return `${s.holders} of ${s.readers} readers have this`;
 }
 
-export function BadgeCard({ snapshot, badgeId, level, format, site }: { snapshot: BadgeSnapshot; badgeId: BadgeId; level: number; format: CardFormat; site: string }) {
+export function BadgeCard({ snapshot, badgeId, level, format }: { snapshot: BadgeSnapshot; badgeId: BadgeId; level: number; format: CardFormat }) {
   const { width, height } = CARD_SIZES[format];
   const rarity = rarityLine(snapshot);
   const byline = `${snapshot.displayName} · ${snapshot.challengeName}`;
@@ -64,7 +64,10 @@ export function BadgeCard({ snapshot, badgeId, level, format, site }: { snapshot
         {rarity ? <div style={{ display: "flex", marginTop: story ? 40 : 22 }}>{pill(story ? 34 : 24, story ? "16px 34px" : "10px 24px")}</div> : null}
         <div style={{ display: "flex", fontSize: story ? 34 : 24, opacity: 0.5, marginTop: story ? 36 : 18, textAlign: "center" }}>{byline}</div>
       </div>
-      <div style={{ display: "flex", justifyContent: "center", fontSize: story ? 28 : 20, fontWeight: 600, opacity: 0.4, paddingBottom: story ? 72 : 36 }}>{site}</div>
+      <div style={{ display: "flex", justifyContent: "center", gap: story ? 9 : 6, fontSize: story ? 28 : 20, opacity: 0.5, paddingBottom: story ? 72 : 36 }}>
+        <div style={{ display: "flex", fontWeight: 400 }}>Powered by</div>
+        <div style={{ display: "flex", fontWeight: 800, letterSpacing: -0.5 }}>Pursion</div>
+      </div>
     </div>
   );
 }

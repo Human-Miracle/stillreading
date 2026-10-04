@@ -388,16 +388,31 @@ function centred(t: string, top: number, size: number, o: TextOpts, extra: CSSPr
   );
 }
 
+/** Rough advance widths (in ems) of Geist's capitals and digits, for laying letters along arcs. */
+function glyphWidth(ch: string): number {
+  if (ch === " ") return 0.42;
+  if ("I1.,:;'!|".includes(ch)) return 0.3;
+  if ("MW".includes(ch)) return 0.86;
+  if ("JLTFE".includes(ch)) return 0.6;
+  if ("ODGQCN".includes(ch)) return 0.74;
+  if ("AVXYK".includes(ch)) return 0.7;
+  return 0.66;
+}
+
 /**
  * Letters along an arc around (cx, cy). Top arcs read left to right over the top; bottom arcs read
  * left to right along the bottom.
  */
 function arcText(t: string, cx: number, cy: number, r: number, size: number, spacing: number, side: "top" | "bottom", o: TextOpts, weight = 700) {
   const chars = [...t];
-  const step = (size * 0.66 + spacing) / r; // radians per letter
-  const span = step * (chars.length - 1);
+  // Each letter gets an arc as wide as the letter itself (plus spacing), so narrow ones like "I"
+  // don't leave gaps and wide ones don't crowd.
+  const widths = chars.map((ch) => (glyphWidth(ch) * size + spacing) / r);
+  const span = widths.reduce((sum, w) => sum + w, 0) - spacing / r;
+  let at = -span / 2;
   return chars.map((ch, i) => {
-    const a = -span / 2 + i * step; // left to right in both cases
+    const a = at + (widths[i]! - spacing / r) / 2; // the letter's centre, left to right in both cases
+    at += widths[i]!;
     const x = cx + r * Math.sin(a);
     const y = side === "top" ? cy - r * Math.cos(a) : cy + r * Math.cos(a);
     const deg = ((side === "top" ? a : -a) * 180) / Math.PI;
@@ -407,8 +422,8 @@ function arcText(t: string, cx: number, cy: number, r: number, size: number, spa
         key={i}
         style={{
           position: "absolute",
-          left: (x - box / 2) * o.k,
-          top: (y - box / 2) * o.k,
+          left: 0,
+          top: 0,
           width: box * o.k,
           height: box * o.k,
           display: "flex",
@@ -420,7 +435,9 @@ function arcText(t: string, cx: number, cy: number, r: number, size: number, spa
           fontWeight: weight,
           lineHeight: 1,
           ...(o.color === "#ffffff" ? { textShadow: `0 ${0.5 * o.k}px ${1.2 * o.k}px rgba(17,17,17,0.2)` } : {}),
-          transform: `rotate(${deg.toFixed(2)}deg)`,
+          // The position goes in the transform so no two letters share a transform string: the image
+          // renderer caches parsed transforms by their text and reuses them, misplacing the letter.
+          transform: `translate(${((x - box / 2) * o.k).toFixed(2)}px, ${((y - box / 2) * o.k).toFixed(2)}px) rotate(${deg.toFixed(2)}deg)`,
           transformOrigin: "50% 50%",
         }}
       >
@@ -620,12 +637,12 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
             <path d={border!} fill="none" stroke={theme.text} strokeOpacity={locked ? 0.5 : 0.85} strokeWidth={1.1} />
             {/* the "court" lines under the title */}
             <g stroke={theme.text} strokeOpacity={locked ? 0.5 : 0.8} strokeWidth={1.1} fill="none">
-              <path d="M40,150 V178 M160,150 V178 M32,178 H168 M100,178 V238 M82,178 V204 H118 V178" />
+              <path d="M40,150 V178 M160,150 V178 M32,178 H168 M100,178 V204 M82,178 V204 H118 V178" />
               <path d="M58,178 A42,42 0 0 0 142,178" />
             </g>
             <rect x={89} y={74} width={22} height={22} fill={locked ? "#ffffff" : "#ffffff"} filter={`url(#lift-${uid})`} />
             <circle cx={100} cy={85} r={6.5} fill={locked ? theme.deep : `url(#base-${uid})`} />
-            {plate ? <rect x={100 - plate.w / 2} y={199} width={plate.w} height={18} rx={9} fill="#ffffff" filter={`url(#lift-${uid})`} /> : null}
+            {plate ? <rect x={100 - plate.w / 2} y={184} width={plate.w} height={18} rx={9} fill="#ffffff" filter={`url(#lift-${uid})`} /> : null}
           </g>,
         )}
         {arcText("STILL READING CERTIFIED", 100, 104, 66, 8.2, 2.1, "top", o, 600)}
@@ -655,8 +672,8 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
         >
           {name.toUpperCase()}
         </div>
-        {arcText(tagline, 100, 152, 82, 7.4, 1.9, "bottom", o, 600)}
-        {plate ? centred(plate.text, 208 - plate.size * 0.5, plate.size, { k, fontFamily, color: theme.deep }, { fontWeight: 800, letterSpacing: 0.6 * k }) : null}
+        {arcText(tagline, 100, 147, 80, 7.4, 1.9, "bottom", o, 600)}
+        {plate ? centred(plate.text, 193 - plate.size * 0.5, plate.size, { k, fontFamily, color: theme.deep }, { fontWeight: 800, letterSpacing: 0.6 * k }) : null}
         {countChip}
       </div>
     );
@@ -712,18 +729,12 @@ export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontF
       {numeral
         ? centred(numeral, (id === "day_one" ? 154 : id === "the_end" ? 150 : 160) - (numeral.length > 1 ? 10 : 12), numeral.length > 1 ? 20 : 24, { k, fontFamily, color: theme.deep }, { fontWeight: 800, letterSpacing: -1 * k })
         : null}
-      {ownerFit ? (
-        <>
-          {centred("· AWARDED TO ·", 198, 5, o, { fontWeight: 700, letterSpacing: 1.4 * k, opacity: 0.85 })}
-          {centred(ownerFit.text, 213.5 - ownerFit.size / 2, ownerFit.size, o, { fontWeight: 800, letterSpacing: -0.2 * k })}
-          {earnedOn ? centred(badgeDate(earnedOn).toUpperCase(), 225, 5, o, { fontWeight: 700, letterSpacing: 1.2 * k, opacity: 0.85 }) : null}
-        </>
-      ) : (
-        <>
-          {centred(`· ${bottomLabel} ·`, 206, 5, o, { fontWeight: 700, letterSpacing: 1.4 * k, opacity: 0.85 })}
-          {centred(bottomValue, 215, 13, o, { fontWeight: 800, letterSpacing: -0.2 * k })}
-        </>
-      )}
+      {/* No fragments here: generated images don't lay them out. */}
+      {centred(ownerFit ? "· AWARDED TO ·" : `· ${bottomLabel} ·`, ownerFit ? 198 : 206, 5, o, { fontWeight: 700, letterSpacing: 1.4 * k, opacity: 0.85 })}
+      {ownerFit
+        ? centred(ownerFit.text, 213.5 - ownerFit.size / 2, ownerFit.size, o, { fontWeight: 800, letterSpacing: -0.2 * k, whiteSpace: "nowrap" })
+        : centred(bottomValue, 215, 13, o, { fontWeight: 800, letterSpacing: -0.2 * k })}
+      {ownerFit && earnedOn ? centred(badgeDate(earnedOn).toUpperCase(), 225, 5, o, { fontWeight: 700, letterSpacing: 1.2 * k, opacity: 0.85 }) : null}
     </div>
   );
 }

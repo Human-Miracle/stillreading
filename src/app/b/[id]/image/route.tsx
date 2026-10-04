@@ -14,7 +14,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const asked = url.searchParams.get("format");
   const format: CardFormat = asked === "story" || asked === "og" ? asked : "square";
   const download = url.searchParams.get("download") === "1";
-  const image = new ImageResponse(<BadgeCard snapshot={share.snapshot} badgeId={share.badgeId} level={share.level} format={format} site={url.host} />, {
+  const image = new ImageResponse(<BadgeCard snapshot={share.snapshot} badgeId={share.badgeId} level={share.level} format={format} />, {
     ...CARD_SIZES[format],
     fonts: await cardFonts(),
   });
