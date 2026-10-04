@@ -26,7 +26,8 @@ export function BadgeGrid({ view, badges, participantId }: { view: ChallengeView
     (a, b) => Number(b.level > 0) - Number(a.level > 0) || order.get(a.id)! - order.get(b.id)!,
   );
   const [open, setOpen] = useState<BadgeResult | null>(null);
-  const name = view.participantsById.get(participantId)?.displayName ?? "They";
+  const holder = view.participantsById.get(participantId)?.displayName ?? null;
+  const name = holder ?? "They";
 
   if (!shown.length) return <p className="rounded-2xl bg-surface-2 px-4 py-3.5 text-sm text-ink/60">No badges yet.</p>;
   return (
@@ -35,7 +36,7 @@ export function BadgeGrid({ view, badges, participantId }: { view: ChallengeView
         {shown.map((r) => (
           <li key={r.id}>
             <button type="button" onClick={() => setOpen(r)} className="flex w-full flex-col items-center gap-1.5" aria-label={`${badgeName(r.id, Math.max(1, r.level))}: ${caption(r)}`}>
-              <BadgeArt id={r.id} level={Math.max(1, r.level)} count={r.count} locked={r.level === 0} size={104} earnedOn={r.earnedOn} footer={r.level === 0 ? lockedFooter(r) : undefined} />
+              <BadgeArt id={r.id} level={Math.max(1, r.level)} count={r.count} locked={r.level === 0} size={104} earnedOn={r.earnedOn} footer={r.level === 0 ? lockedFooter(r) : undefined} owner={holder} />
               <span className="line-clamp-1 text-[13px] font-medium tracking-[-0.01em]">{badgeName(r.id, Math.max(1, r.level))}</span>
               <span className="-mt-1 text-xs text-muted">{caption(r)}</span>
             </button>
@@ -45,7 +46,7 @@ export function BadgeGrid({ view, badges, participantId }: { view: ChallengeView
       <Sheet open={open !== null} onClose={() => setOpen(null)} title="Badge">
         {open ? (
           <div className="space-y-6 pb-2">
-            <BadgeDetail result={open} rarity={badges.rarity(open.id, Math.max(1, open.level))} durationDays={view.challenge.durationDays} startDate={view.challenge.startDate} owner={isMe ? "you" : name} />
+            <BadgeDetail result={open} rarity={badges.rarity(open.id, Math.max(1, open.level))} durationDays={view.challenge.durationDays} startDate={view.challenge.startDate} owner={isMe ? "you" : name} ownerName={holder} />
             {isMe && open.level > 0 ? <BadgeShareActions challengeId={view.challenge.id} result={open} /> : null}
           </div>
         ) : null}

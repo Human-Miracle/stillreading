@@ -39,6 +39,7 @@ export function BadgeDetail({
   durationDays,
   startDate,
   owner,
+  ownerName,
 }: {
   result: BadgeResult;
   rarity: { holders: number; readers: number };
@@ -46,6 +47,8 @@ export function BadgeDetail({
   startDate: string;
   /** Whose badge: "you" or a name. */
   owner: string;
+  /** Their display name, printed on the badge. */
+  ownerName?: string | null;
 }) {
   const def = BADGE_BY_ID.get(result.id)!;
   const earned = result.level > 0;
@@ -56,7 +59,7 @@ export function BadgeDetail({
   return (
     <div className="flex flex-col items-center text-center">
       <div className={earned ? "animate-pop" : undefined}>
-        <BadgeArt id={result.id} level={level} count={result.count} locked={!earned} size={190} earnedOn={result.earnedOn} footer={earned ? undefined : lockedFooter(result)} />
+        <BadgeArt id={result.id} level={level} count={result.count} locked={!earned} size={190} earnedOn={result.earnedOn} footer={earned ? undefined : lockedFooter(result)} owner={ownerName} />
       </div>
       <p className="mt-5 text-sm text-muted">{earned ? (owner === "you" ? "You earned" : `${owner} earned`) : "Locked"}</p>
       <h3 className="display mt-1 text-[40px] leading-none">{badgeName(result.id, level)}</h3>

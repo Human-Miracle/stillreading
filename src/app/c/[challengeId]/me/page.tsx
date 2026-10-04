@@ -26,7 +26,8 @@ type Tab = "overview" | "checkins" | "books" | "badges";
 export default function MePage() {
   const { view, badges, openCheckIn } = useChallenge();
   const me = view.me;
-  const [tab, setTab] = useState<Tab>("overview");
+  // The home page's badges card links here with ?tab=badges.
+  const [tab, setTab] = useState<Tab>(() => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "badges" ? "badges" : "overview"));
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyBook);
   const [openBook, setOpenBook] = useState<LocalBook | null>(null);

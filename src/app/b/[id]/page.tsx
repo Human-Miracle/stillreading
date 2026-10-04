@@ -58,7 +58,7 @@ export default async function BadgePage({ params }: Props) {
         </Link>
       </nav>
       <section className="mt-6 flex flex-col items-center rounded-sheet bg-[#efede9] px-6 pb-8 pt-10 text-center">
-        <BadgeArt id={share.badgeId} level={share.level} count={s.count} size={230} earnedOn={s.earnedOn} />
+        <BadgeArt id={share.badgeId} level={share.level} count={s.count} size={230} earnedOn={s.earnedOn} owner={s.displayName} />
         <p className="mt-6 text-sm text-ink/55">{s.displayName} earned</p>
         <h1 className="display mt-1 text-[48px] leading-none">{s.name}</h1>
         {s.stat ? <p className="mt-3 text-[17px] text-ink/75">{s.stat}</p> : null}

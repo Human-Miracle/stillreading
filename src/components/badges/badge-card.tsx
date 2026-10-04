@@ -38,7 +38,7 @@ export function BadgeCard({ snapshot, badgeId, level, format, site }: { snapshot
   if (format === "og") {
     return (
       <div style={{ ...base, width, height, background: BACKGROUND, alignItems: "center", padding: "0 80px", gap: 70 }}>
-        <BadgeArt id={badgeId} level={level} count={snapshot.count} size={380} fontFamily={font} earnedOn={snapshot.earnedOn} />
+        <BadgeArt id={badgeId} level={level} count={snapshot.count} size={380} fontFamily={font} earnedOn={snapshot.earnedOn} owner={snapshot.displayName} />
         <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
           <div style={{ display: "flex", fontSize: 26, fontWeight: 600, opacity: 0.5 }}>Badge earned on Still Reading</div>
           <div style={{ display: "flex", fontSize: 78, fontWeight: 800, letterSpacing: -3.2, lineHeight: 1, marginTop: 14 }}>{snapshot.name}</div>
@@ -58,7 +58,7 @@ export function BadgeCard({ snapshot, badgeId, level, format, site }: { snapshot
         <div style={{ display: "flex", fontSize: story ? 24 : 20, fontWeight: 600, letterSpacing: 4, opacity: 0.45 }}>BADGE EARNED</div>
       </div>
       <div style={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 72px" }}>
-        <BadgeArt id={badgeId} level={level} count={snapshot.count} size={story ? 620 : 400} fontFamily={font} earnedOn={snapshot.earnedOn} />
+        <BadgeArt id={badgeId} level={level} count={snapshot.count} size={story ? 620 : 400} fontFamily={font} earnedOn={snapshot.earnedOn} owner={snapshot.displayName} />
         <div style={{ display: "flex", fontSize: story ? 104 : 72, fontWeight: 800, letterSpacing: story ? -4.5 : -3, lineHeight: 1, marginTop: story ? 64 : 30, textAlign: "center" }}>{snapshot.name}</div>
         {snapshot.stat ? <div style={{ display: "flex", fontSize: story ? 46 : 32, opacity: 0.72, marginTop: story ? 24 : 12 }}>{snapshot.stat}</div> : null}
         {rarity ? <div style={{ display: "flex", marginTop: story ? 40 : 22 }}>{pill(story ? 34 : 24, story ? "16px 34px" : "10px 24px")}</div> : null}
