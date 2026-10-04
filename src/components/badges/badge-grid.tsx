@@ -15,7 +15,7 @@ function caption(r: BadgeResult): string {
 }
 
 /**
- * A member's badges. Mine shows all 20 (earned in colour, the rest as outlines with progress) and lets
+ * A member's badges. Mine shows them all (earned in colour, the rest as outlines with progress) and lets
  * me share earned ones; someone else's shows only what they've earned.
  */
 export function BadgeGrid({ view, badges, participantId }: { view: ChallengeView; badges: ChallengeBadges; participantId: string }) {

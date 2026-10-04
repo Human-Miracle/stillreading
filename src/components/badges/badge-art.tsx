@@ -27,7 +27,7 @@ interface Theme {
   text: string;
 }
 
-const THEMES: Record<BadgeCategory | "efiko", Theme> = {
+const THEMES: Record<BadgeCategory | "efiko" | "time_traveller", Theme> = {
   start: {
     frame: "ticket",
     stops: ["#6c66e6", "#8a85f0", "#7a9fea"],
@@ -76,6 +76,15 @@ const THEMES: Record<BadgeCategory | "efiko", Theme> = {
     rim: "#ffffff",
     text: "#ffffff",
   },
+  // The Time Stone's blues, with a soft teal glow.
+  time_traveller: {
+    frame: "wavy",
+    stops: ["#4f6fd8", "#7b8ff0", "#7fb6e6"],
+    glows: [["#e6f0ff", 100, 146, 52], ["#8fd3dc", 170, 230, 90], ["#3f5cc9", 30, 40, 80]],
+    deep: "#3a55b8",
+    rim: "#ffffff",
+    text: "#ffffff",
+  },
   efiko: {
     frame: "wavy",
     stops: ["#2a2a2a", "#161616", "#0b0b0b"],
@@ -110,6 +119,7 @@ const TAGLINES: Record<BadgeId, string[]> = {
   daily_champion: ["MOST PAGES IN A DAY"],
   climber: ["UP 5+ PLACES"],
   hype_squad: ["25 CHEERS FOR THE CREW"],
+  time_traveller: ["MISSED DAY BROUGHT BACK"],
 };
 
 /** Numbers printed on the emblem. */
@@ -345,6 +355,17 @@ function emblem(id: BadgeId, fill: string, deep: string): ReactNode {
           <path d="M14,58 L56,16 M40,16 H56 V32" />
         </g>
       );
+    case "time_traveller":
+      return (
+        <g>
+          <path d={roundRect(16, 2, 68, 11, 5.5)} {...f} />
+          <path d={roundRect(16, 87, 68, 11, 5.5)} {...f} />
+          <path d="M25,13 H75 C75,33 61,42 55,50 C61,58 75,67 75,87 H25 C25,67 39,58 45,50 C39,42 25,33 25,13 Z" {...f} />
+          <path d="M39,30 H61 L50,45 Z" fill={deep} fillOpacity={0.42} />
+          <path d="M50,52 V72" stroke={deep} strokeOpacity={0.42} strokeWidth={2.4} strokeLinecap="round" />
+          <path d="M33,82 Q50,62 67,82 Z" fill={deep} fillOpacity={0.42} />
+        </g>
+      );
     case "hype_squad":
       return (
         <g>
@@ -495,7 +516,7 @@ export interface BadgeArtProps {
 
 export function BadgeArt({ id, level = 1, count = 0, locked = false, size, fontFamily = "inherit", earnedOn = null, footer, owner = null }: BadgeArtProps) {
   const def = BADGES.find((b) => b.id === id)!;
-  const base = id === "efiko" ? THEMES.efiko : THEMES[def.category];
+  const base = id === "efiko" ? THEMES.efiko : id === "time_traveller" ? THEMES.time_traveller : THEMES[def.category];
   const theme: Theme = locked ? { ...LOCKED, frame: base.frame } : base;
   const k = size / W;
   const uid = `${id}-${level}-${locked ? "l" : "e"}`;

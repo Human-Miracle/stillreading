@@ -457,5 +457,8 @@ test("Flow L: a Time Stone, earned by a week of reading, brings back a missed ye
   await expect(page.getByText("You missed yesterday")).toHaveCount(0);
   await page.goto(`${challengeUrl}/feed`);
   await expect(page.getByText("Logged with a Time Stone")).toBeVisible();
+  // And it earns the Time Traveller badge.
+  await page.goto(`${challengeUrl}/me?tab=badges`);
+  await expect(page.getByRole("list", { name: "Your badges" }).getByRole("button", { name: "Time Traveller: Earned" })).toBeVisible();
   await ctx.close();
 });

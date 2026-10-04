@@ -31,7 +31,8 @@ export type BadgeId =
   | "top_of_shelf"
   | "daily_champion"
   | "climber"
-  | "hype_squad";
+  | "hype_squad"
+  | "time_traveller";
 
 export type BadgeCategory = "start" | "streak" | "time" | "volume" | "leaderboard" | "crew";
 export type BadgeTier = "common" | "uncommon" | "rare" | "epic" | "efiko";
@@ -94,6 +95,7 @@ export const BADGES: readonly BadgeDef[] = [
   { id: "daily_champion", category: "leaderboard", how: "Read the most pages in the crew in a day", repeatable: true, levels: one("Daily Champion", "uncommon") },
   { id: "climber", category: "leaderboard", how: "Climb 5+ places on the leaderboard in a day", repeatable: true, levels: one("Climber", "uncommon", 5) },
   { id: "hype_squad", category: "crew", how: "Cheer or reply on 25 crew check-ins", levels: one("Hype Squad", "uncommon", 25) },
+  { id: "time_traveller", category: "streak", how: "Bring back a missed day with a Time Stone", repeatable: true, levels: one("Time Traveller", "uncommon") },
 ];
 
 export const BADGE_BY_ID = new Map(BADGES.map((b) => [b.id, b]));
@@ -130,6 +132,8 @@ export function badgeTier(id: BadgeId, level: number): BadgeTier {
 export interface BadgeSession extends SessionLike {
   id: string;
   createdAt: string;
+  /** Logged for a missed day with a Time Stone. */
+  timeStone?: boolean | null;
 }
 
 export interface BadgeReader extends StandingsReader {
@@ -285,6 +289,16 @@ export function computeBadges(input: BadgeInput): Map<string, BadgeResult[]> {
       }
     }
     add("comeback", { ...once(comeback), stat: comeback ? "Back for 3 days straight" : null });
+
+    // Time Traveller: a missed day brought back with a Time Stone, once per day restored.
+    const restored = sessions.filter((s) => s.timeStone).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const restoredDays = new Set(restored.map((s) => s.date));
+    add("time_traveller", {
+      level: restored.length ? 1 : 0,
+      earnedOn: restored[0] ? localDate(restored[0].createdAt) : null,
+      count: restoredDays.size,
+      stat: restored[0] ? (restoredDays.size === 1 ? `Brought back day ${dayNo(restored[0].date)}` : `${restoredDays.size} missed days brought back`) : null,
+    });
 
     // Weekend Reader: Saturday and the Sunday after.
     const weekends = readDates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === 6 && readSet.has(addDays(d, 1)));
