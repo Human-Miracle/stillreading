@@ -362,3 +362,47 @@ test("Flow J: a browser that blocks storage gets told how to join instead of a d
   await blocked.close();
   await hostCtx.close();
 });
+
+test("Flow K: earning badges pops a celebration with share and save, and they stay on the profile", async ({ browser }) => {
+  const ctx = await newContext(browser);
+  await ctx.addInitScript(() => localStorage.setItem("sr-badge-popups", "on"));
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const page = await ctx.newPage();
+  const { challengeUrl } = await createChallenge(page, { name: "Flow K Challenge", host: "Jessica" });
+  await logReading(page, 30);
+
+  const dialog = page.getByRole("dialog", { name: /^New badge/ });
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  await expect(dialog.getByRole("heading", { name: "First Page" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Share" })).toBeEnabled({ timeout: 15_000 });
+  await expect(dialog.getByRole("button", { name: "Save image" })).toBeEnabled({ timeout: 15_000 });
+  // Sharing makes the badge's public page, with a link preview image.
+  const made = page.waitForResponse((r) => r.url().endsWith("/badges/share") && r.request().postDataJSON()?.public === true);
+  await dialog.getByRole("button", { name: "Share" }).click();
+  const shared = (await (await made).json()) as { url: string; public: boolean };
+  expect(shared.public).toBe(true);
+  const visitor = await (await newContext(browser)).newPage();
+  await visitor.goto(shared.url);
+  await expect(visitor.getByRole("heading", { name: "First Page" })).toBeVisible();
+  await expect(visitor.getByText("Jessica earned")).toBeVisible();
+  await expect(visitor.locator('meta[property="og:image"]')).toHaveAttribute("content", /\/b\/[A-Za-z0-9_-]{16}\/image\?format=og$/);
+  await visitor.context().close();
+  // Several new badges show one after another.
+  while (await dialog.getByRole("button", { name: "Next badge" }).isVisible()) await dialog.getByRole("button", { name: "Next badge" }).click();
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  // Seen once: it doesn't pop up again.
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Log reading", exact: true })).toBeVisible();
+  await page.waitForTimeout(1500);
+  await expect(page.getByRole("dialog", { name: /^New badge/ })).toHaveCount(0);
+
+  // On the profile: earned in colour, the rest locked with progress.
+  await page.goto(`${challengeUrl}/me`);
+  await page.getByRole("tab", { name: /Badges/ }).click();
+  const grid = page.getByRole("list", { name: "Your badges" });
+  await expect(grid.getByRole("button", { name: "First Page: Earned" })).toBeVisible();
+  await expect(grid.getByRole("button", { name: "Week Warrior: 1/7" })).toBeVisible();
+  await ctx.close();
+});

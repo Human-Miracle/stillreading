@@ -1,9 +1,11 @@
 "use client";
 import { createContext, useContext } from "react";
+import type { ChallengeBadges } from "@/local/badges";
 import type { ChallengeView } from "@/local/hooks";
 
 export interface ChallengeContextValue {
   view: ChallengeView;
+  badges: ChallengeBadges;
   openCheckIn: () => void;
 }
 

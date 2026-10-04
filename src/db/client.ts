@@ -8,25 +8,30 @@ export type DbOrTx = Database | Tx;
 
 const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 
-let dbPromise: Promise<Database> | null = null;
+/**
+ * One database per server process. Next.js loads this module more than once (pages and route
+ * handlers are bundled separately), so the instance lives on globalThis: two embedded PGlite
+ * instances on the same folder would each miss the other's writes.
+ */
+const shared = globalThis as typeof globalThis & { __stillReadingDb?: Promise<Database> | null };
 
 /**
  * Neon (or any Postgres) when DATABASE_URL is set; otherwise an embedded PGlite database in
  * `.data/pglite` so the app runs locally with zero setup. PGlite is never used on Vercel.
  */
 export function getDb(): Promise<Database> {
-  if (!dbPromise) {
-    dbPromise = createDb().catch((err) => {
-      dbPromise = null;
+  if (!shared.__stillReadingDb) {
+    shared.__stillReadingDb = createDb().catch((err) => {
+      shared.__stillReadingDb = null;
       throw err;
     });
   }
-  return dbPromise;
+  return shared.__stillReadingDb;
 }
 
 /** Test hook: inject a database (e.g. in-memory PGlite). */
 export function setDb(db: Database | null) {
-  dbPromise = db ? Promise.resolve(db) : null;
+  shared.__stillReadingDb = db ? Promise.resolve(db) : null;
 }
 
 async function createDb(): Promise<Database> {

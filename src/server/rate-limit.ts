@@ -31,6 +31,7 @@ export const LIMITS = {
   notifications: { bucket: "notify", limit: 30, windowSeconds: 600 },
   coverFill: { bucket: "cover-fill", limit: 30, windowSeconds: 3600 },
   handoff: { bucket: "handoff", limit: 20, windowSeconds: 3600 },
+  badgeShare: { bucket: "badge-share", limit: 60, windowSeconds: 3600 },
 } satisfies Record<string, Limit>;
 
 /**
