@@ -29,8 +29,9 @@ const run = (input: Partial<BadgeInput> & { readers: BadgeReader[] }) => compute
 const get = (all: Map<string, BadgeResult[]>, pid: string, id: string) => all.get(pid)!.find((b) => b.id === id)!;
 
 describe("badges", () => {
-  it("defines 20 badges with names", () => {
-    expect(BADGES).toHaveLength(20);
+  it("defines 21 badges with names", () => {
+    expect(BADGES).toHaveLength(21);
+    expect(badgeName("time_traveller", 1)).toBe("Time Traveller");
     expect(badgeName("efiko", 1)).toBe("Efiko");
     expect(badgeName("the_end", 2)).toBe("Bookworm");
     expect(badgeKey({ id: "page_turner", level: 3 })).toBe("page_turner:3");
@@ -53,6 +54,22 @@ describe("badges", () => {
     expect(get(missed, "bo", "efiko")).toMatchObject({ level: 0, closed: true });
     const going = run({ today: "2026-10-04", readers: [reader("cy", days("2026-10-01", 4).map((d) => s("cy", d, 10)))] });
     expect(get(going, "cy", "efiko")).toMatchObject({ level: 0, closed: false, progress: { current: 4, target: 10 } });
+  });
+
+  it("Time Traveller: each missed day brought back with a Time Stone", () => {
+    const stone = (date: string, loggedOn: string) => ({ ...s("tia", date, 15, "09:00", loggedOn), timeStone: true });
+    const once = run({ readers: [reader("tia", [s("tia", "2026-10-01", 20), stone("2026-10-02", "2026-10-03"), s("tia", "2026-10-03", 20)])] });
+    // Earned the day the stone was used, for the day it brought back.
+    expect(get(once, "tia", "time_traveller")).toMatchObject({ level: 1, earnedOn: "2026-10-03", count: 1, stat: "Brought back day 2" });
+
+    const twice = run({ readers: [reader("tia", [stone("2026-10-02", "2026-10-03"), s("tia", "2026-10-02", 5, "10:00", "2026-10-03"), stone("2026-10-06", "2026-10-07")])] });
+    expect(get(twice, "tia", "time_traveller")).toMatchObject({ level: 1, count: 2, stat: "2 missed days brought back" });
+
+    // A late check-in that didn't use a stone, or a deleted one that did, doesn't count.
+    const none = run({
+      readers: [reader("tia", [s("tia", "2026-10-02", 5, "01:00", "2026-10-03"), { ...stone("2026-10-05", "2026-10-06"), deletedAt: "2026-10-06T12:00:00.000Z" }])],
+    });
+    expect(get(none, "tia", "time_traveller")).toMatchObject({ level: 0, count: 0 });
   });
 
   it("Comeback: read, miss two days, then three in a row", () => {

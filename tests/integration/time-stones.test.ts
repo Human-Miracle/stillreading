@@ -85,6 +85,14 @@ describe("time stones on the server", () => {
     expect(await logYesterday({ timeStone: true })).toMatchObject({ status: "ok", entity: { record: { timeStone: false } } });
   });
 
+  it("spending one earns the Time Traveller badge, which the server confirms for sharing", async () => {
+    const share = () => api("POST", `/api/challenges/${snap.challenge.id}/badges/share`, { device: host, body: { badgeId: "time_traveller", level: 1 } });
+    await readOn([9, 8, 7, 6, 5, 4, 3]);
+    expect((await share()).status).toBe(403);
+    await logYesterday({ timeStone: true });
+    expect((await share()).status).toBe(200);
+  });
+
   it("logging yesterday is free just after midnight", async () => {
     vi.setSystemTime(new Date(`${today}T00:30:00Z`)); // 01:30 in Lagos
     expect(await logYesterday()).toMatchObject({ status: "ok", entity: { record: { timeStone: false } } });

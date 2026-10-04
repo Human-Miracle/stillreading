@@ -62,8 +62,8 @@ trigger is a GitHub Actions workflow (`.github/workflows/reading-reminders.yml`)
 
 ### Badges
 
-20 badges per challenge (streaks, Efiko for reading every day, time of day, pages, books, the
-leaderboard, cheering others on), worked out from the challenge's data by `src/lib/domain/badges.ts`,
+21 badges per challenge (streaks, Efiko for reading every day, time of day, pages, books, the
+leaderboard, cheering others on, Time Traveller for bringing back a missed day with a Time Stone), worked out from the challenge's data by `src/lib/domain/badges.ts`,
 the same rules on every phone and on the server. New badges pop up once per device with **Share** and
 **Save image**; all of them live on the Me page (Badges tab) and on each member's profile. Cards are
 drawn by `/b/[id]/image` (story, square and link-preview sizes, Geist bundled in `src/assets/fonts`,
