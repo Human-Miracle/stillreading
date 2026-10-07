@@ -1,15 +1,18 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { BadgeCelebration } from "@/components/badges/badge-celebration";
 import { useCoverFill } from "@/components/books/use-cover-fill";
 import { ChallengeContext } from "@/components/challenge/context";
 import { BottomNav } from "@/components/challenge/nav";
-import { CheckInComposer } from "@/components/check-in/check-in-composer";
+import { CheckInComposer, type CheckInDay } from "@/components/check-in/check-in-composer";
 import { SyncToasts } from "@/components/sync/offline-banner";
 import { ButtonLink } from "@/components/ui/button";
 import { PageSkeleton, Wordmark } from "@/components/ui/misc";
 import { track } from "@/lib/analytics";
+import { useChallengeBadges } from "@/local/badges";
 import { useChallengeView } from "@/local/hooks";
+import { syncPushSubscription } from "@/local/notifications";
 import { getSyncEngine } from "@/local/sync/engine";
 
 function FullPageMessage({ title, body }: { title: string; body: string }) {
@@ -29,11 +32,18 @@ export default function ChallengeLayout({ children }: { children: ReactNode }) {
   const { challengeId } = useParams<{ challengeId: string }>();
   const view = useChallengeView(challengeId);
   useCoverFill(challengeId, view?.challenge.access === "ok" ? view.members.flatMap((m) => m.books) : undefined);
-  const [checkIn, setCheckIn] = useState<"closed" | "open" | "dayOne">("closed");
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkInDay, setCheckInDay] = useState<CheckInDay>("today");
+  const openCheckIn = (day: CheckInDay = "today") => {
+    setCheckInDay(day);
+    setCheckInOpen(true);
+  };
+  const badges = useChallengeBadges(view?.challenge.access === "ok" ? view : null);
 
   useEffect(() => {
     track("challenge_viewed", { challengeId });
     void getSyncEngine().sync();
+    void syncPushSubscription(challengeId);
   }, [challengeId]);
 
   if (view === undefined) {
@@ -58,11 +68,12 @@ export default function ChallengeLayout({ children }: { children: ReactNode }) {
 
   const canCheckIn = view.challenge.status !== "archived" && view.me?.progress.clock.phase === "active";
   return (
-    <ChallengeContext.Provider value={{ view, openCheckIn: () => setCheckIn("open"), openDayOneCheckIn: () => setCheckIn("dayOne") }}>
+    <ChallengeContext.Provider value={{ view, badges: badges!, openCheckIn }}>
       <main className="mx-auto min-h-dvh max-w-[440px] overflow-x-clip">{children}</main>
       <SyncToasts />
-      <BottomNav challengeId={challengeId} onCheckIn={() => setCheckIn("open")} canCheckIn={canCheckIn} />
-      <CheckInComposer view={view} open={checkIn !== "closed"} dayOne={checkIn === "dayOne"} onClose={() => setCheckIn("closed")} />
+      <BottomNav challengeId={challengeId} onCheckIn={() => openCheckIn()} canCheckIn={canCheckIn} />
+      <CheckInComposer view={view} open={checkInOpen} day={checkInDay} onClose={() => setCheckInOpen(false)} />
+      {badges ? <BadgeCelebration view={view} badges={badges} paused={checkInOpen} /> : null}
     </ChallengeContext.Provider>
   );
 }

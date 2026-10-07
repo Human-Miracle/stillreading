@@ -84,6 +84,8 @@ export interface SessionDTO {
   reflection: string | null;
   /** End-to-end encrypted private reflection; only present for the viewer's own sessions. */
   privateReflection: string | null;
+  /** Logged for a missed day with a Time Stone. Optional: older servers don't send it. */
+  timeStone?: boolean;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -100,6 +102,29 @@ export interface ReactionDTO {
   deletedAt: string | null;
 }
 
+export interface ReplyDTO {
+  id: string;
+  challengeId: string;
+  participantId: string;
+  sessionId: string;
+  /** Top-level reply this answers; null for replies to the check-in. */
+  parentId: string | null;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface ReplyLikeDTO {
+  id: string;
+  challengeId: string;
+  participantId: string;
+  replyId: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
 export interface ChallengeSnapshot {
   cursor: string;
   full: boolean;
@@ -110,6 +135,8 @@ export interface ChallengeSnapshot {
   books: BookDTO[];
   sessions: SessionDTO[];
   reactions: ReactionDTO[];
+  replies: ReplyDTO[];
+  replyLikes: ReplyLikeDTO[];
 }
 
 export interface JoinPreview {
@@ -120,7 +147,7 @@ export interface JoinPreview {
   membership: { participantId: string; status: ParticipantDTO["status"] } | null;
 }
 
-export type EntityKind = "participant" | "goal" | "book" | "session" | "reaction" | "challenge";
+export type EntityKind = "participant" | "goal" | "book" | "session" | "reaction" | "reply" | "replyLike" | "challenge";
 
 export type PushStatus = "ok" | "duplicate" | "stale" | "rejected" | "error";
 

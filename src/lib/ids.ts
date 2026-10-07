@@ -2,7 +2,7 @@
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-export type IdPrefix = "dvc" | "rd" | "ch" | "pt" | "gl" | "bk" | "rs" | "op";
+export type IdPrefix = "dvc" | "rd" | "ch" | "pt" | "gl" | "bk" | "rs" | "rp" | "op";
 
 function randomString(length: number, alphabet: string): string {
   // Rejection sampling keeps the distribution uniform.
@@ -43,6 +43,11 @@ export function newJoinCode(): string {
 /** 256-bit device secret, base62. */
 export function newDeviceSecret(): string {
   return randomString(43, BASE62);
+}
+
+/** Likes are unique per (reply, participant), so their id is derived. */
+export function replyLikeId(replyId: string, participantId: string): string {
+  return `rl_${replyId.slice(3)}.${participantId.slice(3)}`;
 }
 
 /** Reactions are unique per (session, participant, type), so their id is derived. */

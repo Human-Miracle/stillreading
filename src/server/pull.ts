@@ -2,8 +2,8 @@ import { and, eq, gt, isNull, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { ChallengeSnapshot } from "@/lib/api-types";
 import type { DbOrTx } from "@/db/client";
-import { books, challenges, goals, participants, reactions, readingSessions } from "@/db/schema";
-import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, sessionDTO } from "./serialize";
+import { books, challenges, goals, participants, reactions, readingSessions, replies, replyLikes } from "@/db/schema";
+import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, replyDTO, replyLikeDTO, sessionDTO } from "./serialize";
 import { ApiError } from "./http";
 
 /** Overlap re-reads recent rows so commits that land out of order are never missed. */
@@ -27,13 +27,15 @@ export async function loadSnapshot(db: DbOrTx, challengeId: string, participantI
   const [challenge] = await db.select().from(challenges).where(eq(challenges.id, challengeId));
   if (!challenge) throw new ApiError(404, "not_found", "Challenge not found");
 
-  const [pRows, gRows, bRows, sRows, rRows] = await Promise.all([
+  const [pRows, gRows, bRows, sRows, rRows, rpRows, rlRows] = await Promise.all([
     // Participants are few and always sent in full so status changes are never missed.
     db.select().from(participants).where(eq(participants.challengeId, challengeId)),
     db.select().from(goals).where(filter(goals.challengeId, goals.serverUpdatedAt, goals.deletedAt)),
     db.select().from(books).where(filter(books.challengeId, books.serverUpdatedAt, books.deletedAt)),
     db.select().from(readingSessions).where(filter(readingSessions.challengeId, readingSessions.serverUpdatedAt, readingSessions.deletedAt)),
     db.select().from(reactions).where(filter(reactions.challengeId, reactions.serverUpdatedAt, reactions.deletedAt)),
+    db.select().from(replies).where(filter(replies.challengeId, replies.serverUpdatedAt, replies.deletedAt)),
+    db.select().from(replyLikes).where(filter(replyLikes.challengeId, replyLikes.serverUpdatedAt, replyLikes.deletedAt)),
   ]);
 
   return {
@@ -46,5 +48,7 @@ export async function loadSnapshot(db: DbOrTx, challengeId: string, participantI
     books: bRows.map(bookDTO),
     sessions: sRows.map((r) => sessionDTO(r, participantId)),
     reactions: rRows.map(reactionDTO),
+    replies: rpRows.map(replyDTO),
+    replyLikes: rlRows.map(replyLikeDTO),
   };
 }

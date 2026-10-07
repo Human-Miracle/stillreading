@@ -8,7 +8,7 @@ export type GoalType = "daily" | "total";
 export type GoalFrequency = "daily" | "challenge";
 export type GoalPriority = "primary" | "secondary";
 
-export const REACTION_TYPES = ["heart", "fire", "clap", "book"] as const;
+export const REACTION_TYPES = ["heart", "fire", "clap", "laugh", "book"] as const;
 export type ReactionType = (typeof REACTION_TYPES)[number];
 
 export const BOOK_STATUSES = ["planned", "reading", "completed", "abandoned"] as const;

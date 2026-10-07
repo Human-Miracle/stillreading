@@ -6,7 +6,6 @@ import { BookShelf } from "@/components/books/book-shelf";
 import { Sheet } from "@/components/ui/sheet";
 import type { LocalBook } from "@/local/db";
 import { useChallenge } from "@/components/challenge/context";
-import { DayOneBadge } from "@/components/challenge/day-one";
 import { DayRing } from "@/components/challenge/day-ring";
 import { GoalProgress } from "@/components/challenge/goal-progress";
 import { Hero, type HeroTone } from "@/components/challenge/hero";
@@ -14,6 +13,7 @@ import { StreakBanner } from "@/components/challenge/streak-banner";
 import { ReadingFeed } from "@/components/feed/reading-feed";
 import { Avatar, tintFor } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
+import { BadgeGrid } from "@/components/badges/badge-grid";
 import { Card, Eyebrow, PageSheet } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/misc";
 import { amountSummary, streakBanner } from "@/lib/copy";
@@ -22,7 +22,7 @@ const HERO_FOR: Record<string, HeroTone> = { butter: "honey", sage: "sky", blush
 
 export default function ParticipantPage() {
   const { participantId } = useParams<{ participantId: string }>();
-  const { view } = useChallenge();
+  const { view, badges } = useChallenge();
   const member = view.members.find((m) => m.participant.id === participantId);
   const [openBook, setOpenBook] = useState<LocalBook | null>(null);
   const back = { href: `/c/${view.challenge.id}/people`, label: "Back to people" };
@@ -58,7 +58,6 @@ export default function ParticipantPage() {
             <div className="min-w-0">
               <h1 className="display truncate text-[44px]">{member.participant.displayName}</h1>
               <p className="mt-1 truncate text-ink/60">{member.currentBook ? `Reading ${member.currentBook.title}` : "No book yet"}</p>
-              {member.dayOne ? <DayOneBadge className="mt-2" /> : null}
             </div>
           </div>
           <StreakBanner className="mt-6" title={
@@ -97,6 +96,15 @@ export default function ParticipantPage() {
           ) : (
             <p className="rounded-2xl bg-surface-2 px-4 py-3.5 text-sm text-ink/60">{isMe ? "You haven't added a book yet." : `${member.participant.displayName} hasn't added a book yet.`}</p>
           )}
+        </section>
+        <section aria-labelledby="their-badges" className="pb-1">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 id="their-badges" className="headline text-[22px]">
+              Badges
+            </h2>
+            <p className="text-sm text-muted">{(badges.all.get(member.participant.id) ?? []).filter((b) => b.level > 0).length} of 20</p>
+          </div>
+          <BadgeGrid view={view} badges={badges} participantId={member.participant.id} />
         </section>
         <div className="grid grid-cols-2 gap-3">
           <Card tone="muted" pad="sm">

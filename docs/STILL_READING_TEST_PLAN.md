@@ -21,7 +21,7 @@ Run everything with `npm run verify` (typecheck, lint, unit+integration, build) 
   invalid code 404.
 * authorization: wrong secret 401; mutating someone else's book/session rejected; non-host cannot
   remove/rename.
-* sync push: session create, duplicate op id → no duplicate row; stale LWW; reaction toggle unique.
+* sync push: session create, duplicate op id → no duplicate row; stale LWW; reaction toggle unique; laugh reaction; replies create/idempotent/forbidden/author-only delete, tombstone in delta pull; nested replies normalised to one level, cross-check-in parent rejected; reply likes toggle, forged id rejected.
 * sync pull: since-cursor deltas, tombstones, device ids never exposed, removed member gets 403.
 * client sync engine against real handlers (fake-indexeddb): offline check-in stays local, survives
   "restart" (new engine instance on same DB), syncs on reconnect without duplicates, multiple queued
@@ -37,7 +37,8 @@ Run everything with `npm run verify` (typecheck, lint, unit+integration, build) 
 * Flow A: create challenge → copy link → second browser context joins → goal → check-in.
 * Flow B: joined user goes offline → logs reading → reload (offline, served by SW) → reading still
   there → back online → synced; other member sees it once.
-* Flow C: multiple participants check in → feed → reactions → stats.
+* reply notifications: settings round-trip, push-service allowlist, owner + co-repliers notified (never the replier, only opted-in), no duplicate on retried ops, 410 removes the subscription, no VAPID → nothing sent.
+* Flow C: multiple participants check in → feed → reactions (incl. 😂) → reply in a thread → stats.
 * Flow D: ended challenge → completion screen + share card.
 * Flow E/F: install modal on every visit, skippable; iPhone Safari steps.
 * Flow G: Reading Pass moves a reader and their private reflections to a new phone; wrong pass refused.

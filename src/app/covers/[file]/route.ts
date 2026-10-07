@@ -15,17 +15,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ file: s
   const { file } = await params;
   if (!FILE_RE.test(file)) return new Response("Not found", { status: 404 });
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(`https://${COVER_HOST}/b/id/${file}?default=false`, {
-      headers: { "user-agent": USER_AGENT },
-      redirect: "follow",
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch (err) {
-    log.warn("cover_fetch_failed", { reason: err instanceof Error ? err.name : "unknown" });
-    return new Response("Cover unavailable", { status: 502, headers: { "cache-control": "no-store" } });
+  // archive.org, where the images live, is sometimes slow or drops a request: give it a second go.
+  let upstream: Response | null = null;
+  for (let attempt = 0; attempt < 2 && !upstream; attempt++) {
+    try {
+      const res = await fetch(`https://${COVER_HOST}/b/id/${file}?default=false`, {
+        headers: { "user-agent": USER_AGENT },
+        redirect: "follow",
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.status < 500 || attempt === 1) upstream = res;
+    } catch (err) {
+      if (attempt === 1) log.warn("cover_fetch_failed", { reason: err instanceof Error ? err.name : "unknown" });
+    }
   }
+  if (!upstream) return new Response("Cover unavailable", { status: 502, headers: { "cache-control": "no-store" } });
 
   const type = upstream.headers.get("content-type") ?? "";
   if (upstream.status === 404) return new Response("Not found", { status: 404, headers: { "cache-control": "public, max-age=86400" } });

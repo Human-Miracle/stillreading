@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { count, eq } from "drizzle-orm";
 import type { ChallengeSnapshot, JoinPreview, PushResult } from "@/lib/api-types";
 import { todayInTimezone } from "@/lib/domain/dates";
-import { newId, reactionId } from "@/lib/ids";
+import { newId, reactionId, replyLikeId } from "@/lib/ids";
 import type { Database } from "@/db/client";
 import { processedOperations, readingSessions } from "@/db/schema";
 import { api, bookInput, createBody, freshDb, resetDb, joinBody, newDevice, nowIso, type TestDevice } from "../helpers/server";
@@ -244,6 +244,106 @@ describe("sync push", () => {
 
     const forged = { ...rx(true, t + 3), payload: { ...rx(true, t + 3).payload, id: reactionId(op.payload.id, snap.me.participantId, "fire") } };
     expect((await push(friend, [forged])).body.results[0]!.code).toBe("forbidden");
+  });
+
+  it("accepts the laugh reaction", async () => {
+    const joined = await join(friend);
+    const op = sessionOp(snap.challenge.id);
+    await push(host, [op]);
+    const id = reactionId(op.payload.id, joined.body.me.participantId, "laugh");
+    const res = await push(friend, [
+      { opId: newId("op"), challengeId: snap.challenge.id, type: "reaction.set", payload: { id, sessionId: op.payload.id, type: "laugh", active: true, updatedAt: nowIso() } },
+    ]);
+    expect(res.body.results[0]).toMatchObject({ status: "ok", entity: { kind: "reaction", record: { type: "laugh" } } });
+  });
+
+  it("members reply to check-ins, see each other's replies and delete only their own", async () => {
+    const joined = await join(friend);
+    const op = sessionOp(snap.challenge.id);
+    await push(host, [op]);
+    const reply = (extra: Record<string, unknown> = {}) => ({
+      opId: newId("op"),
+      challengeId: snap.challenge.id,
+      type: "reply.create",
+      payload: { id: newId("rp"), sessionId: op.payload.id, body: "  Which chapter was that?  ", createdAt: nowIso(), ...extra },
+    });
+    const first = reply();
+    const res = await push(friend, [first, reply({ body: "   " }), reply({ sessionId: newId("rs") })]);
+    expect(res.body.results.map((r) => r.status)).toEqual(["ok", "rejected", "rejected"]);
+    expect(res.body.results[0]).toMatchObject({
+      entity: { kind: "reply", record: { body: "Which chapter was that?", sessionId: op.payload.id, participantId: joined.body.me.participantId } },
+    });
+    expect(res.body.results[2]!.code).toBe("not_found");
+
+    // Retrying the same op is idempotent; another member can't claim the id.
+    expect((await push(friend, [{ ...first, opId: newId("op") }])).body.results[0]!.status).toBe("ok");
+    expect((await push(host, [{ ...first, opId: newId("op") }])).body.results[0]!.code).toBe("forbidden");
+
+    let pull = await api<ChallengeSnapshot>("GET", `/api/challenges/${snap.challenge.id}/sync`, { device: host });
+    expect(pull.body.replies).toHaveLength(1);
+    const cursor = pull.body.cursor;
+
+    // The host can't delete the friend's reply; the friend can.
+    const del = { opId: newId("op"), challengeId: snap.challenge.id, type: "reply.delete", payload: { id: first.payload.id, updatedAt: nowIso() } };
+    await push(host, [del]);
+    pull = await api<ChallengeSnapshot>("GET", `/api/challenges/${snap.challenge.id}/sync`, { device: host });
+    expect(pull.body.replies).toHaveLength(1);
+    await push(friend, [{ ...del, opId: newId("op") }]);
+    pull = await api<ChallengeSnapshot>("GET", `/api/challenges/${snap.challenge.id}/sync`, { device: host });
+    expect(pull.body.replies).toHaveLength(0);
+    // Delta pulls carry the tombstone so other devices drop it too.
+    const delta = await api<ChallengeSnapshot>("GET", `/api/challenges/${snap.challenge.id}/sync?since=${encodeURIComponent(cursor)}`, { device: host });
+    expect(delta.body.replies).toEqual([expect.objectContaining({ id: first.payload.id, deletedAt: expect.any(String) })]);
+  });
+
+  it("replies to a reply nest one level deep under the top-level reply", async () => {
+    await join(friend);
+    const op = sessionOp(snap.challenge.id);
+    await push(host, [op]);
+    const reply = (extra: Record<string, unknown>) => ({
+      opId: newId("op"),
+      challengeId: snap.challenge.id,
+      type: "reply.create",
+      payload: { id: newId("rp"), sessionId: op.payload.id, body: "hi", createdAt: nowIso(), ...extra },
+    });
+    const top = reply({});
+    const answer = reply({ parentId: top.payload.id, body: "@Jessica same" });
+    const answerToAnswer = reply({ parentId: answer.payload.id, body: "@David ha" });
+    const res = await push(friend, [top, answer, answerToAnswer, reply({ parentId: newId("rp") })]);
+    expect(res.body.results.map((r) => r.status)).toEqual(["ok", "ok", "ok", "rejected"]);
+    expect(res.body.results[0]!.entity!.record).toMatchObject({ parentId: null });
+    expect(res.body.results[1]!.entity!.record).toMatchObject({ parentId: top.payload.id });
+    // A reply to a nested reply joins the same top-level reply.
+    expect(res.body.results[2]!.entity!.record).toMatchObject({ parentId: top.payload.id });
+
+    // A parent from another check-in is refused.
+    const other = sessionOp(snap.challenge.id);
+    await push(host, [other]);
+    const cross = { ...reply({ parentId: top.payload.id }), payload: { ...reply({}).payload, sessionId: other.payload.id, parentId: top.payload.id } };
+    expect((await push(friend, [cross])).body.results[0]).toMatchObject({ status: "rejected", code: "not_found" });
+  });
+
+  it("members like replies once each and can unlike", async () => {
+    const joined = await join(friend);
+    const op = sessionOp(snap.challenge.id);
+    await push(host, [op]);
+    const replyId = newId("rp");
+    await push(friend, [{ opId: newId("op"), challengeId: snap.challenge.id, type: "reply.create", payload: { id: replyId, sessionId: op.payload.id, body: "Lovely", createdAt: nowIso() } }]);
+    const like = (device: TestDevice, pid: string, active: boolean, at: number) => ({
+      opId: newId("op"),
+      challengeId: snap.challenge.id,
+      type: "reply.like",
+      payload: { id: replyLikeId(replyId, pid), replyId, active, updatedAt: new Date(at).toISOString() },
+    });
+    const t = Date.now();
+    await push(host, [like(host, snap.me.participantId, true, t), like(host, snap.me.participantId, true, t + 1)]);
+    let pull = await api<ChallengeSnapshot>("GET", `/api/challenges/${snap.challenge.id}/sync`, { device: friend });
+    expect(pull.body.replyLikes).toEqual([expect.objectContaining({ replyId, participantId: snap.me.participantId })]);
+    await push(host, [like(host, snap.me.participantId, false, t + 2)]);
+    pull = await api<ChallengeSnapshot>("GET", `/api/challenges/${snap.challenge.id}/sync`, { device: friend });
+    expect(pull.body.replyLikes).toHaveLength(0);
+    // Liking as someone else is refused.
+    expect((await push(host, [like(host, joined.body.me.participantId, true, t + 3)])).body.results[0]!.code).toBe("forbidden");
   });
 
   it("goal upsert derives fields from the preset", async () => {

@@ -8,7 +8,6 @@ import { openDayOneWindow } from "@/local/repo";
 import { getSyncEngine } from "@/local/sync/engine";
 import { Button } from "../ui/button";
 import { Card, Eyebrow } from "../ui/card";
-import { cn } from "../ui/cn";
 
 const WINDOW_MINUTES = DAY_ONE_WINDOW_MS / 60_000;
 
@@ -26,17 +25,6 @@ export function useDayOneWindow(challenge: Pick<LocalChallenge, "dayOneWindowOpe
     return () => clearInterval(t);
   }, [open]);
   return w;
-}
-
-export function DayOneBadge({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn("inline-flex items-center gap-1 rounded-pill bg-butter px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink", className)}
-      title="Read on Day 1"
-    >
-      <span aria-hidden>①</span> Day One
-    </span>
-  );
 }
 
 /** Home-screen call to action while the window is open. */
@@ -87,7 +75,7 @@ export function DayOneHostCard({ view }: { view: ChallengeView }) {
       </p>
     );
   } else if (!canOpenDayOneWindow(challenge)) {
-    body = <p className="text-ink-2">Available from Day 2 while the challenge is running. Everyone who reads on Day 1 gets the badge.</p>;
+    body = <p className="text-ink-2">Available from Day 3 while the challenge is running. Everyone who reads on Day 1 gets the badge.</p>;
   } else {
     body = (
       <>

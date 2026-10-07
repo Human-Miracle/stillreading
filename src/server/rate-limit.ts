@@ -28,9 +28,11 @@ export const LIMITS = {
   pass: { bucket: "pass", limit: 30, windowSeconds: 3600 },
   reinvite: { bucket: "reinvite", limit: 20, windowSeconds: 3600 },
   bookSearch: { bucket: "books-ip", limit: 60, windowSeconds: 60 },
+  notifications: { bucket: "notify", limit: 30, windowSeconds: 600 },
   coverFill: { bucket: "cover-fill", limit: 30, windowSeconds: 3600 },
   dayOne: { bucket: "day-one", limit: 10, windowSeconds: 3600 },
   handoff: { bucket: "handoff", limit: 20, windowSeconds: 3600 },
+  badgeShare: { bucket: "badge-share", limit: 60, windowSeconds: 3600 },
 } satisfies Record<string, Limit>;
 
 /**

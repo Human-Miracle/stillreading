@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { BookDTO, ChallengeDTO, EntityKind, GoalDTO, ParticipantDTO, ReactionDTO, SessionDTO } from "@/lib/api-types";
+import type { BookDTO, ChallengeDTO, EntityKind, GoalDTO, ParticipantDTO, ReactionDTO, ReplyDTO, ReplyLikeDTO, SessionDTO } from "@/lib/api-types";
 import type { SyncOpType } from "@/lib/validation/ops";
 
 export type SyncStatus = "pending" | "synced" | "failed";
@@ -25,6 +25,8 @@ export type LocalSession = SessionDTO & {
   privateSynced?: boolean;
 };
 export type LocalReaction = ReactionDTO & { syncStatus: SyncStatus };
+export type LocalReply = ReplyDTO & { syncStatus: SyncStatus };
+export type LocalReplyLike = ReplyLikeDTO & { syncStatus: SyncStatus };
 
 export interface SyncOpRecord {
   opId: string;
@@ -54,6 +56,8 @@ export class StillReadingDB extends Dexie {
   books!: EntityTable<LocalBook, "id">;
   sessions!: EntityTable<LocalSession, "id">;
   reactions!: EntityTable<LocalReaction, "id">;
+  replies!: EntityTable<LocalReply, "id">;
+  replyLikes!: EntityTable<LocalReplyLike, "id">;
   syncQueue!: EntityTable<SyncOpRecord, "opId">;
 
   // Storage name predates the rename to Still Reading; kept so existing devices keep their data.
@@ -69,6 +73,10 @@ export class StillReadingDB extends Dexie {
       reactions: "id, challengeId, sessionId",
       syncQueue: "opId, createdAt, challengeId, status, entityId",
     });
+    // v2: replies on check-ins.
+    this.version(2).stores({ replies: "id, challengeId, sessionId" });
+    // v3: likes on replies.
+    this.version(3).stores({ replyLikes: "id, challengeId, replyId" });
   }
 }
 
@@ -77,6 +85,25 @@ let instance: StillReadingDB | null = null;
 export function getLocalDb(): StillReadingDB {
   if (!instance) instance = new StillReadingDB();
   return instance;
+}
+
+/**
+ * Whether this browser lets the app keep its data. In-app browsers (Instagram, WhatsApp…) and some
+ * private modes block IndexedDB, or leave it hanging; without it nothing can be saved, so joining
+ * explains that instead of failing silently.
+ */
+export async function localStorageWorks(timeoutMs = 4000): Promise<boolean> {
+  if (typeof indexedDB === "undefined") return false;
+  try {
+    return await Promise.race([
+      getLocalDb()
+        .kv.get("storage-check")
+        .then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), timeoutMs)),
+    ]);
+  } catch {
+    return false;
+  }
 }
 
 /** Test hook. */

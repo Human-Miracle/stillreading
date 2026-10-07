@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canOpenDayOneWindow, dayOneCheckInAllowed, dayOneWindow, formatCountdown, hasDayOneBadge, DAY_ONE_WINDOW_MS } from "@/lib/domain/day-one";
+import { canOpenDayOneWindow, inDayOneWindow, dayOneWindow, formatCountdown, hasDayOneBadge, DAY_ONE_WINDOW_MS } from "@/lib/domain/day-one";
 
 const challenge = { startDate: "2026-10-01", endDate: "2026-10-30", durationDays: 30, timezone: "UTC" };
 const at = (iso: string) => new Date(iso);
@@ -19,23 +19,23 @@ describe("day one window", () => {
     expect(dayOneWindow("2026-10-12T10:00:00Z", at("2026-10-12T09:59:00Z")).msLeft).toBe(180_000);
   });
 
-  it("can be opened once, from Day 2 to the last day", () => {
+  it("can be opened once, from Day 3 to the last day", () => {
     expect(canOpenDayOneWindow(challenge, at("2026-10-01T12:00:00Z"))).toBe(false);
-    expect(canOpenDayOneWindow(challenge, at("2026-10-02T12:00:00Z"))).toBe(true);
+    expect(canOpenDayOneWindow(challenge, at("2026-10-02T12:00:00Z"))).toBe(false);
+    expect(canOpenDayOneWindow(challenge, at("2026-10-03T12:00:00Z"))).toBe(true);
     expect(canOpenDayOneWindow(challenge, at("2026-10-30T12:00:00Z"))).toBe(true);
     expect(canOpenDayOneWindow(challenge, at("2026-10-31T12:00:00Z"))).toBe(false);
     expect(canOpenDayOneWindow({ ...challenge, dayOneWindowOpensAt: "2026-10-05T12:00:00Z" }, at("2026-10-12T12:00:00Z"))).toBe(false);
   });
 
-  it("allows Day 1 check-ins made on Day 1 or 2, and later ones only inside the window", () => {
-    expect(dayOneCheckInAllowed(challenge, at("2026-10-01T20:00:00Z"))).toBe(true);
-    expect(dayOneCheckInAllowed(challenge, at("2026-10-02T20:00:00Z"))).toBe(true);
-    expect(dayOneCheckInAllowed(challenge, at("2026-10-12T10:01:00Z"))).toBe(false);
-    const opened = { ...challenge, dayOneWindowOpensAt: "2026-10-12T10:00:00Z" };
-    expect(dayOneCheckInAllowed(opened, at("2026-10-12T10:01:00Z"))).toBe(true);
-    expect(dayOneCheckInAllowed(opened, at("2026-10-12T10:03:30Z"))).toBe(true); // clock slack
-    expect(dayOneCheckInAllowed(opened, at("2026-10-12T10:05:00Z"))).toBe(false);
-    expect(dayOneCheckInAllowed(opened, at("2026-10-13T10:01:00Z"))).toBe(false);
+  it("accepts check-ins made inside the window, with a minute of slack for device clocks", () => {
+    const opensAt = "2026-10-12T10:00:00Z";
+    expect(inDayOneWindow(null, at("2026-10-12T10:01:00Z"))).toBe(false);
+    expect(inDayOneWindow(opensAt, at("2026-10-12T10:01:00Z"))).toBe(true);
+    expect(inDayOneWindow(opensAt, at("2026-10-12T09:59:30Z"))).toBe(true);
+    expect(inDayOneWindow(opensAt, at("2026-10-12T10:03:30Z"))).toBe(true);
+    expect(inDayOneWindow(opensAt, at("2026-10-12T10:05:00Z"))).toBe(false);
+    expect(inDayOneWindow(opensAt, at("2026-10-13T10:01:00Z"))).toBe(false);
   });
 
   it("awards the badge for any live Day 1 check-in", () => {

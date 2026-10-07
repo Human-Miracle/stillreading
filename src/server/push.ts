@@ -1,23 +1,54 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { EntityKind, PushResult } from "@/lib/api-types";
 import { diffDays, isWithinChallenge, todayInTimezone } from "@/lib/domain/dates";
-import { dayOneCheckInAllowed } from "@/lib/domain/day-one";
-import { reactionId } from "@/lib/ids";
+import { inDayOneWindow } from "@/lib/domain/day-one";
+import { backfillCost, timeStoneWallet } from "@/lib/domain/time-stones";
+import { reactionId, replyLikeId } from "@/lib/ids";
 import { syncOp, type SyncOp } from "@/lib/validation/ops";
 import type { Database, Tx } from "@/db/client";
-import { books, challenges, participants, processedOperations, reactions, readingSessions, type ChallengeRow, type ParticipantRow } from "@/db/schema";
+import { books, challenges, participants, processedOperations, reactions, readingSessions, replies, replyLikes, type ChallengeRow, type ParticipantRow } from "@/db/schema";
 import { findMembership, membershipFailure } from "./auth";
 import { upsertBook } from "./books";
 import { challengePhase, goalDurationFor } from "./challenges";
 import { upsertGoal } from "./goals";
+import { mergeParticipants } from "./merge";
 import { errorFields, log } from "./log";
-import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, sessionDTO } from "./serialize";
+import { afterResponse, notifyReply } from "./notifications";
+import { bookDTO, challengeDTO, goalDTO, participantDTO, reactionDTO, replyDTO, replyLikeDTO, sessionDTO } from "./serialize";
 
 type Outcome = Omit<PushResult, "opId">;
 
 const ok = (kind?: EntityKind, record?: unknown): Outcome => (kind ? { status: "ok", entity: { kind, record } } : { status: "ok" });
 const stale = (kind: EntityKind, record: unknown): Outcome => ({ status: "stale", entity: { kind, record } });
 const rejected = (code: string, message: string): Outcome => ({ status: "rejected", code, message });
+
+/** How far back a device's own clock is trusted for when a check-in was made (it may have been offline). */
+const OFFLINE_TRUST_MS = 7 * 86_400_000;
+
+/**
+ * Whether this check-in spends a Time Stone (a missed yesterday, past the grace hours), or why it
+ * can't be logged: only the day it was made or the day before can be. Timed by the device's clock,
+ * within reason, since it may have been logged offline and synced later.
+ */
+/** When a check-in was made: the device's clock, but never in the future or past the offline trust. */
+function trustedLogTime(createdAt: Date): Date {
+  const now = Date.now();
+  return new Date(Math.min(now, Math.max(now - OFFLINE_TRUST_MS, createdAt.getTime() || now)));
+}
+
+async function spendsTimeStone(tx: Tx, challenge: ChallengeRow, me: ParticipantRow, date: string, createdAt: Date, agreed: boolean): Promise<boolean | Outcome> {
+  const loggedAt = trustedLogTime(createdAt);
+  if (diffDays(date, todayInTimezone(challenge.timezone, loggedAt)) > 1) return rejected("date_out_of_range", "Only today or yesterday can be logged.");
+  const rows = await tx
+    .select({ date: readingSessions.date, createdAt: readingSessions.createdAt, deletedAt: readingSessions.deletedAt, timeStone: readingSessions.timeStone })
+    .from(readingSessions)
+    .where(and(eq(readingSessions.challengeId, challenge.id), eq(readingSessions.participantId, me.id)));
+  const mine = rows.map((r) => ({ date: r.date, createdAt: r.createdAt.toISOString(), deletedAt: r.deletedAt?.toISOString() ?? null, timeStone: r.timeStone }));
+  if (backfillCost(mine, date, challenge.timezone, loggedAt) === "free") return false;
+  if (!agreed) return rejected("time_stone_needed", "Logging a missed day takes a Time Stone.");
+  if (timeStoneWallet(mine).held < 1) return rejected("no_time_stone", "You don't have a Time Stone to log that day.");
+  return true;
+}
 
 /** Applies a batch of client operations in order. Each op is its own transaction and idempotent by op id. */
 export async function applyOps(db: Database, deviceId: string, rawOps: unknown[]): Promise<PushResult[]> {
@@ -31,7 +62,13 @@ export async function applyOps(db: Database, deviceId: string, rawOps: unknown[]
       continue;
     }
     try {
-      results.push({ opId, ...(await applyOne(db, deviceId, parsed.data)) });
+      const outcome = await applyOne(db, deviceId, parsed.data);
+      results.push({ opId, ...outcome });
+      // Committed: tell the thread's followers. notifyReply claims each reply once, so retries are no-ops.
+      if (parsed.data.type === "reply.create" && outcome.status === "ok") {
+        const replyId = parsed.data.payload.id;
+        afterResponse("reply_notify", async () => void (await notifyReply(db, replyId)));
+      }
     } catch (err) {
       log.error("sync_op_failed", { opId, type: parsed.data.type, ...errorFields(err) });
       results.push({ opId, status: "error", code: "server_error", message: "Could not apply operation" });
@@ -137,8 +174,11 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
       return rejected("date_out_of_range", "That date isn't part of this challenge.");
     }
     const createdAt = new Date(payload.createdAt);
-    if (payload.date === challenge.startDate && !dayOneCheckInAllowed(challenge, createdAt)) {
-      return rejected("day_one_closed", "The Day One window has closed.");
+    // A Day 1 check-in made while the host's Day One window was open is allowed on any later day.
+    const viaDayOneWindow = payload.date === challenge.startDate && inDayOneWindow(challenge.dayOneWindowOpensAt, trustedLogTime(createdAt));
+    const timeStone = viaDayOneWindow ? false : await spendsTimeStone(tx, challenge, me, payload.date, createdAt, payload.timeStone === true);
+    if (typeof timeStone === "object") {
+      return payload.date === challenge.startDate && timeStone.code === "date_out_of_range" ? rejected("day_one_closed", "The Day One window has closed.") : timeStone;
     }
     let bookId = payload.bookId ?? null;
     if (bookId) {
@@ -158,6 +198,7 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
         pages: payload.unit === "pages" ? null : (payload.pages ?? null),
         reflection: payload.reflection || null,
         privateReflection: payload.privateReflection ?? null,
+        timeStone,
         createdAt,
         updatedAt: createdAt,
       })
@@ -181,6 +222,64 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
       .where(and(eq(readingSessions.id, payload.id), eq(readingSessions.participantId, me.id)))
       .returning();
     return row ? ok("session", sessionDTO(row, me.id)) : ok();
+  },
+
+  async "reply.create"(tx, { payload }, { challenge, me }) {
+    const [existing] = await tx.select().from(replies).where(eq(replies.id, payload.id));
+    if (existing) {
+      if (existing.participantId !== me.id) return rejected("forbidden", "That reply belongs to someone else.");
+      return ok("reply", replyDTO(existing));
+    }
+    const [session] = await tx
+      .select({ challengeId: readingSessions.challengeId, deletedAt: readingSessions.deletedAt })
+      .from(readingSessions)
+      .where(eq(readingSessions.id, payload.sessionId));
+    if (!session || session.challengeId !== challenge.id || session.deletedAt) return rejected("not_found", "That check-in no longer exists.");
+    // Threads are one level deep: a reply to a nested reply joins its top-level reply.
+    let parentId: string | null = null;
+    if (payload.parentId) {
+      const [parent] = await tx
+        .select({ id: replies.id, parentId: replies.parentId, sessionId: replies.readingSessionId, deletedAt: replies.deletedAt })
+        .from(replies)
+        .where(eq(replies.id, payload.parentId));
+      if (!parent || parent.sessionId !== payload.sessionId || parent.deletedAt) return rejected("not_found", "That reply no longer exists.");
+      parentId = parent.parentId ?? parent.id;
+    }
+    const createdAt = new Date(payload.createdAt);
+    const [row] = await tx
+      .insert(replies)
+      .values({ id: payload.id, challengeId: challenge.id, participantId: me.id, readingSessionId: payload.sessionId, parentId, body: payload.body, createdAt, updatedAt: createdAt })
+      .returning();
+    return ok("reply", replyDTO(row!));
+  },
+
+  async "reply.delete"(tx, { payload }, { me }) {
+    const at = new Date(payload.updatedAt);
+    const [row] = await tx
+      .update(replies)
+      .set({ deletedAt: at, updatedAt: at, serverUpdatedAt: now })
+      .where(and(eq(replies.id, payload.id), eq(replies.participantId, me.id)))
+      .returning();
+    return row ? ok("reply", replyDTO(row)) : ok();
+  },
+
+  async "reply.like"(tx, { payload }, { challenge, me }) {
+    if (payload.id !== replyLikeId(payload.replyId, me.id)) return rejected("forbidden", "Invalid like id.");
+    const [reply] = await tx.select({ challengeId: replies.challengeId }).from(replies).where(eq(replies.id, payload.replyId));
+    if (!reply || reply.challengeId !== challenge.id) return rejected("not_found", "That reply no longer exists.");
+    const updatedAt = new Date(payload.updatedAt);
+    const deletedAt = payload.active ? null : updatedAt;
+    const [existing] = await tx.select().from(replyLikes).where(eq(replyLikes.id, payload.id));
+    if (existing) {
+      if (existing.updatedAt > updatedAt) return stale("replyLike", replyLikeDTO(existing));
+      const [row] = await tx.update(replyLikes).set({ deletedAt, updatedAt, serverUpdatedAt: now }).where(eq(replyLikes.id, payload.id)).returning();
+      return ok("replyLike", replyLikeDTO(row!));
+    }
+    const [row] = await tx
+      .insert(replyLikes)
+      .values({ id: payload.id, challengeId: challenge.id, participantId: me.id, replyId: payload.replyId, createdAt: updatedAt, updatedAt, deletedAt })
+      .returning();
+    return ok("replyLike", replyLikeDTO(row!));
   },
 
   async "reaction.set"(tx, { payload }, { challenge, me }) {
@@ -254,6 +353,22 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
       .returning();
     if (!row) return rejected("not_found", "Participant not found.");
     log.info("participant_removed", { challengeId: challenge.id });
+    return ok("participant", participantDTO(row));
+  },
+
+  async "participant.merge"(tx, { payload }, { challenge, me }) {
+    if (me.role !== "host") return rejected("forbidden", "Only the host can merge participants.");
+    if (payload.fromId === payload.intoId) return rejected("invalid", "Pick two different participants.");
+    const rows = await tx
+      .select()
+      .from(participants)
+      .where(and(eq(participants.challengeId, challenge.id), inArray(participants.id, [payload.fromId, payload.intoId])));
+    const from = rows.find((r) => r.id === payload.fromId);
+    const into = rows.find((r) => r.id === payload.intoId);
+    if (!from || !into || from.status !== "active" || into.status !== "active") return rejected("not_found", "Participant not found.");
+    if (from.role === "host") return rejected("invalid", "The host can't be merged into someone else. Merge the other copy into the host instead.");
+    const row = await mergeParticipants(tx, from, into);
+    log.info("participants_merged", { challengeId: challenge.id });
     return ok("participant", participantDTO(row));
   },
 };

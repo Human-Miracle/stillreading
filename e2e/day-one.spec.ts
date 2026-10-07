@@ -33,17 +33,17 @@ test("Day One window: host opens it once, a member logs Day 1 and earns the badg
   await dialog.getByLabel("How much?").fill("15");
   if (SHOTS) await friend.screenshot({ path: `${SHOTS}/composer.png` });
   await dialog.getByRole("button", { name: "Check in", exact: true }).click();
-  await expect(dialog.getByText("The Day One badge is yours.")).toBeVisible();
+  await expect(dialog.getByText("Day 1 is in. The Day One badge is yours.")).toBeVisible();
   if (SHOTS) await friend.screenshot({ path: `${SHOTS}/success.png` });
   await dialog.getByRole("button", { name: "Done" }).click();
   await waitForSynced(friend);
 
-  // Everyone sees the badge; the host can't open the window again.
-  await host.goto(challengeUrl);
-  await expect(host.getByRole("link", { name: /David/ }).first().getByText("Day One")).toBeVisible({ timeout: 30_000 });
-  if (SHOTS) await host.locator("#crew-title").locator("../..").screenshot({ path: `${SHOTS}/crew.png` });
+  // It earns the Day One badge, and the host can't open the window again.
+  await friend.goto(`${challengeUrl}/me?tab=badges`);
+  await expect(friend.getByRole("list", { name: "Your badges" }).getByRole("button", { name: "Day One: Earned" })).toBeVisible();
+  if (SHOTS) await friend.screenshot({ path: `${SHOTS}/badges.png` });
   await host.goto(`${challengeUrl}/settings`);
-  await expect(host.getByText(/1 of 2 readers have the badge/)).toBeVisible();
+  await expect(host.getByText(/1 of 2 readers have the badge/)).toBeVisible({ timeout: 30_000 });
   await expect(host.getByRole("button", { name: "Open Day One window" })).toHaveCount(0);
 
   await hostCtx.close();

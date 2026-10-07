@@ -7,6 +7,12 @@ import { getLocalDb, type SyncOpRecord } from "./db";
 import { applySnapshot } from "./merge";
 import { onLocalMutationNotify } from "./repo";
 
+/**
+ * Which round of the home-screen pass notice this device has closed (or saved the pass for). Bump it
+ * to show the notice to everyone again; round 2 went out in October 2026.
+ */
+export const PASS_NOTICE_KEY = "pref:passNotice:2";
+
 /** What this device knows about its reader. The pass is kept so it can always be shown in Settings. */
 export interface LocalReader {
   readerId: string;
@@ -127,7 +133,7 @@ export async function claimWithPass(input: string): Promise<string[]> {
     await getLocalDb().sessions.toCollection().modify({ privateSynced: false });
   }
   await saveLocalReader({ readerId: res.readerId, pass, passSetAt: res.passSetAt, noteKey });
-  await getLocalDb().kv.put({ key: "pref:passPromptDone", value: true });
+  await getLocalDb().kv.put({ key: PASS_NOTICE_KEY, value: true });
   await importChallenges(res.challengeIds);
   await backfillPrivateNotes();
   return res.challengeIds;

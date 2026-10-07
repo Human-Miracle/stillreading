@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { BookDetails } from "@/components/books/book-card";
-import { BookForm, bookDraftToInput, emptyBook } from "@/components/books/book-form";
+import { BadgeGrid } from "@/components/badges/badge-grid";
+import { BookForm, bookDraftReady, bookDraftToInput, emptyBook } from "@/components/books/book-form";
 import { BookShelf } from "@/components/books/book-shelf";
 import { useChallenge } from "@/components/challenge/context";
-import { DayOneBadge } from "@/components/challenge/day-one";
 import { GoalProgress } from "@/components/challenge/goal-progress";
 import { Hero } from "@/components/challenge/hero";
 import { StreakBanner } from "@/components/challenge/streak-banner";
@@ -21,16 +22,27 @@ import { relativeDayLabel } from "@/lib/format";
 import type { LocalBook } from "@/local/db";
 import { addBook, deleteSession } from "@/local/repo";
 
-type Tab = "overview" | "checkins" | "books";
+type Tab = "overview" | "checkins" | "books" | "badges";
 
 export default function MePage() {
-  const { view, openCheckIn } = useChallenge();
+  const { view, badges, openCheckIn } = useChallenge();
   const me = view.me;
-  const [tab, setTab] = useState<Tab>("overview");
+  // The home page's badges card links here with ?tab=badges. (Not window.location: on an in-app
+  // navigation the address bar only changes after this page has rendered.)
+  const params = useSearchParams();
+  const [tab, setTab] = useState<Tab>(params.get("tab") === "badges" ? "badges" : "overview");
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const jumped = useRef(false);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyBook);
   const [openBook, setOpenBook] = useState<LocalBook | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Arriving from the badges card: bring the badges up, they're below the fold.
+  useEffect(() => {
+    if (jumped.current || !tabsRef.current || params.get("tab") !== "badges") return;
+    jumped.current = true;
+    tabsRef.current.scrollIntoView({ block: "start" });
+  });
   if (!me) return null;
   const p = me.progress;
   const editable = view.challenge.status !== "archived";
@@ -49,7 +61,6 @@ export default function MePage() {
             You&apos;ve read {headline === "—" ? "nothing yet" : headline}
             <span className="text-ink/35"> this challenge</span>
           </h1>
-          {me.dayOne ? <DayOneBadge className="mt-4" /> : null}
           <div className="mt-8 flex items-center justify-between">
             <p className="text-[17px] font-medium tracking-[-0.02em]">Your books</p>
             <p className="text-sm text-ink/55">
@@ -59,7 +70,7 @@ export default function MePage() {
           <div className="mt-3">
             <BookShelf books={books} onOpen={setOpenBook} onAdd={editable ? () => setAdding(true) : undefined} />
           </div>
-          <div className="mt-6">
+          <div ref={tabsRef} className="mt-6 scroll-mt-20">
             <CountTabs
               label="Your progress"
               value={tab}
@@ -68,6 +79,7 @@ export default function MePage() {
                 { value: "overview", label: "Overview", count: p.readingDays },
                 { value: "checkins", label: "Check-ins", count: mySessions.length },
                 { value: "books", label: "Books", count: books.length },
+                { value: "badges", label: "Badges", count: badges.mine.filter((b) => b.level > 0).length },
               ]}
             />
           </div>
@@ -145,13 +157,15 @@ export default function MePage() {
           ) : (
             <EmptyState title="No check-ins yet">
               {p.clock.phase === "active" ? (
-                <Button className="mt-4" onClick={openCheckIn}>
+                <Button className="mt-4" onClick={() => openCheckIn()}>
                   Log your first reading
                 </Button>
               ) : null}
             </EmptyState>
           )
         ) : null}
+
+        {tab === "badges" ? <BadgeGrid view={view} badges={badges} participantId={view.challenge.myParticipantId} /> : null}
 
         {tab === "books" ? (
           books.length ? (
@@ -173,8 +187,8 @@ export default function MePage() {
           className="space-y-5"
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!bookDraftReady(draft)) return;
             const input = bookDraftToInput(draft);
-            if (!input.title) return;
             await addBook(view.challenge.id, input);
             track("book_added", { challengeId: view.challenge.id });
             setDraft(emptyBook);
@@ -182,7 +196,7 @@ export default function MePage() {
           }}
         >
           <BookForm value={draft} onChange={setDraft} autoFocus />
-          <Button type="submit" size="lg" full disabled={!draft.title.trim()}>
+          <Button type="submit" size="lg" full disabled={!bookDraftReady(draft)}>
             Add book
           </Button>
         </form>

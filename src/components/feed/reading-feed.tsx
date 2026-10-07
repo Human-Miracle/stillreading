@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { formatAmount } from "@/lib/domain/goals";
 import { relativeDayLabel } from "@/lib/format";
 import type { LocalSession } from "@/local/db";
 import type { ChallengeView } from "@/local/hooks";
 import { Avatar } from "../ui/avatar";
 import { Button } from "../ui/button";
+import { Icon } from "../ui/icons";
 import { EmptyState } from "../ui/misc";
 import { ReactionBar } from "./reaction-bar";
 
@@ -16,8 +17,19 @@ function clock(iso: string) {
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function ReadingFeedItem({ view, session }: { view: ChallengeView; session: LocalSession }) {
+export function threadHref(challengeId: string, sessionId: string) {
+  return `/c/${challengeId}/feed/${sessionId}`;
+}
+
+/**
+ * One check-in. In the feed the body links to its thread and a reply summary sits under the
+ * reactions; on the thread page (`inThread`) both are left out.
+ */
+export function ReadingFeedItem({ view, session, inThread = false }: { view: ChallengeView; session: LocalSession; inThread?: boolean }) {
   const person = view.participantsById.get(session.participantId);
+  const replies = view.repliesBySession.get(session.id) ?? [];
+  const latest = replies[replies.length - 1];
+  const href = threadHref(view.challenge.id, session.id);
   const book = session.bookId ? view.booksById.get(session.bookId) : undefined;
   const isMine = session.participantId === view.challenge.myParticipantId;
   const sharedReflection = session.reflection && (session.reflectionShared || !isMine);
@@ -36,17 +48,24 @@ export function ReadingFeedItem({ view, session }: { view: ChallengeView; sessio
             </p>
             <span className="shrink-0 text-xs tabular text-ink/35">{clock(session.createdAt)}</span>
           </div>
-          <p className="display mt-1.5 text-[34px] tabular">{formatAmount(session.amount, session.unit)}</p>
-          {session.unit !== "pages" && session.pages ? <p className="text-sm tabular text-muted">{formatAmount(session.pages, "pages")}</p> : null}
-          {isMine && session.syncStatus !== "synced" ? (
-            <p className="mt-1 text-xs font-medium text-warn">{session.syncStatus === "failed" ? "Not synced" : "Saved on device"}</p>
-          ) : null}
-          {sharedReflection ? <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-ink/70">“{session.reflection}”</p> : null}
-          {privateReflection ? (
-            <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-ink/70">
-              <span className="mr-1.5 rounded-pill bg-surface-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted">Private</span>“{session.reflection}”
-            </p>
-          ) : null}
+          <ThreadLink href={inThread ? null : href}>
+            <p className="display mt-1.5 text-[34px] tabular">{formatAmount(session.amount, session.unit)}</p>
+            {session.unit !== "pages" && session.pages ? <p className="text-sm tabular text-muted">{formatAmount(session.pages, "pages")}</p> : null}
+            {session.timeStone ? (
+              <p className="mt-1.5">
+                <span className="inline-flex items-center gap-1 rounded-pill bg-sky px-2.5 py-0.5 text-xs font-medium text-ink/75">⏳ Logged with a Time Stone</span>
+              </p>
+            ) : null}
+            {isMine && session.syncStatus !== "synced" ? (
+              <p className="mt-1 text-xs font-medium text-warn">{session.syncStatus === "failed" ? "Not synced" : "Saved on device"}</p>
+            ) : null}
+            {sharedReflection ? <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-ink/70">“{session.reflection}”</p> : null}
+            {privateReflection ? (
+              <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-ink/70">
+                <span className="mr-1.5 rounded-pill bg-surface-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted">Private</span>“{session.reflection}”
+              </p>
+            ) : null}
+          </ThreadLink>
           <div className="mt-3">
             <ReactionBar
               challengeId={view.challenge.id}
@@ -56,9 +75,36 @@ export function ReadingFeedItem({ view, session }: { view: ChallengeView; sessio
               disabled={view.challenge.status === "archived"}
             />
           </div>
+          {inThread ? null : (
+            <Link href={href} className="mt-3 flex items-center gap-2 rounded-2xl text-sm text-muted hover:text-ink">
+              <Icon.reply className="size-4 shrink-0" />
+              {latest ? (
+                <span className="min-w-0 truncate">
+                  <span className="font-medium text-ink/80">
+                    {replies.length} {replies.length === 1 ? "reply" : "replies"}
+                  </span>
+                  <span>
+                    {" "}
+                    · {view.participantsById.get(latest.participantId)?.displayName.split(" ")[0] ?? "Someone"}: {latest.body}
+                  </span>
+                </span>
+              ) : (
+                <span className="font-medium">Reply</span>
+              )}
+            </Link>
+          )}
         </div>
       </div>
     </li>
+  );
+}
+
+function ThreadLink({ href, children }: { href: string | null; children: ReactNode }) {
+  if (!href) return <div>{children}</div>;
+  return (
+    <Link href={href} className="block rounded-xl transition-opacity active:opacity-70">
+      {children}
+    </Link>
   );
 }
 

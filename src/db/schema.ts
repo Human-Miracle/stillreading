@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigserial,
+  boolean,
   check,
   date,
   index,
@@ -88,6 +89,13 @@ export const participants = pgTable(
     avatarUrl: text("avatar_url"),
     role: text("role", { enum: ["host", "participant"] }).notNull().default("participant"),
     status: text("status", { enum: ["active", "removed", "left"] }).notNull().default("active"),
+    /** Push a notification to this member's devices when someone replies to their check-ins or threads. */
+    notifyReplies: boolean("notify_replies").notNull().default(false),
+    /** Push a nudge to log today's reading (only when notifications are on; see server/reminders). */
+    notifyReminders: boolean("notify_reminders").notNull().default(true),
+    lastRemindedAt: ts("last_reminded_at"),
+    /** The missed day this reader was last nudged to bring back with a Time Stone (once per day). */
+    stoneRemindedFor: date("stone_reminded_for", { mode: "string" }),
     joinedAt: ts("joined_at").notNull().defaultNow(),
     ...syncColumns,
   },
@@ -136,8 +144,8 @@ export const books = pgTable(
     title: varchar("title", { length: 200 }).notNull(),
     author: varchar("author", { length: 120 }),
     coverUrl: text("cover_url"),
-    /** Server-side cover lookup: null = not looked up yet, found / missing, or removed by the reader. */
-    coverLookup: text("cover_lookup", { enum: ["found", "missing", "removed"] }),
+    /** Server-side cover lookup: null = not looked up yet, found / missing, or the reader removed / picked the cover. */
+    coverLookup: text("cover_lookup", { enum: ["found", "missing", "removed", "picked"] }),
     coverCheckedAt: ts("cover_checked_at"),
     totalPages: integer("total_pages"),
     currentPage: integer("current_page").notNull().default(0),
@@ -169,6 +177,8 @@ export const readingSessions = pgTable(
     reflection: varchar("reflection", { length: 500 }),
     /** End-to-end encrypted private reflection ("v1.<iv>.<ciphertext>"); only ever sent to its owner. */
     privateReflection: text("private_reflection"),
+    /** Logged for a missed day by spending a Time Stone (see domain/time-stones). */
+    timeStone: boolean("time_stone").notNull().default(false),
     ...syncColumns,
     deletedAt: ts("deleted_at"),
   },
@@ -190,7 +200,7 @@ export const reactions = pgTable(
     challengeId: text("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
     participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
     readingSessionId: text("reading_session_id").notNull().references(() => readingSessions.id, { onDelete: "cascade" }),
-    type: text("type", { enum: ["heart", "fire", "clap", "book"] }).notNull(),
+    type: text("type", { enum: ["heart", "fire", "clap", "laugh", "book"] }).notNull(),
     ...syncColumns,
     deletedAt: ts("deleted_at"),
   },
@@ -198,8 +208,74 @@ export const reactions = pgTable(
     uniqueIndex("reactions_unique_per_type_uq").on(t.participantId, t.readingSessionId, t.type),
     index("reactions_session_idx").on(t.readingSessionId),
     index("reactions_sync_idx").on(t.challengeId, t.serverUpdatedAt),
-    check("reactions_type", sql`${t.type} in ('heart','fire','clap','book')`),
+    check("reactions_type", sql`${t.type} in ('heart','fire','clap','laugh','book')`),
   ],
+);
+
+/** Replies on a check-in, shown as a thread under it. */
+export const replies = pgTable(
+  "replies",
+  {
+    id: text("id").primaryKey(),
+    challengeId: text("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
+    participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
+    readingSessionId: text("reading_session_id").notNull().references(() => readingSessions.id, { onDelete: "cascade" }),
+    body: varchar("body", { length: 500 }).notNull(),
+    /** Top-level reply this one answers (one level deep, like Instagram); null for replies to the check-in. */
+    parentId: text("parent_id"),
+    /** Set once notifications for this reply have been sent, so retries never notify twice. */
+    notifiedAt: ts("notified_at"),
+    ...syncColumns,
+    deletedAt: ts("deleted_at"),
+  },
+  (t) => [
+    index("replies_session_idx").on(t.readingSessionId),
+    index("replies_parent_idx").on(t.parentId),
+    index("replies_participant_idx").on(t.participantId),
+    index("replies_sync_idx").on(t.challengeId, t.serverUpdatedAt),
+  ],
+);
+
+/** ♥ on a reply. Unique per (participant, reply), so the id is derived; toggling reuses the row. */
+export const replyLikes = pgTable(
+  "reply_likes",
+  {
+    id: text("id").primaryKey(),
+    challengeId: text("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
+    participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
+    replyId: text("reply_id").notNull().references(() => replies.id, { onDelete: "cascade" }),
+    ...syncColumns,
+    deletedAt: ts("deleted_at"),
+  },
+  (t) => [
+    uniqueIndex("reply_likes_unique_uq").on(t.participantId, t.replyId),
+    index("reply_likes_reply_idx").on(t.replyId),
+    index("reply_likes_sync_idx").on(t.challengeId, t.serverUpdatedAt),
+  ],
+);
+
+/**
+ * Web Push addresses, one per browser/app install. Notifications go to every subscription of the
+ * member's device, or of any device belonging to the same reader (Reading Pass).
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    endpoint: text("endpoint").primaryKey(),
+    deviceId: text("device_id")
+      .notNull()
+      .references(() => devices.id, { onDelete: "cascade" }),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+    /** Outcome of the last notification sent here (sent / failed), with the push service's reason. */
+    lastResult: text("last_result"),
+    lastStatus: integer("last_status"),
+    lastDetail: text("last_detail"),
+    lastSentAt: ts("last_sent_at"),
+  },
+  (t) => [index("push_subscriptions_device_idx").on(t.deviceId)],
 );
 
 /** One-time links a host creates so a member who lost everything can reconnect. */
@@ -263,4 +339,43 @@ export type GoalRow = typeof goals.$inferSelect;
 export type BookRow = typeof books.$inferSelect;
 export type SessionRow = typeof readingSessions.$inferSelect;
 export type ReactionRow = typeof reactions.$inferSelect;
+export type ReplyRow = typeof replies.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type ReplyLikeRow = typeof replyLikes.$inferSelect;
 export type ReaderRow = typeof readers.$inferSelect;
+
+/**
+ * A badge a reader chose to save or share. The snapshot keeps the card's details as they were when
+ * it was earned. Only `public` shares get a page anyone can open (and link previews); the id is
+ * unguessable, so the card image itself can be fetched with just the id.
+ */
+export const badgeShares = pgTable(
+  "badge_shares",
+  {
+    id: text("id").primaryKey(),
+    challengeId: text("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
+    participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
+    badgeId: text("badge_id").notNull(),
+    level: integer("level").notNull(),
+    public: boolean("public").notNull().default(false),
+    snapshot: jsonb("snapshot").$type<BadgeSnapshot>().notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("badge_shares_participant_badge_uq").on(t.participantId, t.badgeId, t.level)],
+);
+
+export interface BadgeSnapshot {
+  name: string;
+  displayName: string;
+  challengeName: string;
+  stat: string | null;
+  earnedOn: string | null;
+  dayNumber: number | null;
+  durationDays: number;
+  count: number;
+  holders: number;
+  readers: number;
+}
+
+export type BadgeShareRow = typeof badgeShares.$inferSelect;

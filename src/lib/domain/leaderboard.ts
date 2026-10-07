@@ -1,6 +1,8 @@
-import { formatAmount } from "./goals";
+import { formatAmount, sumByUnit } from "./goals";
+import { progressAsOf, type StandingsReader } from "./history";
 import type { ParticipantProgress } from "./progress";
 import type { ParticipantStatsRow } from "./stats";
+import type { ChallengeLike, DateKey } from "./types";
 
 /**
  * Pages read are the leaderboard's source of truth: every page earns {@link PAGE_XP} XP. Books and
@@ -54,8 +56,29 @@ function rankValues(values: readonly number[]): (number | null)[] {
 }
 
 export function leaderboard(rows: readonly ParticipantStatsRow[]): LeaderboardEntry[] {
+  return rankByXp(
+    rows.map((r) => ({
+      participantId: r.participantId,
+      displayName: r.displayName,
+      values: Object.fromEntries(XP_CATEGORIES.map((c) => [c.key, c.pick(r.progress)])) as Record<XpCategory, number>,
+    })),
+  );
+}
+
+export function leaderboardOn(
+  challenge: ChallengeLike,
+  readers: readonly StandingsReader[],
+  date: DateKey,
+): { board: LeaderboardEntry[]; dayPages: Map<string, number> } {
+  const rows = readers.map((r) => ({ participantId: r.participantId, displayName: r.displayName, progress: progressAsOf(challenge, r, date) }));
+  const dayPages = new Map(readers.map((r) => [r.participantId, sumByUnit(r.sessions.filter((s) => s.date === date)).pages]));
+  return { board: leaderboard(rows), dayPages };
+}
+
+/** Ranks readers by the XP their category values earn. */
+function rankByXp(rows: readonly { participantId: string; displayName: string; values: Record<XpCategory, number> }[]): LeaderboardEntry[] {
   const perCategory = XP_CATEGORIES.map((c) => {
-    const values = rows.map((r) => c.pick(r.progress));
+    const values = rows.map((r) => r.values[c.key]);
     return { key: c.key, rate: c.rate, values, ranks: rankValues(values) };
   });
 
@@ -79,7 +102,7 @@ export function leaderboard(rows: readonly ParticipantStatsRow[]): LeaderboardEn
       best,
     };
   });
-  const goalDays = new Map(rows.map((r) => [r.participantId, r.progress.goalDays]));
+  const goalDays = new Map(rows.map((r) => [r.participantId, r.values.goalDays]));
 
   // On equal XP, more pages first, then more goal days.
   entries.sort(

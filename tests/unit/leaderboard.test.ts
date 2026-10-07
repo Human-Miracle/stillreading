@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { goalFromPreset } from "@/lib/domain/goals";
-import { leaderboard, PAGE_XP } from "@/lib/domain/leaderboard";
+import { leaderboard, leaderboardOn, PAGE_XP } from "@/lib/domain/leaderboard";
 import { participantProgress } from "@/lib/domain/progress";
 import type { BookLike, SessionLike } from "@/lib/domain/types";
 
@@ -112,5 +112,48 @@ describe("leaderboard XP", () => {
       ["Ada", 1],
       ["Bea", 1],
     ]);
+  });
+});
+
+describe("leaderboard on a given day", () => {
+  const day1 = "2026-10-01";
+  const day2 = "2026-10-02";
+  const pages20 = goalFromPreset({ kind: "pages_per_day", value: 20 }, 30);
+  const minutes30 = goalFromPreset({ kind: "minutes_per_day", value: 30 }, 30);
+  // Jess read on both days; Temi logged everything on day 2; Mosope finished a book on day 2.
+  const readers = [
+    { participantId: "j", displayName: "Jess", goal: pages20, sessions: [sess("j", day1, 180), sess("j", day2, 193)], books: [], joinedDate: null },
+    { participantId: "t", displayName: "Temi", goal: pages20, sessions: [sess("t", day2, 337)], books: [], joinedDate: null },
+    {
+      participantId: "m",
+      displayName: "Mosope",
+      goal: minutes30,
+      sessions: [{ ...sess("m", day1, 40, "minutes"), pages: 30 }, { ...sess("m", day2, 60, "minutes"), pages: 157 }],
+      books: [{ participantId: "m", status: "completed" as const, completedAt: "2026-10-02T18:00:00Z" }],
+      joinedDate: null,
+    },
+  ];
+  const live = (on: string) =>
+    leaderboard(readers.map((r) => ({ participantId: r.participantId, displayName: r.displayName, progress: participantProgress({ challenge, goal: r.goal, sessions: r.sessions, books: r.books, today: on }) })));
+
+  it("today is exactly the live leaderboard", () => {
+    expect(leaderboardOn(challenge, readers, day2).board).toEqual(live(day2));
+    expect(leaderboardOn(challenge, readers, day2).board.map((e) => [e.displayName, e.pages])).toEqual([
+      ["Jess", 373],
+      ["Temi", 337],
+      ["Mosope", 187],
+    ]);
+  });
+
+  it("an earlier day shows the standings at the end of that day, ignoring later check-ins and finished books", () => {
+    const { board, dayPages } = leaderboardOn(challenge, readers, day1);
+    expect(board.map((e) => [e.displayName, e.pages, e.rank])).toEqual([
+      ["Jess", 180, 1],
+      ["Mosope", 30, 2],
+      ["Temi", 0, 3],
+    ]);
+    expect(board.find((e) => e.displayName === "Mosope")!.categories.find((c) => c.key === "books")!.value).toBe(0);
+    expect(dayPages).toEqual(new Map([["j", 180], ["t", 0], ["m", 30]]));
+    expect(leaderboardOn(challenge, readers, day2).dayPages.get("t")).toBe(337);
   });
 });

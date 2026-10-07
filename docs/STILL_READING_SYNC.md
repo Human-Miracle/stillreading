@@ -19,9 +19,13 @@
 | `session.create` / `session.delete` | self | session fields (shared reflection in plain text, private one sealed) / id |
 | `session.private` | self | id, sealed private reflection (backfill for notes written before the pass) |
 | `reaction.set` | self | sessionId, type, active |
+| `reply.create` | self | id, sessionId, body (check-in must be in this challenge and not deleted) |
+| `reply.delete` | self (author only) | id, updatedAt |
+| `reply.like` | self | id (derived), replyId, active, updatedAt |
 | `challenge.update` | host | name, description |
 | `challenge.archive` | host | — |
 | `participant.remove` | host | participantId |
+| `participant.merge` | host | fromId, intoId: moves fromId's check-ins, books, replies, reactions and likes to intoId, then removes fromId (never the host) |
 
 Envelope: `{ opId, challengeId, type, payload }`.
 
@@ -49,7 +53,7 @@ Status handling on the client:
 Backoff: `min(2s × 2^attempts, 5 min)` with ±20% jitter.
 
 ## Pull — `GET /api/challenges/:id/sync?since=<cursor>`
-Returns challenge, participants, goals, books, sessions, reactions with
+Returns challenge, participants, goals, books, sessions, reactions, replies, replyLikes with
 `server_updated_at > since − 30s` (overlap absorbs commit-order skew; merges are idempotent),
 including tombstones. Without `since` the full live dataset is returned. The response `cursor` is the
 server time at query start.
@@ -68,6 +72,28 @@ Merge rule: a pulled row never overwrites a local row whose `syncStatus` is `pen
 One device per participant is the MVP assumption. Sessions are immutable; books/goals/profile are
 last-write-wins by `updated_at`; reactions are idempotent `set(active)`. No CRDTs.
 
+## Reply notifications (Web Push)
+
+Readers opt in per challenge (Settings, or the prompt after a check-in / in a thread they follow).
+`PUT /api/challenges/:id/notifications { enabled, subscription? }` stores this device's push
+subscription (`push_subscriptions`, keyed by endpoint) and sets `challenge_participants.notify_replies`.
+`GET` returns `{ enabled, thisDevice }`; `GET /api/push/config` returns the public VAPID key or null.
+
+- Endpoints must be HTTPS on a browser vendor's push service (FCM, Mozilla, Apple, Windows), because
+  the server sends requests to them.
+- After a `reply.create` commits, `notifyReply` runs in the background (`waitUntil`). It claims the
+  reply once (`replies.notified_at`), so retried ops never notify twice. It then sends to the
+  check-in's owner, the author of the reply being answered ("replied to you") and everyone who
+  replied in the thread, minus the replier, limited to active
+  members with `notify_replies`. Sends go to every subscription on the member's device or any device
+  of the same reader. Payload: `{ title, body (≤140), url: /c/:id/feed/:sessionId, tag: thread-:sessionId }`,
+  TTL 24h, `Topic` = session id so a phone that's offline gets one message per thread.
+- 404/410 from the push service deletes the subscription. Without VAPID keys nothing is sent.
+- The service worker shows the notification (`tag` replaces older ones for the same thread) and on
+  tap focuses an open window and navigates it to `url`, or opens a new one. Only same-origin paths
+  are opened.
+- iPhone/iPad: only the Home Screen app (iOS 16.4+) can subscribe; Safari tabs get an install hint.
+
 ## Book covers
 
 Covers are filled in on the server so every member sees them, whoever added the book.
@@ -81,7 +107,16 @@ client calls it repeatedly, a batch at a time, when it sees books without covers
 - An explicit `coverUrl: null` over an existing cover marks it `removed`: never looked up again.
   Exception: a null written before the server found the cover (older clients that always send the
   field) is ignored.
-- Misses are retried after 7 days; correcting a coverless book's title or author retries at once.
+- The lookup widens step by step (10 results each): title + author, a keyword search of both, the
+  title without its subtitle, then the title alone. Loose searches also return unrelated books, so a
+  result only counts when it is the same book (`sameBook` in `src/lib/book-match.ts`): the title
+  matches, ignoring case, punctuation, a leading article, a subtitle and a small typo, and one of its
+  authors shares the reader's author's surname. No cover beats a wrong cover.
+- A cover the reader picks is marked `picked`, so it is never cleared or replaced by a lookup. The app asks for the
+  author whenever a book is added, since the title alone often matches the wrong edition.
+- Misses are retried after 3 days; correcting a coverless book's title or author retries at once.
+- A cover image that fails to load is retried twice (by the proxy and by the page) before the app
+  falls back to the generated cover.
 - Images are served from our own origin: a stored `https://covers.openlibrary.org/b/id/<id>-<size>.jpg`
   is rendered as `/covers/<id>-<size>.jpg` (`coverSrc`), a route that fetches the cover server-side
   (following Open Library's redirect to archive.org) and returns it with a one-year immutable cache.

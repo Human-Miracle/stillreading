@@ -3,7 +3,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useChallenge } from "@/components/challenge/context";
 import { DayOneHostCard } from "@/components/challenge/day-one";
+import { DuplicateMembers } from "@/components/challenge/duplicate-members";
 import { InviteActions } from "@/components/challenge/invite-actions";
+import { ReplyNotificationsCard } from "@/components/notifications/reply-notifications";
 import { GoalSelector, isGoalValid } from "@/components/goals/goal-selector";
 import { Hero } from "@/components/challenge/hero";
 import { APP_VERSION, refreshApp } from "@/components/pwa/app-update";
@@ -203,6 +205,8 @@ export default function SettingsPage() {
         </Card>
       ) : null}
 
+      {view.isHost && !archived ? <DuplicateMembers view={view} /> : null}
+
       {!view.isHost && !archived ? (
         <Card className="space-y-3">
           <Eyebrow>Leave</Eyebrow>
@@ -240,11 +244,13 @@ export default function SettingsPage() {
         </Button>
       </Card>
 
+      <ReplyNotificationsCard challengeId={challenge.id} />
+
       <Card className="flex items-center justify-between gap-4">
         <div>
           <Eyebrow>Version</Eyebrow>
           <p className="mt-1 text-ink/70">
-            Build <span className="tabular">{APP_VERSION}</span>. Not seeing something new?
+            You&apos;re on <span className="tabular">{APP_VERSION}</span>. Not seeing something new?
           </p>
         </div>
         <Button

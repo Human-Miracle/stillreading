@@ -1,8 +1,15 @@
-import type { BookDTO, ChallengeSnapshot, EntityKind, GoalDTO, ParticipantDTO, ReactionDTO, SessionDTO } from "@/lib/api-types";
+import type { BookDTO, ChallengeSnapshot, EntityKind, GoalDTO, ParticipantDTO, ReactionDTO, ReplyDTO, ReplyLikeDTO, SessionDTO } from "@/lib/api-types";
 import { openNote } from "./crypto";
 import { getLocalDb, type LocalChallenge, type LocalSession, type StillReadingDB } from "./db";
 
-type Table = StillReadingDB["participants"] | StillReadingDB["goals"] | StillReadingDB["books"] | StillReadingDB["sessions"] | StillReadingDB["reactions"];
+type Table =
+  | StillReadingDB["participants"]
+  | StillReadingDB["goals"]
+  | StillReadingDB["books"]
+  | StillReadingDB["sessions"]
+  | StillReadingDB["reactions"]
+  | StillReadingDB["replies"]
+  | StillReadingDB["replyLikes"];
 
 function tableFor(db: StillReadingDB, kind: Exclude<EntityKind, "challenge">): Table {
   switch (kind) {
@@ -16,6 +23,10 @@ function tableFor(db: StillReadingDB, kind: Exclude<EntityKind, "challenge">): T
       return db.sessions;
     case "reaction":
       return db.reactions;
+    case "reply":
+      return db.replies;
+    case "replyLike":
+      return db.replyLikes;
   }
 }
 
@@ -82,7 +93,7 @@ async function openPrivateNotes(sessions: SessionDTO[], myParticipantId: string)
 export async function applySnapshot(snapshot: ChallengeSnapshot, opts: { joinedNow?: boolean } = {}) {
   const db = getLocalDb();
   const opened = await openPrivateNotes(snapshot.sessions, snapshot.me.participantId);
-  await db.transaction("rw", [db.challenges, db.participants, db.goals, db.books, db.sessions, db.reactions], async () => {
+  await db.transaction("rw", [db.challenges, db.participants, db.goals, db.books, db.sessions, db.reactions, db.replies, db.replyLikes], async () => {
     const prev = await db.challenges.get(snapshot.challenge.id);
     const challenge: LocalChallenge = {
       ...snapshot.challenge,
@@ -98,6 +109,8 @@ export async function applySnapshot(snapshot: ChallengeSnapshot, opts: { joinedN
     await mergeRows<BookDTO>(db, "book", snapshot.books, opts.joinedNow);
     await mergeRows<SessionDTO>(db, "session", snapshot.sessions, false, opened);
     await mergeRows<ReactionDTO>(db, "reaction", snapshot.reactions);
+    await mergeRows<ReplyDTO>(db, "reply", (snapshot.replies ?? []).map((r) => ({ ...r, parentId: r.parentId ?? null })));
+    await mergeRows<ReplyLikeDTO>(db, "replyLike", snapshot.replyLikes ?? []);
   });
 }
 
@@ -119,7 +132,7 @@ export async function applyServerRecord(kind: EntityKind, record: unknown, opts:
   const pendingForEntity = await db.syncQueue.where("entityId").equals(row.id).count();
   // Another queued op for the same entity will carry newer local state; don't clobber it.
   if (pendingForEntity > 0 && !opts.force) return;
-  await db.transaction("rw", [db.participants, db.goals, db.books, db.sessions, db.reactions, db.syncQueue], () =>
+  await db.transaction("rw", [db.participants, db.goals, db.books, db.sessions, db.reactions, db.replies, db.replyLikes, db.syncQueue], () =>
     mergeRows(db, kind, [row], true),
   );
 }

@@ -29,25 +29,21 @@ export function dayOneWindow(opensAt: string | Date | null | undefined, now: Dat
   return { state: msLeft > 0 ? "open" : "closed", opensAt: start, closesAt, msLeft: Math.min(DAY_ONE_WINDOW_MS, Math.max(0, msLeft)) };
 }
 
-/** The host can open the window once, on any active day after Day 1 (on Day 1 everyone can log it anyway). */
+/**
+ * The host can open the window once, from Day 3 to the last day. On Day 1 and Day 2 everyone can log
+ * Day 1 anyway (as today / yesterday, where Time Stones apply).
+ */
 export function canOpenDayOneWindow(challenge: ChallengeLike & { dayOneWindowOpensAt?: string | Date | null }, now: Date = new Date()): boolean {
   if (challenge.dayOneWindowOpensAt) return false;
   const today = todayInTimezone(challenge.timezone, now);
-  return diffDays(challenge.startDate, today) >= 1 && diffDays(today, challenge.endDate) >= 0;
+  return diffDays(challenge.startDate, today) >= 2 && diffDays(today, challenge.endDate) >= 0;
 }
 
-/**
- * Whether a Day 1 check-in created at `createdAt` is allowed. Check-ins made on Day 1 or Day 2 (the
- * normal "today" / "yesterday") always are; later ones only while the Day One window was open.
- */
-export function dayOneCheckInAllowed(
-  challenge: ChallengeLike & { dayOneWindowOpensAt?: string | Date | null },
-  createdAt: Date,
-): boolean {
-  if (diffDays(challenge.startDate, todayInTimezone(challenge.timezone, createdAt)) <= 1) return true;
-  const w = dayOneWindow(challenge.dayOneWindowOpensAt, createdAt);
+/** Whether a check-in made at `at` falls inside the Day One window (with slack for device clocks). */
+export function inDayOneWindow(opensAt: string | Date | null | undefined, at: Date): boolean {
+  const w = dayOneWindow(opensAt, at);
   if (!w.opensAt || !w.closesAt) return false;
-  const t = createdAt.getTime();
+  const t = at.getTime();
   return t >= w.opensAt.getTime() - DAY_ONE_CLOCK_SLACK_MS && t <= w.closesAt.getTime() + DAY_ONE_CLOCK_SLACK_MS;
 }
 

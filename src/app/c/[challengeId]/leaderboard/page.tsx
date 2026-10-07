@@ -2,6 +2,7 @@
 import { useChallenge } from "@/components/challenge/context";
 import { Hero } from "@/components/challenge/hero";
 import { StreakBanner } from "@/components/challenge/streak-banner";
+import { DailyTop } from "@/components/leaderboard/daily-top";
 import { Podium } from "@/components/leaderboard/podium";
 import { Card, Eyebrow, PageSheet } from "@/components/ui/card";
 import { PAGE_XP, XP_CATEGORIES, formatCategoryValue } from "@/lib/domain/leaderboard";
@@ -45,6 +46,7 @@ export default function LeaderboardPage() {
       </Hero>
 
       <PageSheet className="space-y-4">
+        {view.isHost ? <DailyTop view={view} /> : null}
         {mine ? (
           <section>
             <StreakBanner

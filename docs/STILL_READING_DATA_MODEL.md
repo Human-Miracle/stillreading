@@ -76,17 +76,34 @@ count 0 pages.
 Append-oriented: sessions are created and (soft) deleted, not edited.
 
 #### Day One window and badge
-Anyone with a live check-in dated Day 1 (`start_date`) holds the **Day One** badge. On Day 1 and
+Anyone with a live check-in dated Day 1 (`start_date`) earns the **Day One** badge (`lib/domain/badges.ts`). On Day 1 and
 Day 2 that is the normal today / yesterday check-in. After that, the host can open the **Day One
-window** once (`POST /api/challenges/:id/day-one`, from Day 2 to the last day): for 3 minutes
+window** once (`POST /api/challenges/:id/day-one`, from Day 3 to the last day): for 3 minutes
 (`DAY_ONE_WINDOW_MS` in `lib/domain/day-one.ts`) every member can log reading for Day 1. The server
 stamps `day_one_window_opens_at` with its own clock and refuses to open it again. `session.create`
-rejects a Day 1 check-in (`day_one_closed`) unless it was created on Day 1 or 2, or inside the
-window (±1 minute for device clocks), so a check-in queued offline during the window still syncs.
+only takes today or yesterday (see Time Stones), except a Day 1 check-in made inside the window
+(±1 minute for device clocks), so one queued offline during the window still syncs later. Any other
+late Day 1 check-in is rejected as `day_one_closed`.
 
 ### reactions
-`id, participant_id, reading_session_id → reading_sessions, challenge_id, type (heart|fire|clap|book), …timestamps, deleted_at`
+`id, participant_id, reading_session_id → reading_sessions, challenge_id, type (heart|fire|clap|laugh|book), …timestamps, deleted_at`
 * `UNIQUE (participant_id, reading_session_id, type)` — toggling re-uses the row via `deleted_at`.
+
+### push_subscriptions
+`endpoint (PK, push-service URL), device_id → devices (ON DELETE CASCADE), p256dh, auth, created_at, updated_at`
+* One per browser/app install. `challenge_participants.notify_replies` (default false) and
+  `replies.notified_at` drive reply notifications (see Sync → Reply notifications).
+
+### replies
+`id (rp_…), participant_id, reading_session_id → reading_sessions (ON DELETE CASCADE), challenge_id, parent_id (nullable, top-level reply), body (1–500, cleaned), notified_at, …timestamps, deleted_at`
+* Threads are one level deep, like Instagram: a reply to a nested reply is stored under the same
+  top-level reply (the server normalises `parent_id`); the client prefills `@name`. If a parent is
+  deleted its answers show as top-level replies.
+
+### reply_likes
+`id (rl_<reply>.<participant>, derived), participant_id, reply_id → replies (ON DELETE CASCADE), challenge_id, …timestamps, deleted_at`
+* `UNIQUE (participant_id, reply_id)`; ♥ toggles reuse the row via `deleted_at` (`reply.like` op, last write wins).
+* A thread under a check-in, oldest first (`/c/:id/feed/:sessionId`). Any member can reply; only the author can delete (soft delete, tombstone synced).
 
 ### processed_operations
 `op_id pk, device_id, op_type, result jsonb, created_at` — idempotency ledger (see `STILL_READING_SYNC.md`).

@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
 import { Button } from "../ui/button";
+import { Icon } from "../ui/icons";
 import { Sheet } from "../ui/sheet";
 import { PassActions, PassTicket } from "./pass-ticket";
 import { markPassPromptDone, useLocalReader } from "./use-reader";
 
 /**
- * Home-screen reminder to save the Reading Pass. Shows until the reader saves it or skips; either way
- * the pass stays in Settings. This is how readers from before the pass existed receive theirs.
+ * Home-screen notice to save the Reading Pass, shown to every reader until they close it (or save
+ * the pass). The pass always stays in Settings.
  */
 export function PassPrompt() {
   const state = useLocalReader();
@@ -17,17 +18,24 @@ export function PassPrompt() {
 
   return (
     <>
-      <section className="animate-rise relative overflow-hidden rounded-[1.75rem] bg-butter px-5 pb-5 pt-4">
-        <p className="eyebrow text-ink/55">New · Reading Pass</p>
-        <p className="mt-1.5 max-w-[30ch] text-[17px] leading-snug tracking-[-0.015em]">
-          Your progress now has a key. Save your Reading Pass to carry on from any phone, no sign-in.
+      <section className="animate-rise relative overflow-hidden rounded-[1.75rem] bg-butter px-5 pb-5 pt-4" aria-labelledby="pass-notice-title">
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={() => void markPassPromptDone()}
+          className="absolute right-3 top-3 grid size-8 place-items-center rounded-full text-ink/60 hover:bg-ink/5"
+        >
+          <Icon.close className="size-4" />
+        </button>
+        <p id="pass-notice-title" className="eyebrow text-ink/55">
+          Your Reading Pass
         </p>
-        <div className="mt-4 flex gap-2">
+        <p className="mt-1.5 max-w-[30ch] pr-6 text-[17px] leading-snug tracking-[-0.015em]">
+          Switching phones or browsers? Your Reading Pass brings all your reading with you, no sign-in. Save it somewhere safe.
+        </p>
+        <div className="mt-4">
           <Button size="sm" onClick={() => setOpen(true)}>
             View my pass
-          </Button>
-          <Button size="sm" variant="glass" onClick={() => void markPassPromptDone()}>
-            Skip
           </Button>
         </div>
       </section>

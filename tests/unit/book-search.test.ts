@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { cleanBookQuery, coverSrc, coverUrlFor, findCovers, openLibrarySearchUrl, parseOpenLibrarySearch } from "@/lib/book-search";
+import { authorsMatch, mainTitle, sameBook, titlesMatch } from "@/lib/book-match";
 import { coverUrl } from "@/lib/validation/fields";
 
 describe("parseOpenLibrarySearch", () => {
@@ -86,5 +87,43 @@ describe("coverSrc", () => {
 
   it("leaves anything else untouched", () => {
     expect(coverSrc("https://covers.openlibrary.org/b/isbn/123-M.jpg")).toBe("https://covers.openlibrary.org/b/isbn/123-M.jpg");
+  });
+});
+
+describe("mainTitle", () => {
+  it("drops subtitles and series notes, keeping hyphenated titles", () => {
+    expect(mainTitle("Atomic Habits: An Easy & Proven Way to Build Good Habits")).toBe("Atomic Habits");
+    expect(mainTitle("Dune (Dune Chronicles #1)")).toBe("Dune");
+    expect(mainTitle("Rich Dad Poor Dad - What the Rich Teach Their Kids")).toBe("Rich Dad Poor Dad");
+    expect(mainTitle("Spider-Man")).toBe("Spider-Man");
+    expect(mainTitle("The 48 Laws of Power")).toBe("The 48 Laws of Power");
+  });
+});
+
+describe("sameBook", () => {
+  it("matches titles despite case, punctuation, articles, subtitles and a small typo", () => {
+    expect(titlesMatch("atomic habits", "Atomic Habits: An Easy & Proven Way to Build Good Habits")).toBe(true);
+    expect(titlesMatch("The Psychology of Money", "Psychology of money")).toBe(true);
+    expect(titlesMatch("Thinking Fast and Slow", "Thinking, Fast & Slow")).toBe(true);
+    expect(titlesMatch("The Alchemistt", "The Alchemist")).toBe(true);
+    expect(titlesMatch("Thank you for remembering", "The Writer's Resource")).toBe(false);
+    expect(titlesMatch("Thank you for remembering", "Thank You for Remembering Me")).toBe(false);
+    expect(titlesMatch("Dune", "Dune Messiah")).toBe(false);
+  });
+
+  it("matches the author by surname, against any of the book's authors", () => {
+    expect(authorsMatch("James Clear", ["James Clear"])).toBe(true);
+    expect(authorsMatch("J. Clear", ["James Clear"])).toBe(true);
+    expect(authorsMatch("Chimamanda Adichie", ["Chimamanda Ngozi Adichie"])).toBe(true);
+    expect(authorsMatch("Daniel Kahneman", ["Someone", "Daniel Kahnemann"])).toBe(true);
+    expect(authorsMatch("Emily Harding", ["Someone Else"])).toBe(false);
+    expect(authorsMatch("Emily Harding", [])).toBe(false);
+  });
+
+  it("needs both when the reader gave an author, and just the title otherwise", () => {
+    const found = { title: "Thank You for Remembering", authors: ["Someone Else"] };
+    expect(sameBook({ title: "Thank you for remembering", author: "Emily Harding" }, found)).toBe(false);
+    expect(sameBook({ title: "Thank you for remembering", author: null }, found)).toBe(true);
+    expect(sameBook({ title: "Thank you for remembering", author: "Emily Harding" }, { ...found, authors: ["Emily Harding"] })).toBe(true);
   });
 });

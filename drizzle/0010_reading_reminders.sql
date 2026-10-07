@@ -1,0 +1,2 @@
+ALTER TABLE "challenge_participants" ADD COLUMN "notify_reminders" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "challenge_participants" ADD COLUMN "last_reminded_at" timestamp with time zone;

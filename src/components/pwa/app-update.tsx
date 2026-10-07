@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 
-/** Short build id shown in settings, so readers can tell which version they're on. */
-export const APP_VERSION = (process.env.NEXT_PUBLIC_APP_VERSION || "dev").slice(0, 7);
+/** The app's version (package.json), shown in settings as e.g. "V1.0.2". */
+export const APP_VERSION = `V${process.env.NEXT_PUBLIC_APP_VERSION || "dev"}`;
 
 async function registration() {
   try {

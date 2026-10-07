@@ -220,6 +220,9 @@ describe("local-first sync engine", () => {
     expect(await friendDb.participants.count()).toBe(2);
     expect((await friendDb.sessions.get(session.id))?.reflection).toBe("So good");
     await repo.setReaction(snap.challenge.id, session.id, "fire", true);
+    const reply = await repo.addReply(snap.challenge.id, session.id, "Which chapter was that?");
+    await repo.addReply(snap.challenge.id, session.id, "@David chapter 4?", reply!.id);
+    await repo.setReplyLike(snap.challenge.id, reply!.id, true);
     await engine().sync();
 
     // Back to the host.
@@ -229,6 +232,12 @@ describe("local-first sync engine", () => {
     const reactions = await hostDb.reactions.where("sessionId").equals(session.id).toArray();
     expect(reactions).toHaveLength(1);
     expect(reactions[0]).toMatchObject({ type: "fire", participantId: joined.me.participantId });
+    const replies = (await hostDb.replies.where("sessionId").equals(session.id).toArray()).sort((a, b) => Number(a.parentId !== null) - Number(b.parentId !== null)); // top-level first (both can share a millisecond)
+    expect(replies).toEqual([
+      expect.objectContaining({ body: "Which chapter was that?", parentId: null, participantId: joined.me.participantId, syncStatus: "synced" }),
+      expect.objectContaining({ body: "@David chapter 4?", parentId: replies[0]!.id }),
+    ]);
+    expect(await hostDb.replyLikes.where("replyId").equals(replies[0]!.id).toArray()).toEqual([expect.objectContaining({ participantId: joined.me.participantId })]);
   });
 
   it("a removed participant loses access locally", async () => {

@@ -28,7 +28,7 @@ obtains a copy of the database.
 ## Verified as sound
 * Every endpoint validates input with Zod; bodies capped at 256 KB; batch ops capped at 50.
 * No SQL injection paths: Drizzle parameterises everything, including the raw merge SQL.
-* Authorization is server-side for every mutation: owner checks on books/sessions/reactions, host
+* Authorization is server-side for every mutation: owner checks on books/sessions/reactions/replies, host
   checks on rename/archive/remove/re-invite; removed members get 403; device ids never leave the server.
 * Idempotency: op ids are random 80-bit and scoped to the device that used them.
 * Secrets: device secret stored as SHA-256, compared in constant time; pass stored only as scrypt
@@ -54,3 +54,6 @@ obtains a copy of the database.
   some quota. Upstream protection (Vercel Firewall / WAF rules) is the next layer if needed.
 * If someone copies the whole database, cracking a single pass offline costs ~2⁵⁰ slow hashes; private
   reflections stay safe unless that happens.
+* Web Push: the server only sends to HTTPS endpoints on browser vendors' push services (no SSRF via
+  registered endpoints). Payloads are encrypted end to end to the device (RFC 8291); the VAPID
+  private key stays in server env. Subscriptions are deleted when the push service reports them gone.

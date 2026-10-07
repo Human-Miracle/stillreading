@@ -4,8 +4,8 @@ import {
   bookAuthor,
   bookStatus,
   bookTitle,
-  coverUrl,
   challengeName,
+  coverUrl,
   dateKey,
   description,
   displayName,
@@ -14,6 +14,7 @@ import {
   pageCount,
   reactionType,
   reflection,
+  replyBody,
   sessionUnit,
 } from "./fields";
 import { goalPreset } from "./goal";
@@ -21,7 +22,7 @@ import { SEALED_NOTE_PATTERN } from "@/lib/pass";
 
 const sealedNote = z.string().max(4100).regex(SEALED_NOTE_PATTERN, "Invalid encrypted note");
 
-const reactionIdPattern = /^rx_[0-9A-Z]{26}\.[0-9A-Z]{26}\.(heart|fire|clap|book)$/;
+const reactionIdPattern = /^rx_[0-9A-Z]{26}\.[0-9A-Z]{26}\.(heart|fire|clap|laugh|book)$/;
 
 export const bookFields = z.object({
   id: id("bk"),
@@ -57,6 +58,8 @@ export const sessionFields = z
     pages: amount.nullable().optional(),
     reflection: reflection.nullable().optional(),
     privateReflection: sealedNote.nullable().optional(),
+    /** The reader agreed to spend a Time Stone on a missed day. */
+    timeStone: z.boolean().optional(),
     createdAt: isoTimestamp,
   })
   .refine((s) => s.unit !== "pages" || s.pages == null, { message: "Pages check-ins record pages as the amount", path: ["pages"] });
@@ -74,12 +77,24 @@ export const syncOp = z.discriminatedUnion("type", [
   z.object({ ...envelope, type: z.literal("session.delete"), payload: z.object({ id: id("rs"), updatedAt: isoTimestamp }) }),
   z.object({
     ...envelope,
+    type: z.literal("reply.create"),
+    payload: z.object({ id: id("rp"), sessionId: id("rs"), parentId: id("rp").nullable().optional(), body: replyBody, createdAt: isoTimestamp }),
+  }),
+  z.object({ ...envelope, type: z.literal("reply.delete"), payload: z.object({ id: id("rp"), updatedAt: isoTimestamp }) }),
+  z.object({
+    ...envelope,
+    type: z.literal("reply.like"),
+    payload: z.object({ id: z.string().regex(/^rl_[0-9A-Z]{26}\.[0-9A-Z]{26}$/), replyId: id("rp"), active: z.boolean(), updatedAt: isoTimestamp }),
+  }),
+  z.object({
+    ...envelope,
     type: z.literal("reaction.set"),
     payload: z.object({ id: z.string().regex(reactionIdPattern), sessionId: id("rs"), type: reactionType, active: z.boolean(), updatedAt: isoTimestamp }),
   }),
   z.object({ ...envelope, type: z.literal("challenge.update"), payload: z.object({ name: challengeName, description, updatedAt: isoTimestamp }) }),
   z.object({ ...envelope, type: z.literal("challenge.archive"), payload: z.object({}).default({}) }),
   z.object({ ...envelope, type: z.literal("participant.remove"), payload: z.object({ participantId: id("pt") }) }),
+  z.object({ ...envelope, type: z.literal("participant.merge"), payload: z.object({ fromId: id("pt"), intoId: id("pt") }) }),
 ]);
 
 export type SyncOp = z.output<typeof syncOp>;

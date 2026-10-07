@@ -6,6 +6,7 @@ export async function newContext(browser: Browser) {
   await ctx.addInitScript(() => {
     try {
       sessionStorage.setItem("sr-install-dismissed", "1");
+      if (!localStorage.getItem("sr-badge-popups")) localStorage.setItem("sr-badge-popups", "off");
     } catch {
       // ignore
     }
@@ -29,6 +30,7 @@ export async function createChallenge(page: Page, opts: { name: string; host: st
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Continue" }).click(); // default goal: 20 pages/day
   await page.getByLabel("Title").fill("Atomic Habits");
+  await page.getByLabel("Author", { exact: true }).fill("James Clear");
   await page.getByRole("button", { name: "Create challenge" }).click();
   await expect(page.getByRole("heading", { name: "Your challenge is ready" })).toBeVisible();
   const url = (await page.getByLabel("Invite link").textContent())!.trim();
@@ -37,7 +39,7 @@ export async function createChallenge(page: Page, opts: { name: string; host: st
   return { inviteUrl: url, challengeUrl: page.url() };
 }
 
-export async function join(page: Page, inviteUrl: string, name: string, opts: { book?: string; goal?: string } = {}) {
+export async function join(page: Page, inviteUrl: string, name: string, opts: { book?: string; author?: string; goal?: string } = {}) {
   await page.goto(new URL(inviteUrl).pathname);
   await page.getByRole("button", { name: "Join the challenge" }).click();
   await page.getByLabel("Your name").fill(name);
@@ -46,6 +48,8 @@ export async function join(page: Page, inviteUrl: string, name: string, opts: { 
   await page.getByRole("button", { name: "Continue" }).click();
   if (opts.book) {
     await page.getByLabel("Title").fill(opts.book);
+    await expect(page.getByRole("button", { name: "Join challenge" })).toBeDisabled(); // the author is required too
+    await page.getByLabel("Author", { exact: true }).fill(opts.author ?? "Someone");
     await page.getByRole("button", { name: "Join challenge" }).click();
   } else {
     await page.getByRole("button", { name: "Skip for now" }).click();
@@ -78,4 +82,51 @@ export async function waitForSynced(page: Page) {
 export async function expectToday(page: Page, amount: number, caption: string) {
   await expect(page.getByTestId("ring-figure")).toHaveText(String(amount));
   await expect(page.getByText(caption)).toBeVisible();
+}
+
+/** A timezone where it's currently daytime (8am–8pm), so day boundaries and night hours can't interfere. */
+export function daytimeZone(): string {
+  const h = new Date().getUTCHours();
+  return [
+    ["Pacific/Honolulu", -10],
+    ["Africa/Abidjan", 0],
+    ["Asia/Tokyo", 9],
+  ].find(([, offset]) => {
+    const local = (h + (offset as number) + 24) % 24;
+    return local >= 8 && local <= 20;
+  })![0] as string;
+}
+
+/**
+ * Check-ins for past days (`daysAgo`, e.g. [3, 2]), each made on its own day as a phone that was
+ * offline would sync them: straight to the server with this device's credentials.
+ */
+export async function seedPastCheckIns(page: Page, challengeId: string, timezone: string, daysAgo: number[]) {
+  const results = await page.evaluate(
+    async ({ challengeId, timezone, daysAgo }) => {
+      const device = await new Promise<{ deviceId: string; deviceSecret: string }>((resolve, reject) => {
+        const open = indexedDB.open("read30");
+        open.onerror = reject;
+        open.onsuccess = () => {
+          const get = open.result.transaction("kv").objectStore("kv").get("device");
+          get.onerror = reject;
+          get.onsuccess = () => resolve(get.result.value);
+        };
+      });
+      const ulid = () => Array.from({ length: 26 }, () => "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[Math.floor(Math.random() * 32)]).join("");
+      const ops = daysAgo.map((n) => {
+        const at = new Date(Date.now() - n * 86_400_000);
+        const date = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(at);
+        return { opId: `op_${ulid()}`, challengeId, type: "session.create", payload: { id: `rs_${ulid()}`, date, amount: 25, unit: "pages", createdAt: at.toISOString() } };
+      });
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-stillreading-device": device.deviceId, "x-stillreading-secret": device.deviceSecret },
+        body: JSON.stringify({ ops }),
+      });
+      return ((await res.json()) as { results: { status: string }[] }).results.map((r) => r.status);
+    },
+    { challengeId, timezone, daysAgo },
+  );
+  expect(results.every((s) => s === "ok")).toBe(true);
 }
