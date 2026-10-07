@@ -5,18 +5,18 @@ const challenge = { startDate: "2026-10-01", endDate: "2026-10-30", durationDays
 const at = (iso: string) => new Date(iso);
 
 describe("day one window", () => {
-  it("is unopened, then open for three minutes, then closed for good", () => {
+  it("is unopened, then open for five minutes, then closed for good", () => {
     expect(dayOneWindow(null).state).toBe("unopened");
     const opensAt = "2026-10-12T10:00:00Z";
-    expect(DAY_ONE_WINDOW_MS).toBe(180_000);
-    expect(dayOneWindow(opensAt, at("2026-10-12T10:00:00Z"))).toMatchObject({ state: "open", msLeft: 180_000 });
-    expect(dayOneWindow(opensAt, at("2026-10-12T10:02:59Z"))).toMatchObject({ state: "open", msLeft: 1000 });
-    expect(dayOneWindow(opensAt, at("2026-10-12T10:03:00Z"))).toMatchObject({ state: "closed", msLeft: 0 });
+    expect(DAY_ONE_WINDOW_MS).toBe(300_000);
+    expect(dayOneWindow(opensAt, at("2026-10-12T10:00:00Z"))).toMatchObject({ state: "open", msLeft: 300_000 });
+    expect(dayOneWindow(opensAt, at("2026-10-12T10:04:59Z"))).toMatchObject({ state: "open", msLeft: 1000 });
+    expect(dayOneWindow(opensAt, at("2026-10-12T10:05:00Z"))).toMatchObject({ state: "closed", msLeft: 0 });
     expect(dayOneWindow(opensAt, at("2026-11-30T10:00:00Z")).state).toBe("closed");
   });
 
   it("never shows more than the full window, even with a clock behind the server", () => {
-    expect(dayOneWindow("2026-10-12T10:00:00Z", at("2026-10-12T09:59:00Z")).msLeft).toBe(180_000);
+    expect(dayOneWindow("2026-10-12T10:00:00Z", at("2026-10-12T09:59:00Z")).msLeft).toBe(300_000);
   });
 
   it("can be opened once, from Day 3 to the last day", () => {
@@ -33,8 +33,8 @@ describe("day one window", () => {
     expect(inDayOneWindow(null, at("2026-10-12T10:01:00Z"))).toBe(false);
     expect(inDayOneWindow(opensAt, at("2026-10-12T10:01:00Z"))).toBe(true);
     expect(inDayOneWindow(opensAt, at("2026-10-12T09:59:30Z"))).toBe(true);
-    expect(inDayOneWindow(opensAt, at("2026-10-12T10:03:30Z"))).toBe(true);
-    expect(inDayOneWindow(opensAt, at("2026-10-12T10:05:00Z"))).toBe(false);
+    expect(inDayOneWindow(opensAt, at("2026-10-12T10:05:30Z"))).toBe(true);
+    expect(inDayOneWindow(opensAt, at("2026-10-12T10:07:00Z"))).toBe(false);
     expect(inDayOneWindow(opensAt, at("2026-10-13T10:01:00Z"))).toBe(false);
   });
 
@@ -46,7 +46,7 @@ describe("day one window", () => {
   });
 
   it("formats the countdown", () => {
-    expect(formatCountdown(180_000)).toBe("3:00");
+    expect(formatCountdown(300_000)).toBe("5:00");
     expect(formatCountdown(61_500)).toBe("1:02");
     expect(formatCountdown(0)).toBe("0:00");
   });

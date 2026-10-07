@@ -69,7 +69,7 @@ describe("day one window", () => {
     expect(again.body.error?.code).toBe("day_one_used");
   });
 
-  it("closes after three minutes for good", async () => {
+  it("closes after five minutes for good", async () => {
     await openWindow(host);
     await db
       .update(challenges)

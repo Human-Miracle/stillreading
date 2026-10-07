@@ -52,6 +52,29 @@ export function DayOneBanner({ view, onLog }: { view: ChallengeView; onLog: () =
   );
 }
 
+/**
+ * The Day One spot on the challenge home: the countdown while the window is open, and for the host,
+ * the button to open it while it's still unused.
+ */
+export function DayOneHome({ view, onLog }: { view: ChallengeView; onLog: () => void }) {
+  const w = useDayOneWindow(view.challenge);
+  if (w.state === "open" && view.today !== view.challenge.startDate) {
+    return (
+      <div className="mt-4">
+        <DayOneBanner view={view} onLog={onLog} />
+      </div>
+    );
+  }
+  if (view.isHost && w.state === "unopened" && canOpenDayOneWindow(view.challenge)) {
+    return (
+      <div className="mt-4">
+        <DayOneHostCard view={view} />
+      </div>
+    );
+  }
+  return null;
+}
+
 /** Settings card for the host: open the one-time window, then show its status. */
 export function DayOneHostCard({ view }: { view: ChallengeView }) {
   const { challenge } = view;

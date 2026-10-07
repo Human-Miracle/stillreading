@@ -6,7 +6,7 @@ import type { ChallengeLike, SessionLike } from "./types";
  * The Day One window: once per challenge, the host can open a short window in which every member may
  * log reading for Day 1, which earns the Day One badge. When it closes it never opens again.
  */
-export const DAY_ONE_WINDOW_MS = 3 * 60_000;
+export const DAY_ONE_WINDOW_MS = 5 * 60_000;
 
 /** Slack for device clocks that run a little ahead of or behind the server's. */
 export const DAY_ONE_CLOCK_SLACK_MS = 60_000;

@@ -78,7 +78,7 @@ Append-oriented: sessions are created and (soft) deleted, not edited.
 #### Day One window and badge
 Anyone with a live check-in dated Day 1 (`start_date`) earns the **Day One** badge (`lib/domain/badges.ts`). On Day 1 and
 Day 2 that is the normal today / yesterday check-in. After that, the host can open the **Day One
-window** once (`POST /api/challenges/:id/day-one`, from Day 3 to the last day): for 3 minutes
+window** once (`POST /api/challenges/:id/day-one`, from Day 3 to the last day): for 5 minutes
 (`DAY_ONE_WINDOW_MS` in `lib/domain/day-one.ts`) every member can log reading for Day 1. The server
 stamps `day_one_window_opens_at` with its own clock and refuses to open it again. `session.create`
 only takes today or yesterday (see Time Stones), except a Day 1 check-in made inside the window

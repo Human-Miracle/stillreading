@@ -15,16 +15,17 @@ test("Day One window: host opens it once, a member logs Day 1 and earns the badg
   await join(friend, inviteUrl, "David", { book: "Deep Work" });
   await expect(friend.getByRole("button", { name: "Log Day 1 reading" })).toHaveCount(0);
 
-  await host.goto(`${challengeUrl}/settings`);
+  // The host finds it on the challenge home (it's in settings too).
+  await host.goto(challengeUrl);
+  if (SHOTS) await host.screenshot({ path: `${SHOTS}/host-home.png` });
   await host.getByRole("button", { name: "Open Day One window" }).click();
-  await host.getByRole("button", { name: "Start 3-minute window" }).click();
-  await expect(host.getByText(/Open now: \d:\d\d left/)).toBeVisible();
-  if (SHOTS) await host.getByText("Day One badge", { exact: true }).locator("..").screenshot({ path: `${SHOTS}/host-card.png` });
+  await host.getByRole("button", { name: "Start 5-minute window" }).click();
+  await expect(host.getByTestId("day-one-countdown")).toHaveText(/^[0-5]:\d\d$/);
 
   await friend.reload();
   const banner = friend.getByRole("button", { name: "Log Day 1 reading" });
   await expect(banner).toBeVisible({ timeout: 30_000 });
-  await expect(friend.getByTestId("day-one-countdown")).toHaveText(/^[0-3]:\d\d$/);
+  await expect(friend.getByTestId("day-one-countdown")).toHaveText(/^[0-5]:\d\d$/);
   if (SHOTS) await friend.screenshot({ path: `${SHOTS}/member-home.png` });
   await banner.click();
 

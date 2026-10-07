@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { BadgeSummary } from "@/components/badges/badge-summary";
 import { useChallenge } from "@/components/challenge/context";
-import { DayOneBanner } from "@/components/challenge/day-one";
+import { DayOneHome } from "@/components/challenge/day-one";
 import { DayRing } from "@/components/challenge/day-ring";
 import { TimeStoneCard } from "@/components/challenge/time-stone-card";
 import { Hero } from "@/components/challenge/hero";
@@ -204,11 +204,7 @@ export default function ChallengeHome() {
       >
         <div className="px-5 pt-6">
           <StreakBanner title={banner.title} sub={banner.sub} />
-          {phase === "active" ? (
-            <div className="mt-4">
-              <DayOneBanner view={view} onLog={() => openCheckIn("dayOne")} />
-            </div>
-          ) : null}
+          {phase === "active" ? <DayOneHome view={view} onLog={() => openCheckIn("dayOne")} /> : null}
         </div>
         <div className="animate-rise pt-4">
           <DayRing progress={p} durationDays={challenge.durationDays} size={312}>
