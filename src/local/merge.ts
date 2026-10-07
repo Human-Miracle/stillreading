@@ -106,7 +106,13 @@ export async function applyServerRecord(kind: EntityKind, record: unknown, opts:
   const db = getLocalDb();
   if (kind === "challenge") {
     const c = record as LocalChallenge;
-    await db.challenges.update(c.id, { name: c.name, description: c.description, status: c.status, updatedAt: c.updatedAt });
+    await db.challenges.update(c.id, {
+      name: c.name,
+      description: c.description,
+      status: c.status,
+      updatedAt: c.updatedAt,
+      ...(c.dayOneWindowOpensAt !== undefined ? { dayOneWindowOpensAt: c.dayOneWindowOpensAt } : {}),
+    });
     return;
   }
   const row = record as { id: string };

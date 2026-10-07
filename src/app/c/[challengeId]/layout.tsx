@@ -29,7 +29,7 @@ export default function ChallengeLayout({ children }: { children: ReactNode }) {
   const { challengeId } = useParams<{ challengeId: string }>();
   const view = useChallengeView(challengeId);
   useCoverFill(challengeId, view?.challenge.access === "ok" ? view.members.flatMap((m) => m.books) : undefined);
-  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkIn, setCheckIn] = useState<"closed" | "open" | "dayOne">("closed");
 
   useEffect(() => {
     track("challenge_viewed", { challengeId });
@@ -58,11 +58,11 @@ export default function ChallengeLayout({ children }: { children: ReactNode }) {
 
   const canCheckIn = view.challenge.status !== "archived" && view.me?.progress.clock.phase === "active";
   return (
-    <ChallengeContext.Provider value={{ view, openCheckIn: () => setCheckInOpen(true) }}>
+    <ChallengeContext.Provider value={{ view, openCheckIn: () => setCheckIn("open"), openDayOneCheckIn: () => setCheckIn("dayOne") }}>
       <main className="mx-auto min-h-dvh max-w-[440px] overflow-x-clip">{children}</main>
       <SyncToasts />
-      <BottomNav challengeId={challengeId} onCheckIn={() => setCheckInOpen(true)} canCheckIn={canCheckIn} />
-      <CheckInComposer view={view} open={checkInOpen} onClose={() => setCheckInOpen(false)} />
+      <BottomNav challengeId={challengeId} onCheckIn={() => setCheckIn("open")} canCheckIn={canCheckIn} />
+      <CheckInComposer view={view} open={checkIn !== "closed"} dayOne={checkIn === "dayOne"} onClose={() => setCheckIn("closed")} />
     </ChallengeContext.Provider>
   );
 }

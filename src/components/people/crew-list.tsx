@@ -3,6 +3,7 @@ import { amountSummary } from "@/lib/copy";
 import { unitLabel } from "@/lib/domain/goals";
 import type { MemberView } from "@/local/hooks";
 import { Avatar, tintFor } from "../ui/avatar";
+import { DayOneBadge } from "../challenge/day-one";
 import { cn } from "../ui/cn";
 import { ProgressBar } from "../ui/progress";
 
@@ -31,6 +32,7 @@ export function CrewRow({ member, challengeId, isMe, detail = "book" }: { member
             <span className="truncate">{participant.displayName}</span>
             {isMe ? <span className="text-xs font-normal text-muted">you</span> : null}
             {participant.role === "host" ? <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted">Host</span> : null}
+            {member.dayOne ? <DayOneBadge className="shrink-0" /> : null}
             {p.streak.current >= 2 ? <span className="text-xs font-normal text-muted">· {p.streak.current}d streak</span> : null}
           </p>
           <ProgressBar value={pct} label={`${participant.displayName} today`} tint={tintFor(participant.id)} />

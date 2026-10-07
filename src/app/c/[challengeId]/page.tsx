@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { useChallenge } from "@/components/challenge/context";
+import { DayOneBanner } from "@/components/challenge/day-one";
 import { DayRing } from "@/components/challenge/day-ring";
 import { Hero } from "@/components/challenge/hero";
 import { InviteActions } from "@/components/challenge/invite-actions";
@@ -84,7 +85,7 @@ function CoachCard({ view, me }: { view: ChallengeView; me: MemberView }) {
 }
 
 export default function ChallengeHome() {
-  const { view, openCheckIn } = useChallenge();
+  const { view, openCheckIn, openDayOneCheckIn } = useChallenge();
   const { me, challenge, stats } = view;
   const [shared, setShared] = useState(false);
   if (!me) return null;
@@ -127,6 +128,11 @@ export default function ChallengeHome() {
       >
         <div className="px-5 pt-6">
           <StreakBanner title={banner.title} sub={banner.sub} />
+          {phase === "active" ? (
+            <div className="mt-4">
+              <DayOneBanner view={view} onLog={openDayOneCheckIn} />
+            </div>
+          ) : null}
         </div>
         <div className="animate-rise pt-4">
           <DayRing progress={p} durationDays={challenge.durationDays} size={312}>

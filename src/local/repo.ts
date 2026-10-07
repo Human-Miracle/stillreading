@@ -1,4 +1,4 @@
-import type { BookDTO, ChallengeSnapshot, EntityKind } from "@/lib/api-types";
+import type { BookDTO, ChallengeDTO, ChallengeSnapshot, EntityKind } from "@/lib/api-types";
 import { goalFromPreset, pagesRead, type GoalPreset } from "@/lib/domain/goals";
 import { joinedDateFor, participantDuration, todayInTimezone } from "@/lib/domain/dates";
 import type { BookStatus, ReactionType, SessionUnit } from "@/lib/domain/types";
@@ -360,6 +360,14 @@ export async function updateChallengeDetails(challengeId: string, name: string, 
   const t = nowIso();
   await db.challenges.update(challengeId, { name, description, updatedAt: t });
   await enqueueOnly(challengeId, "challenge.update", { name, description, updatedAt: t }, "challenge", challengeId);
+}
+
+/** Online only: the server's clock decides when the one-time Day One window opens and closes. */
+export async function openDayOneWindow(challengeId: string): Promise<ChallengeDTO> {
+  const { challenge } = await apiRequest<{ challenge: ChallengeDTO }>(`/api/challenges/${challengeId}/day-one`, { method: "POST" });
+  await getLocalDb().challenges.update(challengeId, { dayOneWindowOpensAt: challenge.dayOneWindowOpensAt ?? null });
+  notify();
+  return challenge;
 }
 
 export async function archiveChallenge(challengeId: string) {

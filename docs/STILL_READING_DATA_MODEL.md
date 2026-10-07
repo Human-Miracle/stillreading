@@ -30,6 +30,7 @@ Every shared table carries:
 | timezone | IANA, captured from host |
 | status | `draft \| active \| completed \| archived` — stored `active`/`archived`; *completed* is derived from dates |
 | host_participant_id | |
+| day_one_window_opens_at | `timestamptz`, null until the host opens the one-time Day One window |
 
 ### challenge_participants
 `id, challenge_id → challenges, device_id → devices, display_name (1–40), avatar_url, role (host|participant), status (active|removed|left), joined_at, updated_at, server_updated_at`
@@ -73,6 +74,15 @@ book progress and the leaderboard all use it. Rows from before the column have `
 count 0 pages.
 
 Append-oriented: sessions are created and (soft) deleted, not edited.
+
+#### Day One window and badge
+Anyone with a live check-in dated Day 1 (`start_date`) holds the **Day One** badge. On Day 1 and
+Day 2 that is the normal today / yesterday check-in. After that, the host can open the **Day One
+window** once (`POST /api/challenges/:id/day-one`, from Day 2 to the last day): for 3 minutes
+(`DAY_ONE_WINDOW_MS` in `lib/domain/day-one.ts`) every member can log reading for Day 1. The server
+stamps `day_one_window_opens_at` with its own clock and refuses to open it again. `session.create`
+rejects a Day 1 check-in (`day_one_closed`) unless it was created on Day 1 or 2, or inside the
+window (±1 minute for device clocks), so a check-in queued offline during the window still syncs.
 
 ### reactions
 `id, participant_id, reading_session_id → reading_sessions, challenge_id, type (heart|fire|clap|book), …timestamps, deleted_at`

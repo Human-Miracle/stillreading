@@ -13,9 +13,15 @@ export async function newContext(browser: Browser) {
   return ctx;
 }
 
-export async function createChallenge(page: Page, opts: { name: string; host: string; duration?: "7 days" | "14 days" | "30 days" }) {
+export async function createChallenge(page: Page, opts: { name: string; host: string; duration?: "7 days" | "14 days" | "30 days"; startDate?: string }) {
   await page.goto("/");
   await page.getByRole("link", { name: "Create a challenge" }).click();
+  if (opts.startDate) {
+    // The form only offers today onward; the server accepts starts up to 60 days back (used to test mid-challenge flows).
+    const field = page.getByLabel("Start date");
+    await field.evaluate((el) => el.removeAttribute("min"));
+    await field.fill(opts.startDate);
+  }
   await page.getByLabel("Challenge name").fill(opts.name);
   if (opts.duration) await page.getByRole("radio", { name: opts.duration }).click();
   await page.getByRole("button", { name: "Continue" }).click();

@@ -2,6 +2,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { joinedDateFor, todayInTimezone } from "@/lib/domain/dates";
+import { hasDayOneBadge } from "@/lib/domain/day-one";
 import { isLive } from "@/lib/domain/goals";
 import { participantProgress, type ParticipantProgress } from "@/lib/domain/progress";
 import { leaderboard, type LeaderboardEntry } from "@/lib/domain/leaderboard";
@@ -54,6 +55,8 @@ export interface MemberView {
   currentBook: LocalBook | null;
   progress: ParticipantProgress;
   sessions: LocalSession[];
+  /** Has a check-in dated Day 1: the Day One badge. */
+  dayOne: boolean;
 }
 
 export interface ChallengeView {
@@ -106,6 +109,7 @@ export function buildChallengeView(data: ChallengeData, now: Date): ChallengeVie
       books,
       currentBook: pickCurrentBook(books, sessions),
       sessions,
+      dayOne: hasDayOneBadge(challenge, sessions),
       progress: participantProgress({ challenge, goal, sessions, books, today, joinedDate: joinedDateFor(challenge, participant) }),
     };
   });

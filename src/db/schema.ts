@@ -65,6 +65,8 @@ export const challenges = pgTable(
     timezone: text("timezone").notNull(),
     status: text("status", { enum: ["draft", "active", "completed", "archived"] }).notNull().default("active"),
     hostParticipantId: text("host_participant_id"),
+    /** When the host opened the one-time Day One window (see lib/domain/day-one); null until then. */
+    dayOneWindowOpensAt: ts("day_one_window_opens_at"),
     ...syncColumns,
   },
   (t) => [

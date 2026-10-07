@@ -16,6 +16,7 @@ export function challengeDTO(r: ChallengeRow): ChallengeDTO {
     timezone: r.timezone,
     status: r.status,
     hostParticipantId: r.hostParticipantId,
+    dayOneWindowOpensAt: isoOrNull(r.dayOneWindowOpensAt),
     createdAt: iso(r.createdAt),
     updatedAt: iso(r.updatedAt),
   };

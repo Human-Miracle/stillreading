@@ -21,6 +21,8 @@ export interface ChallengeDTO {
   timezone: string;
   status: "draft" | "active" | "completed" | "archived";
   hostParticipantId: string | null;
+  /** When the one-time Day One window opened; null until the host opens it. Missing on older local rows. */
+  dayOneWindowOpensAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -29,6 +29,7 @@ export const LIMITS = {
   reinvite: { bucket: "reinvite", limit: 20, windowSeconds: 3600 },
   bookSearch: { bucket: "books-ip", limit: 60, windowSeconds: 60 },
   coverFill: { bucket: "cover-fill", limit: 30, windowSeconds: 3600 },
+  dayOne: { bucket: "day-one", limit: 10, windowSeconds: 3600 },
   handoff: { bucket: "handoff", limit: 20, windowSeconds: 3600 },
 } satisfies Record<string, Limit>;
 

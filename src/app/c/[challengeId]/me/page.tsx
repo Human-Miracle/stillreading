@@ -4,6 +4,7 @@ import { BookDetails } from "@/components/books/book-card";
 import { BookForm, bookDraftToInput, emptyBook } from "@/components/books/book-form";
 import { BookShelf } from "@/components/books/book-shelf";
 import { useChallenge } from "@/components/challenge/context";
+import { DayOneBadge } from "@/components/challenge/day-one";
 import { GoalProgress } from "@/components/challenge/goal-progress";
 import { Hero } from "@/components/challenge/hero";
 import { StreakBanner } from "@/components/challenge/streak-banner";
@@ -48,6 +49,7 @@ export default function MePage() {
             You&apos;ve read {headline === "—" ? "nothing yet" : headline}
             <span className="text-ink/35"> this challenge</span>
           </h1>
+          {me.dayOne ? <DayOneBadge className="mt-4" /> : null}
           <div className="mt-8 flex items-center justify-between">
             <p className="text-[17px] font-medium tracking-[-0.02em]">Your books</p>
             <p className="text-sm text-ink/55">

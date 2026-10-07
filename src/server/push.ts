@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { EntityKind, PushResult } from "@/lib/api-types";
 import { diffDays, isWithinChallenge, todayInTimezone } from "@/lib/domain/dates";
+import { dayOneCheckInAllowed } from "@/lib/domain/day-one";
 import { reactionId } from "@/lib/ids";
 import { syncOp, type SyncOp } from "@/lib/validation/ops";
 import type { Database, Tx } from "@/db/client";
@@ -135,12 +136,15 @@ const handlers: { [T in SyncOp["type"]]: Handler<T> } = {
     if (!isWithinChallenge(challenge, payload.date) || diffDays(today, payload.date) > 1) {
       return rejected("date_out_of_range", "That date isn't part of this challenge.");
     }
+    const createdAt = new Date(payload.createdAt);
+    if (payload.date === challenge.startDate && !dayOneCheckInAllowed(challenge, createdAt)) {
+      return rejected("day_one_closed", "The Day One window has closed.");
+    }
     let bookId = payload.bookId ?? null;
     if (bookId) {
       const [book] = await tx.select({ participantId: books.participantId }).from(books).where(eq(books.id, bookId));
       if (!book || book.participantId !== me.id) bookId = null;
     }
-    const createdAt = new Date(payload.createdAt);
     const [row] = await tx
       .insert(readingSessions)
       .values({

@@ -6,6 +6,7 @@ import { BookShelf } from "@/components/books/book-shelf";
 import { Sheet } from "@/components/ui/sheet";
 import type { LocalBook } from "@/local/db";
 import { useChallenge } from "@/components/challenge/context";
+import { DayOneBadge } from "@/components/challenge/day-one";
 import { DayRing } from "@/components/challenge/day-ring";
 import { GoalProgress } from "@/components/challenge/goal-progress";
 import { Hero, type HeroTone } from "@/components/challenge/hero";
@@ -57,6 +58,7 @@ export default function ParticipantPage() {
             <div className="min-w-0">
               <h1 className="display truncate text-[44px]">{member.participant.displayName}</h1>
               <p className="mt-1 truncate text-ink/60">{member.currentBook ? `Reading ${member.currentBook.title}` : "No book yet"}</p>
+              {member.dayOne ? <DayOneBadge className="mt-2" /> : null}
             </div>
           </div>
           <StreakBanner className="mt-6" title={

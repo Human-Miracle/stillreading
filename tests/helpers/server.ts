@@ -10,6 +10,7 @@ import { PUT as passPUT } from "@/app/api/reader/pass/route";
 import { POST as claimPOST } from "@/app/api/reader/claim/route";
 import { POST as reinvitePOST } from "@/app/api/challenges/[id]/reinvite/route";
 import { POST as coversPOST } from "@/app/api/challenges/[id]/covers/route";
+import { POST as dayOnePOST } from "@/app/api/challenges/[id]/day-one/route";
 import { POST as handoffPOST } from "@/app/api/handoff/route";
 import { POST as handoffClaimPOST } from "@/app/api/handoff/claim/route";
 import { GET as bookSearchGET } from "@/app/api/books/search/route";
@@ -53,6 +54,7 @@ const routes: { method: string; pattern: RegExp; keys: string[]; handler: Handle
   { method: "POST", pattern: /^\/api\/reader\/claim$/, keys: [], handler: claimPOST as Handler },
   { method: "POST", pattern: /^\/api\/challenges\/([^/]+)\/reinvite$/, keys: ["id"], handler: reinvitePOST as Handler },
   { method: "POST", pattern: /^\/api\/challenges\/([^/]+)\/covers$/, keys: ["id"], handler: coversPOST as Handler },
+  { method: "POST", pattern: /^\/api\/challenges\/([^/]+)\/day-one$/, keys: ["id"], handler: dayOnePOST as Handler },
   { method: "POST", pattern: /^\/api\/handoff$/, keys: [], handler: handoffPOST as Handler },
   { method: "POST", pattern: /^\/api\/handoff\/claim$/, keys: [], handler: handoffClaimPOST as Handler },
   { method: "GET", pattern: /^\/api\/books\/search$/, keys: [], handler: bookSearchGET as Handler },

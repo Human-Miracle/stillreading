@@ -1,0 +1,1 @@
+ALTER TABLE "challenges" ADD COLUMN "day_one_window_opens_at" timestamp with time zone;

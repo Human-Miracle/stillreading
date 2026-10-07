@@ -1,7 +1,8 @@
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, isNull, sql } from "drizzle-orm";
 import type { z } from "zod";
-import type { ChallengeSnapshot, JoinPreview } from "@/lib/api-types";
+import type { ChallengeDTO, ChallengeSnapshot, JoinPreview } from "@/lib/api-types";
 import { challengeClock, diffDays, endDateFor, participantDuration, todayInTimezone } from "@/lib/domain/dates";
+import { canOpenDayOneWindow } from "@/lib/domain/day-one";
 import { newId, newJoinCode } from "@/lib/ids";
 import type { createChallengeBody, joinChallengeBody } from "@/lib/validation/api";
 import type { Database, DbOrTx } from "@/db/client";
@@ -13,6 +14,7 @@ import { upsertGoal } from "./goals";
 import { ApiError } from "./http";
 import { log } from "./log";
 import { loadSnapshot } from "./pull";
+import { challengeDTO } from "./serialize";
 
 export const MAX_PARTICIPANTS = 200;
 
@@ -201,5 +203,26 @@ export async function joinChallenge(db: Database, deviceId: string, code: string
     }
     log.info("challenge_joined", { challengeId: challenge.id });
     return loadSnapshot(tx, challenge.id, participantId);
+  });
+}
+
+/** The host opens the one-time Day One window. It can never be reopened, so a second call fails. */
+export async function openDayOneWindow(db: Database, deviceId: string, challengeId: string): Promise<ChallengeDTO> {
+  return db.transaction(async (tx) => {
+    const [challenge] = await tx.select().from(challenges).where(eq(challenges.id, challengeId));
+    const me = challenge ? await findMembership(tx, challengeId, deviceId) : null;
+    if (!challenge || !me || me.status !== "active") throw new ApiError(404, "not_found", "Challenge not found");
+    if (me.role !== "host") throw new ApiError(403, "forbidden", "Only the host can open the Day One window.");
+    if (challengePhase(challenge) === "archived") throw new ApiError(410, "archived", "This challenge has been archived.");
+    if (challenge.dayOneWindowOpensAt) throw new ApiError(409, "day_one_used", "The Day One window has already been used.");
+    if (!canOpenDayOneWindow(challenge)) throw new ApiError(409, "day_one_unavailable", "The Day One window can only be opened after Day 1, while the challenge is running.");
+    const [row] = await tx
+      .update(challenges)
+      .set({ dayOneWindowOpensAt: sql`now()`, serverUpdatedAt: sql`now()` })
+      .where(and(eq(challenges.id, challengeId), isNull(challenges.dayOneWindowOpensAt)))
+      .returning();
+    if (!row) throw new ApiError(409, "day_one_used", "The Day One window has already been used.");
+    log.info("day_one_window_opened", { challengeId });
+    return challengeDTO(row);
   });
 }

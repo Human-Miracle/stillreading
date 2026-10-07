@@ -2,11 +2,13 @@
 import { useState } from "react";
 import { track } from "@/lib/analytics";
 import { addDays, isWithinChallenge } from "@/lib/domain/dates";
+import { formatCountdown } from "@/lib/domain/day-one";
 import { defaultSessionUnit, formatAmount, formatSession, unitLabel } from "@/lib/domain/goals";
 import type { SessionUnit } from "@/lib/domain/types";
 import type { ChallengeView } from "@/local/hooks";
 import { addBook, logReading, updateBook } from "@/local/repo";
 import { useSyncState } from "@/local/hooks";
+import { DayOneBadge, useDayOneWindow } from "../challenge/day-one";
 import { Button } from "../ui/button";
 import { cn } from "../ui/cn";
 import { Field, Input, Textarea } from "../ui/field";
@@ -24,21 +26,26 @@ interface Logged {
   pages: number | null;
   bookTitle: string | null;
   offline: boolean;
+  /** Logged for Day 1 through the Day One window. */
+  dayOne: boolean;
 }
 
-export function CheckInComposer({ view, open, onClose }: { view: ChallengeView; open: boolean; onClose: () => void }) {
+export function CheckInComposer({ view, open, dayOne = false, onClose }: { view: ChallengeView; open: boolean; dayOne?: boolean; onClose: () => void }) {
   if (!view.me) return null;
   return (
     <Sheet open={open} onClose={onClose} title="Log reading">
       {/* Mounted only while open, so every check-in starts from a fresh form. */}
-      {open ? <ComposerBody view={view} onClose={onClose} /> : null}
+      {open ? <ComposerBody view={view} dayOne={dayOne} onClose={onClose} /> : null}
     </Sheet>
   );
 }
 
-function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => void }) {
+type Day = "today" | "yesterday" | "dayOne";
+
+function ComposerBody({ view, dayOne, onClose }: { view: ChallengeView; dayOne: boolean; onClose: () => void }) {
   const me = view.me!;
   const sync = useSyncState();
+  const dayOneWindow = useDayOneWindow(view.challenge);
   const myBooks = me.books
     .filter((b) => b.status !== "abandoned")
     .sort((a, b) => Number(a.status === "completed") - Number(b.status === "completed"));
@@ -50,13 +57,24 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
   const [reflection, setReflection] = useState("");
   const [shared, setShared] = useState(true);
   const [finished, setFinished] = useState(false);
-  const [day, setDay] = useState<"today" | "yesterday">("today");
+
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [logged, setLogged] = useState<Logged | null>(null);
 
   const yesterday = addDays(view.today, -1);
-  const canYesterday = me.progress.clock.phase === "active" && isWithinChallenge(view.challenge, yesterday) && yesterday >= me.progress.effectiveStart;
+  const day1 = view.challenge.startDate;
+  const active = me.progress.clock.phase === "active";
+  const canYesterday = active && isWithinChallenge(view.challenge, yesterday) && yesterday >= me.progress.effectiveStart;
+  // While the Day One window is open, anyone can log for Day 1 (shown as "Yesterday" on Day 2).
+  const canDayOne = active && dayOneWindow.state === "open" && view.today !== day1 && !(canYesterday && yesterday === day1);
+  const [day, setDay] = useState<Day>(() => (dayOne ? (canDayOne ? "dayOne" : canYesterday && yesterday === day1 ? "yesterday" : "today") : "today"));
+  const date = day === "dayOne" ? day1 : day === "yesterday" ? yesterday : view.today;
+  const dayOptions: { value: Day; label: string }[] = [
+    { value: "today", label: "Today" },
+    ...(canYesterday ? [{ value: "yesterday" as const, label: "Yesterday" }] : []),
+    ...(canDayOne || day === "dayOne" ? [{ value: "dayOne" as const, label: "Day 1" }] : []),
+  ];
   const remaining = me.progress.today.target !== null && me.goal?.targetUnit === unit ? me.progress.today.remaining : 0;
   const quick = Array.from(new Set([...(remaining > 0 ? [remaining] : []), ...QUICK[unit]])).slice(0, 4);
   const selectedBook = myBooks.find((b) => b.id === bookId);
@@ -71,6 +89,7 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
     }
     if (pageCount !== null && pageCount > 10_000) return setError("That's a lot of pages! Please enter 10,000 or less.");
     if (bookId === NEW_BOOK && !newTitle.trim()) return setError("Add the book title, or choose “No book”.");
+    if (day === "dayOne" && !canDayOne) return setError("The Day One window has closed. Choose another day.");
     setError(null);
     setSaving(true);
     const wasMet = me.progress.today.goalMet;
@@ -91,12 +110,12 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
         pages: pageCount,
         reflection,
         reflectionShared: shared,
-        date: day === "yesterday" ? yesterday : view.today,
+        date,
       });
       if (finished && useBookId) await updateBook(useBookId, { status: "completed" });
       track("reading_logged", { challengeId: view.challenge.id, props: { unit, hasReflection: Boolean(reflection.trim()) } });
       if (!wasMet && day === "today") track("reading_goal_completed", { challengeId: view.challenge.id });
-      setLogged({ amount: value, unit, pages: pageCount, bookTitle: title, offline: !sync.online });
+      setLogged({ amount: value, unit, pages: pageCount, bookTitle: title, offline: !sync.online, dayOne: date === day1 && view.today !== day1 });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save. Please try again.");
     } finally {
@@ -114,16 +133,13 @@ function ComposerBody({ view, onClose }: { view: ChallengeView; onClose: () => v
         void submit();
       }}
     >
-      {canYesterday ? (
-        <Segmented
-          label="Which day?"
-          value={day}
-          onChange={setDay}
-          options={[
-            { value: "today", label: "Today" },
-            { value: "yesterday", label: "Yesterday" },
-          ]}
-        />
+      {dayOptions.length > 1 ? (
+        <Segmented label="Which day?" value={day} onChange={setDay} options={dayOptions} />
+      ) : null}
+      {day === "dayOne" ? (
+        <p className="-mt-3 text-center text-sm text-muted" role="status">
+          Day One window closes in <span className="tabular font-medium text-ink">{formatCountdown(dayOneWindow.msLeft)}</span>
+        </p>
       ) : null}
 
       <div className="rounded-[1.75rem] bg-surface-2 px-4 pb-4 pt-5 text-center">
@@ -245,6 +261,12 @@ function Success({ view, logged, onClose }: { view: ChallengeView; logged: Logge
       <div className="mx-auto grid size-24 animate-pop place-items-center rounded-full bg-sage text-ink" aria-hidden>
         <Icon.check className="size-10" strokeWidth={2} />
       </div>
+      {logged.dayOne ? (
+        <div className="space-y-1">
+          <DayOneBadge className="text-xs" />
+          <p className="text-sm text-muted">Day 1 reading logged. The Day One badge is yours.</p>
+        </div>
+      ) : null}
       <div>
         <p className="headline text-[32px]">{logged.offline ? "Saved on this device" : "Reading logged"}</p>
         <p className="mt-1 text-lg text-ink/60">

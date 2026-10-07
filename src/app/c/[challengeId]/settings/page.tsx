@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useChallenge } from "@/components/challenge/context";
+import { DayOneHostCard } from "@/components/challenge/day-one";
 import { InviteActions } from "@/components/challenge/invite-actions";
 import { GoalSelector, isGoalValid } from "@/components/goals/goal-selector";
 import { Hero } from "@/components/challenge/hero";
@@ -123,6 +124,8 @@ export default function SettingsPage() {
         <p className="text-sm text-muted">Days roll over at midnight {challenge.timezone} time.</p>
         {!archived ? <InviteActions joinCode={challenge.joinCode} challengeName={challenge.name} challengeId={challenge.id} /> : null}
       </Card>
+
+      {view.isHost && !archived ? <DayOneHostCard view={view} /> : null}
 
       {view.isHost && !archived ? (
         <Card className="space-y-5">

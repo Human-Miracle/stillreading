@@ -35,6 +35,7 @@ export const productEventBody = z.object({
     "goal_selected",
     "book_added",
     "reading_logged",
+    "day_one_window_opened",
     "reading_goal_completed",
     "streak_started",
     "streak_broken",
