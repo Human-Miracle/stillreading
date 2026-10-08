@@ -1,6 +1,6 @@
-import { diffDays, todayInTimezone } from "./dates";
+import { diffDays, participantStart, todayInTimezone } from "./dates";
 import { isLive } from "./goals";
-import type { ChallengeLike, SessionLike } from "./types";
+import type { ChallengeLike, DateKey, SessionLike } from "./types";
 
 /**
  * The Day One window: once per challenge, the host can open a short window in which every member may
@@ -50,6 +50,14 @@ export function inDayOneWindow(opensAt: string | Date | null | undefined, at: Da
 /** Anyone with a live check-in dated Day 1 holds the Day One badge. */
 export function hasDayOneBadge(challenge: Pick<ChallengeLike, "startDate">, sessions: readonly SessionLike[]): boolean {
   return sessions.some((s) => isLive(s) && s.date === challenge.startDate && s.amount > 0);
+}
+
+/**
+ * First day that counts for a reader. A late joiner who logged Day 1 (through the Day One window)
+ * counts from Day 1, so that day shows as read and joins their streak and reading days.
+ */
+export function readerStart(challenge: ChallengeLike, joinedDate: DateKey | null | undefined, sessions: readonly SessionLike[]): DateKey {
+  return hasDayOneBadge(challenge, sessions) ? challenge.startDate : participantStart(challenge, joinedDate);
 }
 
 export function formatCountdown(ms: number): string {

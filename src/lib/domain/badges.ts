@@ -1,4 +1,5 @@
-import { addDays, diffDays, joinedDateFor, participantStart, todayInTimezone } from "./dates";
+import { addDays, diffDays, joinedDateFor, todayInTimezone } from "./dates";
+import { readerStart } from "./day-one";
 import { isLive, pagesRead } from "./goals";
 import type { StandingsReader } from "./history";
 import { leaderboardOn } from "./leaderboard";
@@ -230,7 +231,7 @@ export function computeBadges(input: BadgeInput): Map<string, BadgeResult[]> {
     const readDates = [...new Set(sessions.map((s) => s.date))].sort();
     const readSet = new Set(readDates);
     const pages = dayPages.get(pid)!;
-    const start = participantStart(challenge, r.joinedDate);
+    const start = readerStart(challenge, r.joinedDate, sessions);
     const results: BadgeResult[] = [];
     const add = (id: BadgeId, partial: Partial<BadgeResult>) =>
       results.push({ id, level: 0, earnedOn: null, count: 0, progress: null, closed: false, stat: null, ...partial });

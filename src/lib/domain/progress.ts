@@ -1,4 +1,5 @@
-import { challengeClockForDate, dateRange, diffDays, participantStart, type ChallengeClock } from "./dates";
+import { challengeClockForDate, dateRange, diffDays, type ChallengeClock } from "./dates";
+import { readerStart } from "./day-one";
 import { amountTowardGoal, dailyTarget, isGoalDay, isLive, percent, sumByUnit, type Percent } from "./goals";
 import { computePace, type PaceResult } from "./pace";
 import { computeStreaks } from "./streaks";
@@ -14,7 +15,7 @@ export interface DayRow {
 
 export interface ParticipantProgress {
   clock: ChallengeClock;
-  /** First counted day for this participant (challenge start, or join day for late joiners). */
+  /** First counted day: the challenge start, or the join day for late joiners who haven't logged Day 1. */
   effectiveStart: DateKey;
   /** Challenge days available to this participant. */
   effectiveDuration: number;
@@ -59,7 +60,7 @@ export interface ProgressInput {
 
 export function participantProgress({ challenge, goal, sessions, books, today, joinedDate }: ProgressInput): ParticipantProgress {
   const clock = challengeClockForDate(challenge, today);
-  const effectiveStart = participantStart(challenge, joinedDate);
+  const effectiveStart = readerStart(challenge, joinedDate, sessions);
   const offset = diffDays(challenge.startDate, effectiveStart);
   const effectiveDuration = challenge.durationDays - offset;
   const live = sessions.filter(isLive);

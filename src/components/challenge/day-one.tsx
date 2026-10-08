@@ -92,11 +92,8 @@ export function DayOneHostCard({ view }: { view: ChallengeView }) {
       </p>
     );
   } else if (w.state === "closed") {
-    body = (
-      <p className="text-ink-2">
-        Used. The window has closed for good. {earned} of {view.members.length} readers have the badge.
-      </p>
-    );
+    // Used and over for good: nothing left to do here.
+    return null;
   } else if (!canOpenDayOneWindow(challenge)) {
     body = <p className="text-ink-2">Available from Day 3 while the challenge is running. Everyone who reads on Day 1 gets the badge.</p>;
   } else {
